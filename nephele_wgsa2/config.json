@@ -1,0 +1,9 @@
+{
+    "name": "WGSA2",
+    "version": "0.1.0",
+    "db_dir_path": "/dbs",
+    "mapping_file_name": "mapping_file.txt",
+    "output_details_file_name": "WGSA2_output_details_Jul_2023_updated.pdf",
+    "ted_file_name": "TED.tar",
+    "biom_file_name": "for_analyze_with_microbiomedb.biom"
+}

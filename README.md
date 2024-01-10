@@ -1,151 +1,92 @@
-# What is the purpose of this repository template?
+# Nephele WGSA2 pipeline
 
-This repository template has been created to assist in the establishment of a new Nephele pipeline repository. It includes a collection of files and documentation essential to kickstart your Nephele pipeline.
+## Introduction
+The WGSA2 pipeline uses raw paired end (PE) shotgun reads to produce de novo assemblies for each sample in a metagenomic dataset, as well as extract optimal levels of information about the taxonomic and functional composition of a microbial community.
 
-Several key areas have been preconfigured:
+## Datafiles
+Note: Need to provide links to download files
+The following datafiles are needed to run the pipeline
+- decontaminate
+- classification
+- eggnog
+- annotations
+- krona
 
-- Pipeline container building and deployment: [`build-and-push.yaml`](./.github/workflows/build-and-push.yaml) GitHub Action workflow handles the building of the pipeline container and its subsequent push to the AWS ECR repository.
-- Directories structure within the repository: we maintain a consistent structure across all Nephele pipeline repositories.
-- Skeleton of configuration code, schema code and pipeline code: utilizing the [`nephele_pipeline_utils`](https://github.com/niaid/nephele_pipeline_utils), a dependency for all pipelines, we've provided foundational code structures that incorporate validation and I/O management capabilities. This serves to expedite initial setup without extensive documentation reading.
-- Code style, formatting and local development automation: to streamline development processes, we've introduced [`Taskfile.yaml`](./Taskfile.yaml) for automating specific tasks during pipeline development, [`.pre-commit-config.yaml`](./.pre-commit-config.yaml) for automated code formatting and linting, along with a corresponding GitHub Action workflow to ensure code checks on each commit.
-
-> [!IMPORTANT]
-> **Created this repository based on [`niaid/nephele_pipeline_template`](https://github.com/niaid/nephele_pipeline_template). What now?**
->
-> 1. Update this readme with your pipeline documentation.
-> 2. Update [GitHub Action workflow definition](./.github/workflows/build-and-push.yaml) (replace all occurences of `nephele_pipeline_template` with `nephele_<pipeline name>`, for example `nephele_dada2`).
-> 3. Register a new self-hosted GitHub runner to run the GitHub Action workflow above in `nephele-mgmt` space
->
-> - `spaces materials register -space nephele -repo niaid/nephele_<pipeline_name>`
-> - `spaces materials runners add -space nephele -repo niaid/nephele_<pipeline_name>`
->
-> 4. Create a new AWS ECR repository in `nephele-mgmt` space to deposit containers. Name: `nephele_<pipeline name>`, for example `nephele_dada2`.
-> 5. Once you're done remove everything above the line below.
-
----
-
-# Nephele pipeline template repository
-
-This document describes how to run the _PIPELINE_NAME_ pipeline.
-
-## Running the pipeline
-
-> [!TIP]
-> You may use [`task`](https://taskfile.dev/#/) to automate the steps described below. Run `task --list` to see the available tasks. This requires `task` to be installed on your system.
-
-### Build the pipeline container
-
-```bash
-docker build -f nephele_PIPELINE_NAME/Dockerfile --tag nephele_qc_long_reads:latest .
+## Sample input.json
 ```
-
-### Set environment variables
-
-In order to run the next step, the following environment variables must be set:
-
-- `INPUTS_MOUNT`: path to the inputs directory. The structure of this directory is dictated by the paths you provide in `inputs` section in the input JSON file.
-- `OUTPUTS_MOUNT`: path to the outputs directory
-
-For example:
-
-```bash
-export INPUTS_MOUNT=/Users/stolarczykmj/Desktop/qc_long_reads
-export OUTPUTS_MOUNT=/Users/stolarczykmj/Desktop/outputs
-```
-
-### Prepare the input JSON file
-
-The input JSON file must be present in the container. For example, you may put it in the inputs directory: `$INPUTS_MOUNT/example_input.json`.
-
-Below is a fully functional example of the input JSON file. In order to use defaults for the pipeline arguments, you may omit some key value pais in the `pipeline_arguments` section.
-
-```json
 {
-  "inputs": [
-    {
-      "name": "18S_combo",
-      "files": [
+    "inputs": [
         {
-          "path": "18S_combo.fastq.gz",
-          "type": "fwd"
-        }
-      ],
-      "metadata": [
+            "name": "S1",
+            "files": [
+                {
+                    "path": "S1_GItract_camiHiSeq_sub1M_R1.fastq.gz",
+                    "type": "fwd"
+                },
+                {
+                    "path": "S1_GItract_camiHiSeq_sub1M_R2.fastq.gz",
+                    "type": "rev"
+                }
+            ],
+            "metadata": [{}],
+            "type": "fastq",
+            "source": "input"
+        },
         {
-          "TreatmentGroup": "18S_combo"
+            "name": "S6",
+            "files": [
+                {
+                    "path": "S6_Oral_camiHiSeq_sub1M_R1.fastq.gz",
+                    "type": "fwd"
+                },
+                {
+                    "path": "S6_Oral_camiHiSeq_sub1M_R2.fastq.gz",
+                    "type": "rev"
+                }
+            ],
+            "metadata": [{}],
+            "type": "fastq",
+            "source": "input"
         }
-      ],
-      "type": "fastq",
-      "source": "input"
+    ],
+    "pipeline_arguments": {
+        "decontaminate_db_path": "decontam_db/decontam_marine_db",
+        "classification_db_name": "plusPFV",
+        "classification_db_path": "classification_db/plusPFV_Mar2023",
+        "eggnog_db_path": "eggnog_data",
+        "annotations_type": "ko",
+        "annotations_map_path": "minpath_data/KEGG_myfiles_0922/KEGG-ko2map-092022.txt",
+        "annotations_hrr_path": "minpath_data/KEGG_myfiles_0922/KEGG-HRCHY-092022.txt",
+        "krona_tax_db_path": "KronaTools_taxonomy",
+        "amrfind": true,
+        "tax_genes": true,
+        "tax_scaffolds": true,
+        "mag": true,
+        "include_ted_files": true,
     },
-    {
-      "name": "Mock",
-      "files": [
-        {
-          "path": "Mock.fastq",
-          "type": "fwd"
-        }
-      ],
-      "metadata": [
-        {
-          "TreatmentGroup": "Mock"
-        }
-      ],
-      "type": "fastq",
-      "source": "input"
-    }
-  ],
-  "pipeline_arguments": {
-    "data_type": "qc_lr",
-    "threads": 8,
-    "mem_gb": 16
-  },
-  "outputs": [
-    {
-      "name": "<generated>",
-      "files": [
-        {
-          "s3_location": "s3://test/test/x.biom",
-          "path": "/home/user/job/x.biom"
-        }
-      ],
-      "metadata": [
-        {
-          "TreatmentGroup": "test"
-        }
-      ],
-      "type": "biom",
-      "source": "output"
-    }
-  ]
+    "outputs": []
 }
 ```
 
-Notably, you may adjust the pipeline arguments based on your analysis needs. Pipeline arguments reference:
+## Pipeline's parameters
 
-- `data_type`
-
-  - Type: `str`
-  - Choices: `qc_lr`
-  - Description: Specifies the data type to be processed.
-
-- `threads`
-
-  - Type: `int`
-  - Default: `8`
-  - Description: Number of threads to use.
-
-- `mem_gb`
-
-  - Type: `int`
-  - Default: `16`
-  - Description: Amount of memory to use in GB.
-
-### Run the pipeline container
-
-```bash
-docker run --rm --name nephele_PIPELINE_NAME_container \
-    --mount type=bind,source=$INPUTS_MOUNT,target=/inputs \
-    --mount type=bind,source=$OUTPUTS_MOUNT,target=/outputs \
-    nephele_PIPELINE_NAME:latest --json_file_path /inputs/example_input.json
+```
+decontaminate_db_path: str - path to the decontamination database, inclusive of the host organism of your dataset
+classification_db_name: str {plusPFV | MGBCdb | EuPATHdb}
+classification_db_path: str - path to the taxonomic classification DB that best suits your dataset
+eggnog_db_path: str - path to your eggnog datafile
+annotations_type: str {ko | ec}
+annotations_map_path: str - path to your annotations map file
+annotations_hrr_path: str - path to your annotations hrr file
+krona_tax_db_path: str - path to your krona tax datafile
+amrfind: bool (default=false) - Add Antimicrobial Resistance genes & peptide finding
+tax_genes: bool (default=false) - Add taxonomic annotation to be produced from genes per sample
+tax_scaffolds: bool (default=false) - Add taxonomic annotation to be produced from scaffolds per sample
+mag: bool (default=false) - Add metagenome assembled genomes (MAGs) & MAG-based taxonomic profiles to be produced from scaffolds per sample (Note: time consuming & functional only for prokaryotic organisms)
+include_ted_files: bool (default=false) - The Trimmed, Error-corrected and Decontaminated (TED) fastq files are large and therefore omitted in default results output! Elect this option for pipeline to produce the file
+trim_filter: bool (default=false) - Allows for additional trimming and filtering of reads, post-QA processing (if needed)
+average_read_quality: int (default=10) - Filter reads with this read-wide average quality threshold. Come into effect when trim_filter=true
+min_read_length: int (default=60) - Filter out reads below this read length. Come into effect when trim_filter=true
+trim_of_5: int (default=20) - Quality threshold for 5'-end trimming. Come into effect when trim_filter=true
+trim_of_3: int (default=15) - Quality threshold of 3'-end trimming. Come into effect when trim_filter=true
 ```
