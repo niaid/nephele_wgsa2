@@ -262,8 +262,7 @@ rule kreport2krona_per_sample:
         binfile=TED_READS_TAX + "bin/{sample}_wTAXid_4krona.txt",                                                                           ##--> modified code
     shell:
         "python3 {params.kreport2krona_script} --report-file {input.krfile} --no-tax-prefixes -o {output.binfile} &&"                                  ##--> updated  code <--## 
-        "sed -i '2s/\\t\\t/\\tUnclassified\\t/g' {output.binfile} &&"                  ## needed twice                                 ##--> added  code , no output <--## 
-        "sed -i '2s/\\t\\t/\\tUnclassified\\t/g' {output.binfile}"
+        "sed -i 's/\\tUnclassified\\t\\t\\t\\t\\t\\t\\t0/\\tUnclassified\\tUnclassified\\tUnclassified\\tUnclassified\\tUnclassified\\tUnclassified\\tUnclassified\\t0/g' {output.binfile}"
  ##--> removing the table merging capapcity of the kreport2krona_per_sample rule, since it overprints the bin/files (required output)
  ##--> removed the mod_kreport2krona_output rule cuz mods are above and no output <--## 
 
