@@ -7,19 +7,19 @@ from biom.cli.util import write_biom_table
 import os
 
 
-def read_mapping_file():
-    samples = {}
-    with open(config["map_file"]) as f:
-        reader = csv.DictReader(f, delimiter='\t')
-        for row in reader:
-            if row['#SampleID'] == '':
-                continue
-            samples[row['#SampleID']] = {}
-            if row.get('ForwardFastqFile'):
-                samples[row['#SampleID']]["f"] = config["input_dir"] + "/" + row["ForwardFastqFile"]
-            if row.get('ReverseFastqFile'):
-                samples[row['#SampleID']]["r"] = config["input_dir"] + "/" + row["ReverseFastqFile"]
-    return samples
+# def read_mapping_file():
+#     samples = {}
+#     with open(config["map_file"]) as f:
+#         reader = csv.DictReader(f, delimiter='\t')
+#         for row in reader:
+#             if row['#SampleID'] == '':
+#                 continue
+#             samples[row['#SampleID']] = {}
+#             if row.get('ForwardFastqFile'):
+#                 samples[row['#SampleID']]["f"] = config["input_dir"] + "/" + row["ForwardFastqFile"]
+#             if row.get('ReverseFastqFile'):
+#                 samples[row['#SampleID']]["r"] = config["input_dir"] + "/" + row["ReverseFastqFile"]
+#     return samples
 
 def get_fastq_gz(wildcards):
     return samples[wildcards.sample]

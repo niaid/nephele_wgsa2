@@ -1,7 +1,7 @@
 from enum import Enum
 from pathlib import Path
 
-from nephele_pipeline_utils.io import PipelineInput
+from nephele_pipeline_utils.io import PipelineArguments, PipelinePE
 from pydantic import BaseModel, Field
 
 
@@ -16,7 +16,7 @@ class AnnotationsType(Enum):
     EC = "ec"
 
 
-class PipelineArguments(BaseModel):
+class PipelineArguments(PipelineArguments):
     decontaminate_db_path: Path
     classification_db_name: ClassificationDbType
     classification_db_path: Path
@@ -37,5 +37,5 @@ class PipelineArguments(BaseModel):
     include_ted_files: bool = False
 
 
-class WGSA2Pipeline(PipelineInput):
+class WGSA2Pipeline(PipelinePE):
     pipeline_arguments: PipelineArguments

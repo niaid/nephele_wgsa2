@@ -59,7 +59,8 @@ PWYBIOM = PWYDIR + "bioms/"
 TAXBIOM = TED_READS_TAX + "bioms/"
 TED_READS_TAX_KLOGS = TED_READS_TAX + "klogs/"
 
-samples = read_mapping_file()
+# samples = read_mapping_file()
+samples = config["samples"]
 threads_per_job = get_num_threads_per_job(len(samples))
 
 pipeline_output = [
