@@ -1,5 +1,6 @@
 # Design, development & documentation
 # Angelina Angelova PhD, Metagenomics Analysis Specialist, Science Support Section, BCBB/OCICB/OSMO/OD/NIAID/NIH
+# Katie McCauley MPH, Metagenomics Specialist, Science Support Section, BCBB/OCICB/OSMO/OD/NIAID/NIH
 # Duc Doan, Software Engineer, Bioinformatics Software Section, BCBB/OCICB/OSMO/OD/NIAID/NIH
 configfile: "/pipeline/config.yaml"
 include: "/pipeline/utils.smk"
