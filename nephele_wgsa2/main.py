@@ -39,7 +39,7 @@ def main(args):
         mem_gb = int(mem.total / 1024 / 1024 / 1024)
         # Generate mapping file
         mapping_file_path = outputs_dir_path / pipeline_config.mapping_file_name        
-        #pipeline.generate_mapping_file(mapping_file_path)
+        pipeline.generate_mapping_file(mapping_file_path)
         log("Starting WGSA pipeline...")
         # log(args)
         base_command = [
