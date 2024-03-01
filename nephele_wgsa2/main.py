@@ -1,5 +1,4 @@
 import argparse
-import json
 import os
 import shlex
 import shutil
@@ -16,23 +15,12 @@ from psutil import virtual_memory
 from schema import WGSA2Pipeline
 
 
-def get_samples(samples):
-    results = {}
-    for sample in samples:
-        results[sample.id] = {
-            "f": str(sample.forward_fastq_file_path),
-            "r": str(sample.reverse_fastq_file_path),
-        }
-    return json.dumps(results)
-
-
 def main(args):
     try:
         exit_status = 0
         pipeline = WGSA2Pipeline.from_json(args.json_file_path)
         args = pipeline.pipeline_arguments
-        outputs_dir_path = args.outputs_dir_path
-        tmp_dir = outputs_dir_path / "tmp"
+        tmp_dir = pipeline_config.outputs_dir_path / "tmp"
         log(tmp_dir)
         sh.mkdir("-p", str(tmp_dir))
         num_cpus = os.cpu_count()
@@ -40,8 +28,9 @@ def main(args):
         mem = virtual_memory()
         mem_gb = int(mem.total / 1024 / 1024 / 1024)
         # Generate mapping file
-        mapping_file_path = outputs_dir_path / pipeline_config.mapping_file_name
-        # pipeline.generate_mapping_file(mapping_file_path)
+        mapping_file_path = (
+            pipeline_config.outputs_dir_path / pipeline_config.mapping_file_name
+        )
         pipeline.generate_mapping_file(mapping_file_path)
         log("Starting WGSA pipeline...")
         # log(args)
@@ -52,22 +41,22 @@ def main(args):
         ]
         snakemake_config = [
             f"--config num_cpus={num_cpus} map_file={mapping_file_path}",
-            f"output_dir={outputs_dir_path} total_mem_gb={mem_gb} tmp_dir={tmp_dir}",
+            f"input_dir={pipeline_config.inputs_dir_path} output_dir={pipeline_config.outputs_dir_path} total_mem_gb={mem_gb} tmp_dir={tmp_dir}",
             f"trim_filter={args.trim_filter} include_ted_files={args.include_ted_files} ted_file_name={pipeline_config.ted_file_name}",
             f"biom_file_name={pipeline_config.biom_file_name}",
-            f"decontaminate={args.decontaminate_db_path}",
+            f"decontaminate={pipeline_config.db_dir_path / args.decontaminate_db_path}",
             f"classification_db_name={args.classification_db_name.value}",
-            f"classification_db={args.classification_db_path}",
+            f"classification_db={pipeline_config.db_dir_path / args.classification_db_path}",
             f"amrfind={args.amrfind}",
-            f"eggnog_db={args.eggnog_db_path}",
+            f"denovo_mtx={args.denovo_mtx}",
+            f"eggnog_db={pipeline_config.db_dir_path / args.eggnog_db_path}",
             f"annotations_type={args.annotations_type.value}",
-            f"annotations_map={args.annotations_map_path}",
-            f"annotations_hrr={args.annotations_hrr_path}",
+            f"annotations_map={pipeline_config.db_dir_path / args.annotations_map_path}",
+            f"annotations_hrr={pipeline_config.db_dir_path / args.annotations_hrr_path}",
             f"tax_genes={args.tax_genes}",
-            f"krona_tax_db={args.krona_tax_db_path}",
+            f"krona_tax_db={pipeline_config.db_dir_path / args.krona_tax_db_path}",
             f"tax_scaffolds={args.tax_scaffolds}",
             f"mag={args.mag}",
-            f"samples='{get_samples(pipeline.samples)}'",
         ]
         if args.trim_filter:
             snakemake_config.extend(
@@ -117,7 +106,9 @@ def main(args):
         log("Pipeline completed")
     finally:
         # Copy output details into main/root output folder
-        shutil.copy2(pipeline_config.output_details_file_name, outputs_dir_path)
+        shutil.copy2(
+            pipeline_config.output_details_file_name, pipeline_config.outputs_dir_path
+        )
         sh.rm("-rf", tmp_dir)
         exit(exit_status)
 
