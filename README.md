@@ -15,56 +15,45 @@ The following datafiles are needed to run the pipeline
 ## Sample input.json
 ```
 {
-    "inputs": [
+    "samples": [
         {
-            "name": "S1",
-            "files": [
-                {
-                    "path": "S1_GItract_camiHiSeq_sub1M_R1.fastq.gz",
-                    "type": "fwd"
-                },
-                {
-                    "path": "S1_GItract_camiHiSeq_sub1M_R2.fastq.gz",
-                    "type": "rev"
-                }
-            ],
-            "metadata": [{}],
-            "type": "fastq",
-            "source": "input"
+            "id": "S1",
+            "forward_fastq_file_path": "/inputs/S1_GItract_camiHiSeq_sub1M_R1.fastq.gz",
+            "reverse_fastq_file_path": "/inputs/S1_GItract_camiHiSeq_sub1M_R2.fastq.gz",
+            "metadata": {
+                "TreatmentGroup": "Control",
+                "Animal": "RhDCBC",
+                "Day": "347",
+                "Description": "SwabJejunum"
+            }
         },
         {
-            "name": "S6",
-            "files": [
-                {
-                    "path": "S6_Oral_camiHiSeq_sub1M_R1.fastq.gz",
-                    "type": "fwd"
-                },
-                {
-                    "path": "S6_Oral_camiHiSeq_sub1M_R2.fastq.gz",
-                    "type": "rev"
-                }
-            ],
-            "metadata": [{}],
-            "type": "fastq",
-            "source": "input"
+            "id": "S6",
+            "forward_fastq_file_path": "/inputs/S6_Oral_camiHiSeq_sub1M_R1.fastq.gz",
+            "reverse_fastq_file_path": "/inputs/S6_Oral_camiHiSeq_sub1M_R2.fastq.gz",
+            "metadata":{
+                "TreatmentGroup": "Control",
+                "Animal": "RhDCBC",
+                "Day": "347",
+                "Description": "SwabJejunum"
+            }
         }
     ],
     "pipeline_arguments": {
-        "decontaminate_db_path": "decontam_db/decontam_marine_db",
+        "decontaminate_db_path": "/dbs/decontam_db/decontam_marine_db",
         "classification_db_name": "plusPFV",
-        "classification_db_path": "classification_db/plusPFV_Mar2023",
-        "eggnog_db_path": "eggnog_data",
+        "classification_db_path": "/dbs/classification_db/plusPFV_Mar2023",
+        "eggnog_db_path": "/dbs/eggnog_data",
         "annotations_type": "ko",
-        "annotations_map_path": "minpath_data/KEGG_myfiles_0922/KEGG-ko2map-092022.txt",
-        "annotations_hrr_path": "minpath_data/KEGG_myfiles_0922/KEGG-HRCHY-092022.txt",
+        "annotations_map_path": "/dbs/minpath_data/KEGG_myfiles_0922/KEGG-ko2map-092022.txt",
+        "annotations_hrr_path": "/dbs/minpath_data/KEGG_myfiles_0922/KEGG-HRCHY-092022.txt",
         "krona_tax_db_path": "KronaTools_taxonomy",
         "amrfind": true,
         "tax_genes": true,
         "tax_scaffolds": true,
         "mag": true,
         "include_ted_files": true,
-    },
-    "outputs": []
+    }
 }
 ```
 
