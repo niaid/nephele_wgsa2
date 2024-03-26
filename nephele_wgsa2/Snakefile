@@ -996,7 +996,7 @@ rule tax_biom_per_sample:
         txt=temp(TAXBIOM + "{sample}_4biom.txt"),
         biom=TAXBIOM + "{sample}_json.biom"
     shell:
-        "sed 's/\\t/;/g' {input} | sed 's/;/\\t/1' | nl -n ln |sed '1s/^/\\t/' | sed '1s/1\\s\\+\\t#/\\t/' | sed 's/\\s\\+\\t/\\t/g' | sed '1s/LINEAGE/Taxonomy/' | sed -e '1s/Level.*/Taxonomy/' > {output.txt} && "
+        "sed 's/\\t/;/g' {input} | sed 's/;/\\t/1' | nl -n ln |sed '1s/^/\\t/' | sed '1s/1\\s\\+\\t#/\\t/' | sed 's/\\s\\+\\t/\\t/g' | sed '1s/LINEAGE/taxonomy/' | sed -e '1s/Level.*/taxonomy/' > {output.txt} && "
         "biom convert -i {output.txt} -o {output.biom} --to-json --table-type='{params.tabtype}' --process-obs-metadata taxonomy"
 
 rule pwy_biom_per_sample:
@@ -1010,7 +1010,7 @@ rule pwy_biom_per_sample:
     shell:
         """
         if [ -s {input} ]; then
-            sed 's/\\t/;/g' {input} | sed 's/;/\\t/1' | nl -n ln |sed '1s/^/\\t/' | sed '1s/1\\s\\+\\t#/\\t/' | sed 's/\\s\\+\\t/\\t/g' | sed '1s/LINEAGE/Taxonomy/' | sed -e '1s/Level.*/Taxonomy/' > {output.txt}
+            sed 's/\\t/;/g' {input} | sed 's/;/\\t/1' | nl -n ln |sed '1s/^/\\t/' | sed '1s/1\\s\\+\\t#/\\t/' | sed 's/\\s\\+\\t/\\t/g' | sed '1s/LINEAGE/taxonomy/' | sed -e '1s/Level.*/taxonomy/' > {output.txt}
             biom convert -i {output.txt} -o {output.biom} --to-json --table-type='{params.tabtype}' --process-obs-metadata taxonomy || touch {output.biom}
         else
             echo "The input file {input} is empty, so pwy_biom_per_sample will not run. All output file(s) from this step are empty."
@@ -1029,7 +1029,7 @@ if len(samples) > 1:
             biom=TAX_MERGED_TABLES + "merged_Counts+Lineage_json.biom",
             tmp=temp(TAX_MERGED_TABLES + "tmp_.txt")
         shell:
-            "sed '1s/Lineage/Taxonomy/' {input.tax_collation} > {output.tmp} && "
+            "sed '1s/Lineage/taxonomy/' {input.tax_collation} > {output.tmp} && "
             "biom convert -i {output.tmp} -m <(sed '1s/^/#/' {input.mapping_file}) -o {output.biom} --to-json --table-type='{params.tabtype}' --process-obs-metadata taxonomy"
     
     rule PWY_collation_biom:
@@ -1042,7 +1042,7 @@ if len(samples) > 1:
             biom=PWY_MERGED_TABLES + "merged_Counts+allTiers_json.biom",                ##--> updated name
             tmp=temp(PWY_MERGED_TABLES + "tmp_.txt")
         shell:
-            "sed '1s/allTiers/Taxonomy/' {input.pwy_collation} > {output.tmp} && "
+            "sed '1s/allTiers/taxonomy/' {input.pwy_collation} > {output.tmp} && "
             "biom convert -i {output.tmp} -m <(sed '1s/^/#/' {input.mapping_file}) -o {output.biom} --to-json --table-type='{params.tabtype}' --process-obs-metadata taxonomy"
 
 
