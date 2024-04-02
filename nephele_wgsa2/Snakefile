@@ -354,14 +354,16 @@ rule samtools_to_bam:
         bam_fixmate=temp(ASM + "{sample}_fixmate.bam"),
         bam_fixmate_sorted=temp(ASM + "{sample}_fixmate_sorted.bam"),
         tmp_markdup=temp(ASM + "{sample}_tmp_markdup.txt"),
-        final_bam=OUT_FILE + ".bam"
+        final_bam=OUT_FILE + ".bam",
+        named_bam="{sample}_assembly.bam", ## output in the mainDIR
     shell:
         "samtools sort {input} -o {output.bam} -@ {threads} -T {params.sort_tmp} && "
         "samtools collate {output.bam} -o {output.bam_colated} -@ {threads} {params.collate_tmp} && "
         "samtools fixmate -m {output.bam_colated} {output.bam_fixmate} -@ {threads} && "
         "samtools sort {output.bam_fixmate} -o {output.bam_fixmate_sorted} -@ {threads} -T {params.sort_tmp} && "
         "samtools markdup -r -s {output.bam_fixmate_sorted} -f {output.tmp_markdup} {output.final_bam} -@ {threads} -T {params.markdup_tmp} && "
-        "samtools index -b {output.final_bam} -@ {threads}"
+        "samtools index -b {output.final_bam} -@ {threads} \n"
+        "ln -s {output.final_bam} {output.named_bam}
 
 rule add_de_replication_stats:
     input:
