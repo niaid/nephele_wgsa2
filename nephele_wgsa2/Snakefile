@@ -355,7 +355,7 @@ rule samtools_to_bam:
         bam_fixmate_sorted=temp(ASM + "{sample}_fixmate_sorted.bam"),
         tmp_markdup=temp(ASM + "{sample}_tmp_markdup.txt"),
         final_bam=OUT_FILE + ".bam",
-        named_bam="{sample}_assembly.bam", ## output in the mainDIR
+        named_bam=ASM + "{sample}_assembly.bam",
     shell:
         "samtools sort {input} -o {output.bam} -@ {threads} -T {params.sort_tmp} && "
         "samtools collate {output.bam} -o {output.bam_colated} -@ {threads} {params.collate_tmp} && "
