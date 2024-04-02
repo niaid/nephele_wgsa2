@@ -862,21 +862,21 @@ rule run_min_path:
     params:
         minpath_script=config["minpath_script"],
         annotations_map=config["annotations_map"],
+        minpath_log=PATHWAYS_PREFIX + ".minpath.log.txt",
     output:
         tmp_report=temp(PATHWAYS + "tmp_report.txt"),
         details=PATHWAYS_PREFIX + ".details.txt",
-        minpath_log=PATHWAYS_PREFIX + ".minpath.log.txt",
     shell:
         """
         if [ -s {input} ]; then
-            python3 {params.minpath_script} -any {input} -map {params.annotations_map} -report {output.tmp_report} -details {output.details} >> {output.minpath_log}
+            python3 {params.minpath_script} -any {input} -map {params.annotations_map} -report {output.tmp_report} -details {output.details} >> {params.minpath_log}
         else
             echo "The input file {input} is empty, so run_min_path will not run. All output file(s) from this step are empty."
-            touch {output.tmp_report} {output.details} {output.minpath_log}
+            touch {output.tmp_report} {output.details} {params.minpath_log}
         fi
         """
         # "python3 {params.minpath_script} -any {input} -map {params.annotations_map} "
-        # "-report {output.tmp_report} -details {output.details} >> {output.minpath_log}"
+        # "-report {output.tmp_report} -details {output.details} >> {params.minpath_log}"
 
 rule create_pathways_report:
     input:
