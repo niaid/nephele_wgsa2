@@ -20,7 +20,7 @@ RUN wget https://github.com/doandm/MinPath/archive/refs/heads/master.zip \
 # Install R packages
 RUN Rscript -e 'install.packages(c("broom", "tibble", "docopt", "reshape2", "data.table", "biomformat", "fossil", "ggplot2", "vegan", "remotes", "BiocManager", "foreach"), repos = "http://cran.us.r-project.org")'
 RUN Rscript -e 'BiocManager::install("biomformat")'
-RUN Rscript -e 'remotes::install_github("MadsAlbertsen/ampvis2")'
+RUN Rscript -e 'remotes::install_github("kasperskytte/ampvis2")'
 RUN Rscript -e 'BiocManager::install("S4Vectors")'
 RUN Rscript -e 'install.packages("easypackages", repos = "http://cran.us.r-project.org")'
 RUN Rscript -e 'install.packages("tidyverse", repos = "http://cran.us.r-project.org")'
