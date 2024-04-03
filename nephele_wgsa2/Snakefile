@@ -354,14 +354,14 @@ rule samtools_to_bam:
         bam_fixmate=temp(ASM + "{sample}_fixmate.bam"),
         bam_fixmate_sorted=temp(ASM + "{sample}_fixmate_sorted.bam"),
         tmp_markdup=temp(ASM + "{sample}_tmp_markdup.txt"),
-        final_bam=OUT_FILE + ".bam",
+        final_bam=OUT_FILE + ".bam"
     shell:
         "samtools sort {input} -o {output.bam} -@ {threads} -T {params.sort_tmp} && "
         "samtools collate {output.bam} -o {output.bam_colated} -@ {threads} {params.collate_tmp} && "
         "samtools fixmate -m {output.bam_colated} {output.bam_fixmate} -@ {threads} && "
         "samtools sort {output.bam_fixmate} -o {output.bam_fixmate_sorted} -@ {threads} -T {params.sort_tmp} && "
         "samtools markdup -r -s {output.bam_fixmate_sorted} -f {output.tmp_markdup} {output.final_bam} -@ {threads} -T {params.markdup_tmp} && "
-        "samtools index -b {output.final_bam} -@ {threads}  "
+        "samtools index -b {output.final_bam} -@ {threads}"
 
 
 rule add_de_replication_stats:
@@ -629,9 +629,9 @@ if config["mag"]:
         input:
             tax=rules.checkm_qa.output.tax,
             qa_txt=rules.checkm_qa.output.qa_txt,
-            profiles=rules.checkm_profile.output,
+            profiles=rules.checkm_profile.output
         params:
-            sedSTR=r"'s/[^\t]*_assembly: //g'",
+            sedSTR=r"'s/[^\t]*_assembly: //g'"
         output:
             tmp1=temp(MAG_QA + "tmp1.txt"),
             tmp2=temp(MAG_QA + "tmp2.txt"),
@@ -641,8 +641,7 @@ if config["mag"]:
             "cut {input.tax} -f1,5 > {output.tmp1} && "
             "cut {input.qa_txt} -f1,6-11,13,15,17,19,23 > {output.tmp2} && "
             "paste {output.tmp1} {output.tmp2} > {output.tmpsum} && "
-            "join {input.profiles} {output.tmpsum} -t $'\\t' | cut -f 1,3,4,6,7-19 | \
-                sed {params.sedSTR} > {output.summary}"
+            "join {input.profiles} {output.tmpsum} -t $'\\t' | cut -f 1,3,4,6,7-19 | sed {params.sedSTR} > {output.summary}"
 
     rule checkm_plots:
         input:
