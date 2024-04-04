@@ -687,7 +687,7 @@ if config["mag"]:
         params:
             map_file=config["map_file"],
             TAXCOL = "Taxonomy (contained)",
-            PROFCOL = lambda wildcards: "{sample}_assembly: mapped reads".format(sample=wildcards.sample), 
+            PROFCOL = lambda wildcards: "{sample}_assembly: mapped reads".format(sample=wildcards.sample)
         output:
             BIOM_FILE_6C
         message: """rule {rule}
