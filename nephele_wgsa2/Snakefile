@@ -700,7 +700,7 @@ if config["mag"]:
         run:
             make_biom_file(str(rules.checkm_profile.output),
                        str(rules.checkm_qa.output.tax),
-                       samples, ##.keys(),
+                       samples.keys(), ## AA may have to rm .keys() but should be ok
                        params.map_file,
                        str(output), params.TAXCOL, str(params.PROFCOL))
 
