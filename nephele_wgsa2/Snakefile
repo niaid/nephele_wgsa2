@@ -687,7 +687,7 @@ if config["mag"]:
         params:
             map_file=config["map_file"],
             TAXCOL = "Taxonomy (contained)",
-            PROFCOL = lambda wildcards: "{sample}_assembly: mapped reads".format(sample=wildcards.sample)
+            PROFCOL = lambda wildcards: "{sample}_assembly: mapped reads", ##AA
         output:
             BIOM_FILE_6C
         message: """rule {rule}
@@ -700,9 +700,9 @@ if config["mag"]:
         run:
             make_biom_file(str(rules.checkm_profile.output),
                        str(rules.checkm_qa.output.tax),
-                       samples.keys(),
+                       samples.keys(), ## AA may have to rm .keys() but should be ok
                        params.map_file,
-                       str(output), params.TAXCOL, params.PROFCOL)
+                       str(output), params.TAXCOL, str(params.PROFCOL))
 
 # Step 6D                                                                                                                                       ##--> updated code condition <--##
 if config["amrfind"]:
