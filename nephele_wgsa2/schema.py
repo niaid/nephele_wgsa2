@@ -2,28 +2,29 @@ from enum import Enum
 from pathlib import Path
 
 from nephele_pipeline_utils.io import PipelineArguments, PipelinePE
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
-class ClassificationDbType(Enum):
+class ClassificationDbType(str, Enum):
     PLUSPFV = "plusPFV"
     MGBCDB = "MGBCdb"
     EUPATHDB = "EuPATHdb"
 
 
-class AnnotationsType(Enum):
+class AnnotationsType(str, Enum):
     KO = "ko"
     EC = "ec"
 
 
 class PipelineArguments(PipelineArguments):
+    model_config = ConfigDict(use_enum_values=True)
     decontaminate_db_path: Path
     classification_db_name: ClassificationDbType
     classification_db_path: Path
     eggnog_db_path: Path
     annotations_type: AnnotationsType
-    annotations_map_path: Path
-    annotations_hrr_path: Path
+    annotations_map_db_path: Path
+    annotations_hrr_db_path: Path
     krona_tax_db_path: Path
     amrfind: bool = False
     tax_genes: bool = False

@@ -11,7 +11,7 @@ from pathlib import Path
 import sh
 from config import pipeline_config
 from nephele_pipeline_utils.exceptions import NephelePipelineError
-from nephele_pipeline_utils.utils import log
+from nephele_pipeline_utils.utils import get_num_cpus, log
 from psutil import virtual_memory
 from schema import WGSA2Pipeline
 
@@ -35,7 +35,7 @@ def main(args):
         tmp_dir = outputs_dir_path / "tmp"
         log(tmp_dir)
         sh.mkdir("-p", str(tmp_dir))
-        num_cpus = os.cpu_count()
+        num_cpus = get_num_cpus(pipe_args.num_cpus)
         # # for bbmap (avoid heap memory issue)
         mem = virtual_memory()
         mem_gb = int(mem.total / 1024 / 1024 / 1024)
@@ -56,13 +56,13 @@ def main(args):
             f"trim_filter={args.trim_filter} include_ted_files={args.include_ted_files} ted_file_name={pipeline_config.ted_file_name}",
             f"biom_file_name={pipeline_config.biom_file_name}",
             f"decontaminate={args.decontaminate_db_path}",
-            f"classification_db_name={args.classification_db_name.value}",
+            f"classification_db_name={args.classification_db_name}",
             f"classification_db={args.classification_db_path}",
             f"amrfind={args.amrfind}",
             f"eggnog_db={args.eggnog_db_path}",
-            f"annotations_type={args.annotations_type.value}",
-            f"annotations_map={args.annotations_map_path}",
-            f"annotations_hrr={args.annotations_hrr_path}",
+            f"annotations_type={args.annotations_type}",
+            f"annotations_map={args.annotations_map_db_path}",
+            f"annotations_hrr={args.annotations_hrr_db_path}",
             f"tax_genes={args.tax_genes}",
             f"krona_tax_db={args.krona_tax_db_path}",
             f"tax_scaffolds={args.tax_scaffolds}",
@@ -80,26 +80,6 @@ def main(args):
         main_pipeline = " ".join(base_command)
         log(main_pipeline)
         main_pipeline_args = shlex.split(main_pipeline)
-        # # Run and flush stdout while waiting for the process to be finished
-        # process = subprocess.Popen(
-        #     main_pipeline_args,
-        #     stdout=subprocess.PIPE,
-        #     stderr=subprocess.PIPE,
-        #     text=True,
-        #     bufsize=1,
-        #     universal_newlines=True,
-        # )
-        # # Loop to continuously read and flush stdout/stderr
-        # while True:
-        #     # Read a line from stdout
-        #     stdout_line = process.stdout.readline()
-        #     if stdout_line:
-        #         # Print the line and flush the output
-        #         log(stdout_line)
-        #     else:
-        #         break  # No more output from stdout
-        # # Wait for the subprocess to complete
-        # process.wait()
         process = subprocess.run(main_pipeline_args)
 
         if process.returncode == 1:

@@ -45,8 +45,8 @@ The following datafiles are needed to run the pipeline
         "classification_db_path": "/dbs/classification_db/plusPFV_Mar2023",
         "eggnog_db_path": "/dbs/eggnog_data",
         "annotations_type": "ko",
-        "annotations_map_path": "/dbs/minpath_data/KEGG_myfiles_0922/KEGG-ko2map-092022.txt",
-        "annotations_hrr_path": "/dbs/minpath_data/KEGG_myfiles_0922/KEGG-HRCHY-092022.txt",
+        "annotations_map_db_path": "/dbs/minpath_data/KEGG_myfiles_0922/KEGG-ko2map-092022.txt",
+        "annotations_hrr_db_path": "/dbs/minpath_data/KEGG_myfiles_0922/KEGG-HRCHY-092022.txt",
         "krona_tax_db_path": "KronaTools_taxonomy",
         "amrfind": true,
         "tax_genes": true,
@@ -65,8 +65,8 @@ classification_db_name: str {plusPFV | MGBCdb | EuPATHdb}
 classification_db_path: str - path to the taxonomic classification DB that best suits your dataset
 eggnog_db_path: str - path to your eggnog datafile
 annotations_type: str {ko | ec}
-annotations_map_path: str - path to your annotations map file
-annotations_hrr_path: str - path to your annotations hrr file
+annotations_map_db_path: str - path to your annotations map file
+annotations_hrr_db_path: str - path to your annotations hrr file
 krona_tax_db_path: str - path to your krona tax datafile
 amrfind: bool (default=false) - Add Antimicrobial Resistance genes & peptide finding
 tax_genes: bool (default=false) - Add taxonomic annotation to be produced from genes per sample
