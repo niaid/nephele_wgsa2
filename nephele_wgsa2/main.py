@@ -11,7 +11,7 @@ from pathlib import Path
 import sh
 from config import pipeline_config
 from nephele_pipeline_utils.exceptions import NephelePipelineError
-from nephele_pipeline_utils.utils import get_num_cpus, log
+from nephele_pipeline_utils.utils import log
 from psutil import virtual_memory
 from schema import WGSA2Pipeline
 
@@ -35,7 +35,7 @@ def main(args):
         tmp_dir = outputs_dir_path / "tmp"
         log(tmp_dir)
         sh.mkdir("-p", str(tmp_dir))
-        num_cpus = get_num_cpus(pipe_args.num_cpus)
+        num_cpus = os.cpu_count()
         # # for bbmap (avoid heap memory issue)
         mem = virtual_memory()
         mem_gb = int(mem.total / 1024 / 1024 / 1024)
