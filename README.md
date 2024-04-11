@@ -47,7 +47,7 @@ The following datafiles are needed to run the pipeline
         "annotations_type": "ko",
         "annotations_map_db_path": "/dbs/minpath_data/KEGG_myfiles_0922/KEGG-ko2map-092022.txt",
         "annotations_hrr_db_path": "/dbs/minpath_data/KEGG_myfiles_0922/KEGG-HRCHY-092022.txt",
-        "krona_tax_db_path": "KronaTools_taxonomy",
+        "krona_tax_db_path": "/dbs/KronaTools_taxonomy",
         "amrfind": true,
         "tax_genes": true,
         "tax_scaffolds": true,

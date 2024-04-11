@@ -29,11 +29,12 @@ def get_samples(samples):
 def main(args):
     try:
         exit_status = 0
+        report_outputs = False
         pipeline = WGSA2Pipeline.from_json(args.json_file_path)
         args = pipeline.pipeline_arguments
         outputs_dir_path = args.outputs_dir_path
+        report_outputs = True
         tmp_dir = outputs_dir_path / "tmp"
-        log(tmp_dir)
         sh.mkdir("-p", str(tmp_dir))
         num_cpus = os.cpu_count()
         # # for bbmap (avoid heap memory issue)
@@ -93,13 +94,28 @@ def main(args):
         error_msg = f"Pipeline Error:\n{traceback.format_exc()}"
         # explicitly writing to stderr
         print(error_msg, file=sys.stderr, flush=True)
-    else:
-        log("Pipeline completed")
     finally:
-        # Copy output details into main/root output folder
-        shutil.copy2(pipeline_config.output_details_file_name, outputs_dir_path)
-        sh.rm("-rf", tmp_dir)
-        exit(exit_status)
+        try:
+            # Copy output details into main/root output folder
+            shutil.copy2(pipeline_config.output_details_file_name, outputs_dir_path)
+            sh.rm("-rf", tmp_dir)
+        except Exception:
+            log(f"Warning: {traceback.format_exc()}")
+
+    # Report outputs
+    if report_outputs:
+        try:
+            pipeline.report_outputs(
+                Path(pipeline_config.outputs_template_file_name),
+                outputs_dir_path / pipeline_config.outputs_report_file_name,
+            )
+        except Exception:
+            log(f"Warning: error reporting outputs:\n {traceback.format_exc()}")
+
+    if exit_status == 0:
+        log("Pipeline completed")
+
+    exit(exit_status)
 
 
 if __name__ == "__main__":
