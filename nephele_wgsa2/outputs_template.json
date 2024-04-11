@@ -1,5 +1,11 @@
 [
     {
+        "type": "BIOM",
+        "path": "for_analyze_with_microbiomedb.biom",
+        "title": "BIOM file",
+        "description": "BIOM file that can be used at the MicrobiomeDB platform for further analysis."
+    },
+    {
         "type": "IMAGE",
         "path": "TAXprofiles/readsTAX_*/DivPlots/TAX_BetaDiv_PCoA.png",
         "title": " TAX PCoA plot",
