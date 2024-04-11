@@ -151,7 +151,7 @@ def handle_cp_biom():
 def for_discoVIR():
     asm_bam=" ".join(expand(ASM + "*.bam", sample=samples))
     asm_fas=" ".join(expand(ASM + "*.fasta", sample=samples))
-    discoVIR="asmb_finals/"
+    discoVIR="asmb_files/"
    
     command = f"""
     set +o pipefail
