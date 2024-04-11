@@ -146,3 +146,26 @@ def handle_cp_biom():
     elif len(tax_single_biom) == 1 and os.path.exists(tax_single_biom[0]):
         cmd = f"cp {tax_single_biom[0]} {BIOM_FILE_MICROBIOMEDB}"
     return cmd
+
+
+def for_discoVIR():
+    asm_bam=" ".join(expand(ASM + "*.bam", sample=samples))
+    asm_fas=" ".join(expand(ASM + "*.fasta", sample=samples))
+    discoVIR="asmb_finals/"
+   
+    command = f"""
+    set +o pipefail
+    echo "moving FASTA & BAM files from each assembly & creating links..."
+
+    mkdir -p {discoVIR}
+    mv {asm_bam} {discoVIR}
+    mv {asm_fas} {discoVIR}
+
+    list=$(ls -1 {discoVIR}/*.bam |xargs basename -a -s _assembly.bam)
+    
+    for i in ${{list}}; do
+        ln -rs {discoVIR}/${{i}}_assembly.bam {ASM}/${{i}}_asmb/${{i}}_assembly.bam
+        ln -rs {discoVIR}/${{i}}_assembly.fasta {ASM}/${{i}}_asmb/${{i}}_assembly.fasta
+    done
+    """
+    return command
