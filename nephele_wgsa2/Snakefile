@@ -58,6 +58,7 @@ BIOM_FILE_6C=TAXBIN + "MAG-based_Counts+TAX.biom"
 PWYBIOM = PWYDIR + "bioms/"
 TAXBIOM = TED_READS_TAX + "bioms/"
 TED_READS_TAX_KLOGS = TED_READS_TAX + "klogs/"
+DISCOVIR = config["output_dir"] + "/asmb_files/"
 
 # samples = read_mapping_file()
 samples = config["samples"]
@@ -1095,7 +1096,7 @@ if len(samples) > 1:
  
 
 onsuccess:
-    shell(clean_output() + handle_TED() + handle_cp_biom() + for_discoVIR() )
+    shell(clean_output() + handle_TED() + handle_cp_biom() + for_discovir())
 
 onerror:
-    shell(clean_output() + handle_TED() + handle_cp_biom + for_discoVIR() )
+    shell(clean_output() + handle_TED() + handle_cp_biom() + for_discovir())

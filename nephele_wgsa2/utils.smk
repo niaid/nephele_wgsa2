@@ -148,24 +148,23 @@ def handle_cp_biom():
     return cmd
 
 
-def for_discoVIR():
+def for_discovir():
     asm_bam=" ".join(expand(ASM + "*.bam", sample=samples))
     asm_fas=" ".join(expand(ASM + "*.fasta", sample=samples))
-    discoVIR="asmb_files/"
    
     command = f"""
     set +o pipefail
     echo "moving FASTA & BAM files from each assembly & creating links..."
 
-    mkdir -p {discoVIR}
-    mv {asm_bam} {discoVIR}
-    mv {asm_fas} {discoVIR}
+    mkdir -p {DISCOVIR}
+    mv {asm_bam} {DISCOVIR}
+    mv {asm_fas} {DISCOVIR}
 
-    list=$(ls -1 {discoVIR}/*.bam |xargs basename -a -s _assembly.bam)
+    list=$(ls -1 {DISCOVIR}/*.bam |xargs basename -a -s _assembly.bam)
     
     for i in ${{list}}; do
-        ln -rs {discoVIR}/${{i}}_assembly.bam {ASM}/${{i}}_asmb/${{i}}_assembly.bam
-        ln -rs {discoVIR}/${{i}}_assembly.fasta {ASM}/${{i}}_asmb/${{i}}_assembly.fasta
+        ln -rs {DISCOVIR}/${{i}}_assembly.bam {ASM}/${{i}}_asmb/${{i}}_assembly.bam
+        ln -rs {DISCOVIR}/${{i}}_assembly.fasta {ASM}/${{i}}_asmb/${{i}}_assembly.fasta
     done
     """
     return command
