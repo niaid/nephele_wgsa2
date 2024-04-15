@@ -148,7 +148,7 @@ def handle_cp_biom():
     return cmd
 
 
-def for_discoVIR():
+def for_discovir():
     asm_bam=" ".join(expand(ASM + "*.bam", sample=samples))
     asm_fas=" ".join(expand(ASM + "*.fasta", sample=samples))
     discoVIR= config["output_dir"] + "/asmb_files/"
