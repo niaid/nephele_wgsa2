@@ -163,8 +163,8 @@ def for_discovir():
     list=$(ls -1 {DISCOVIR}/*.bam |xargs basename -a -s _assembly.bam)
     
     for i in ${{list}}; do
-        ln -rs {DISCOVIR}/${{i}}_assembly.bam {ASM}/${{i}}_asmb/${{i}}_assembly.bam
-        ln -rs {DISCOVIR}/${{i}}_assembly.fasta {ASM}/${{i}}_asmb/${{i}}_assembly.fasta
+        ln -rs {DISCOVIR}/${{i}}_assembly.bam asmbMetaSpades/${{i}}_asmb/${{i}}_assembly.bam
+        ln -rs {DISCOVIR}/${{i}}_assembly.fasta asmbMetaSpades/${{i}}_asmb/${{i}}_assembly.fasta
     done
     """
     return command
