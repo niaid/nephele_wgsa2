@@ -169,3 +169,4 @@ def for_discoVIR():
         ln -rs {discoVIR}/${{i}}_assembly.fasta {asmbDIR}/${{i}}_asmb/${{i}}_assembly.fasta
     done
     """
+    return command
