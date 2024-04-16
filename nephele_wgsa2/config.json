@@ -1,6 +1,6 @@
 {
     "name": "WGSA2",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "mapping_file_name": "mapping_file.txt",
     "output_details_file_name": "WGSA2_output_details_Apr_2024.pdf",
     "ted_file_name": "TED.tar",
