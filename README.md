@@ -52,7 +52,7 @@ The following datafiles are needed to run the pipeline
         "tax_genes": true,
         "tax_scaffolds": true,
         "mag": true,
-        "include_ted_files": true,
+        "include_ted_files": true
     }
 }
 ```
