@@ -1096,7 +1096,7 @@ if len(samples) > 1:
  
 
 onsuccess:
-    shell(clean_output() + handle_TED() + handle_cp_biom() + for_discovir())
+    shell(clean_output() + handle_TED() + handle_cp_biom() )
 
 onerror:
-    shell(clean_output() + handle_TED() + handle_cp_biom() + for_discovir())
+    shell(clean_output() + handle_TED() + handle_cp_biom() )
