@@ -149,14 +149,14 @@ def handle_cp_biom():
 
 
 def for_discovir():
-    asm_bam=" ".join(expand(ASM + "*.bam", sample=samples))
-    asm_fas=" ".join(expand(ASM + "*.fasta", sample=samples))
+    asm_bam=" ".join(expand(OUT_FILE + ".bam", sample=samples))
+    asm_fas=" ".join(expand(OUT_FILE + ".fasta", sample=samples))
     discoVIR= config["output_dir"] + "/asmb_files/"
     asmbDIR = config["output_dir"] + "/asmbMetaSpades/"
 
     command = f"""
-    set +o pipefail
-    echo "moving FASTA & BAM files from each assembly & creating links..."
+    ### set +o pipefail
+    echo "----> moving FASTA & BAM files from assembly to {discoVIR}..."
 
     mkdir -p {discoVIR}
     mv {asm_bam} {discoVIR}
