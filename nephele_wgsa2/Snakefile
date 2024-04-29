@@ -1094,9 +1094,11 @@ if len(samples) > 1:
             touch {output.done}
             """
  
-
+import subprocess
 onsuccess:
-    shell(clean_output() + handle_TED() + handle_cp_biom() )
+    shell(clean_output() + handle_TED() + handle_cp_biom() ) 
+    subprocess.run(for_discovir(), shell = True ) ## updates AA Apr 2024
 
 onerror:
-    shell(clean_output() + handle_TED() + handle_cp_biom() )
+    shell(clean_output() + handle_TED() + handle_cp_biom())
+    subprocess.run(for_discovir(), shell = True ) ## updates AA Apr 2024
