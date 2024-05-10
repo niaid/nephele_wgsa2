@@ -46,7 +46,7 @@ path$outdir= paste0(args$outdir); dir.create(path$outdir);
 # #importing metadata objects
 print("-----------> reading in mapping file:")
 tables=NA
-tables$meta <- read.table(paste0(args$mfile), header = T, sep="\t", quote = ""); #, row.names = NULL
+tables$meta <- read.table(paste0(args$mfile), header = T, sep="\t", quote = "", check.names=F); #, row.names = NULL
 # print(head(tables$meta))
 row.names(tables$meta) = tables$meta$SampleID # tables$meta=tables$meta %>% relocate(SampleID)
 tables$meta=tables$meta[order(tables$meta$SampleID), ]
@@ -56,7 +56,7 @@ tables$meta; print("-----------> done importing mapping file^^^")
 #https://madsalbertsen.github.io/ampvis2/articles/ampvis2.html
 print("-----------> prepping AMPVIS2 object")
 #tables$amp=cbind(tables$counts, tables$tax) # or 
-tables$amp=read.table(paste0(path$tables, "/merged_Counts+PWY.txt"),  header = T, row.names = 1, sep = "\t", quote = "" )
+tables$amp=read.table(paste0(path$tables, "/merged_Counts+PWY.txt"),  header = T, row.names = 1, sep = "\t", quote = "", check.names=F )
 tables$amp = tables$amp %>% dplyr::rename(Species = Tier3, Order = Tier2, Phylum = Tier1) %>%
   dplyr::select(-c(starts_with("Tier") ) ) #bc AWS::ampvis2.7.17 makes issue with the extra columns from metaCyc DB
 head(tables$amp)
