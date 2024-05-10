@@ -44,13 +44,13 @@ path$outdir=paste0(args$outdir); dir.create(path$outdir);
 # #------------------------------- alpha and beta diversity -------------------------------------
 # #importing counts, meta and tax objects
 tables=NA
-tables$meta <- read.table(paste0(args$mfile), header = T, sep="\t", quote = "");
+tables$meta <- read.table(paste0(args$mfile), header = T, sep="\t", quote = "", colClasses = "character");
 row.names(tables$meta)= tables$meta$SampleID # tables$meta=tables$meta %>% relocate(SampleID)
 tables$meta=tables$meta[order(tables$meta$SampleID), ]
 tables$meta; print("-----------> read in mapping file^^^")
-tables$counts <- read.table(paste0(path$tables,"/merged_Counts.txt"), header = T, row.names = 1, sep="\t") 
+tables$counts <- read.table(paste0(path$tables,"/merged_Counts.txt"), header = T, row.names = 1, sep="\t", check.names=F) 
 head(tables$counts); print("-----------> read in Counts file^^^")
-tables$tax <- read.table(paste0(path$tables,"/merged_TAX.txt"), header = T, row.names = 1, sep = "\t", quote = "")
+tables$tax <- read.table(paste0(path$tables,"/merged_TAX.txt"), header = T, row.names = 1, sep = "\t", quote = "", check.names=F)
 head(tables$tax); print("-----------> read in TAX file^^^")
 
 print("-----------> Calculating alpha diversity indexes")
@@ -98,11 +98,11 @@ sst=NULL;
 #https://madsalbertsen.github.io/ampvis2/articles/ampvis2.html
 print("-----------> prepping AMPVIS2 object")
 #tables$amp=cbind(tables$counts, tables$tax)# or 
-tables$amp=read.table(paste0(path$tables, "/merged_Counts+TAX.txt"),  header = T, row.names = 1, sep = "\t", quote = "" )
+tables$amp=read.table(paste0(path$tables, "/merged_Counts+TAX.txt"),  header = T, row.names = 1, sep = "\t", quote = "",  check.names = F )
 amp=amp_load(tables$amp, tables$meta)
 print("-----------> checking some AMPVIS2 data")
-amp$abund[1:4, 1:3]; amp$tax[1:4, ]
-amp$metadata[1:3,1:3]
+head(amp$abund); amp$tax[1:4, ]
+head(amp$metadata)
 print("-----------> checking AMPVIS2 data ^^^")
 
 print("-----------> making PCOA plot")
