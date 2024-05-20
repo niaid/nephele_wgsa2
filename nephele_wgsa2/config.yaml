@@ -1,5 +1,4 @@
-# minpath_script: /usr/local/src/MinPath/MinPath.py
-minpath_script: /usr/local/src/MinPath/MinPath_prni.py
+minpath_script: /usr/local/src/MinPath/MinPath.py ## Duc chaned it to Poorani's mps-enabled version
 kreport2krona_script: /pipeline/utils/report2krona_wTAXid_last.py
 gff2gtf_script: /pipeline/utils/gff2gtf.sh
 genes2krona_script: /pipeline/utils/genes2KronaTable.py
