@@ -855,14 +855,16 @@ rule run_min_path:
     params:
         minpath_script=config["minpath_script"],
         annotations_map=config["annotations_map"],
-        minpath_log=PATHWAYS_PREFIX + ".minpath.log.txt"
+        minpath_log=PATHWAYS_PREFIX + ".minpath.log.txt",
+        mps_file=PATHWAYS_PREFIX + ".mps",
     output:
         tmp_report=temp(PATHWAYS + "tmp_report.txt"),
         details=PATHWAYS_PREFIX + ".details.txt"
     shell:
         """
         if [ -s {input} ]; then
-            python3 {params.minpath_script} -any {input} -map {params.annotations_map} -report {output.tmp_report} -details {output.details} >> {params.minpath_log}
+            python3 {params.minpath_script} -any {input} -map {params.annotations_map} -mps {params.mps_file} \
+                -report {output.tmp_report} -details {output.details} >> {params.minpath_log}
         else
             echo "The input file {input} is empty, so run_min_path will not run. All output file(s) from this step are empty."
             touch {output.tmp_report} {output.details} {params.minpath_log}
