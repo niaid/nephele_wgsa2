@@ -125,7 +125,7 @@ nmds_bray <- amp_ordinate(amp, filter_species = 0.01, type = "NMDS",  sample_lab
                           detailed_output = TRUE, transform = "none", sample_shape_by = "TreatmentGroup")
 nmds_bray$plot=nmds_bray$plot + guides(color = guide_legend(ncol = 3), shape = guide_legend(ncol = 2)) +
     theme(legend.position = "right") + ggtitle(title) + scale_shape_manual(values=c(17, 15,13,18, 4,5,6,7,8) )
-pdf(paste0(path$outdir, "/TAX_BetaDiv_nMDS.pdf"), width=12, height=10); plot(nmds_bray$plot); dev.off()
+pdf(paste0(path$outdir, "/TAX_BetaDiv_nMDS.pdf"), width=14, height=10); plot(nmds_bray$plot); dev.off()
 })
 
 print("-----------> making heatmap profile graph")
