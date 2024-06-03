@@ -83,13 +83,13 @@ sst$melt$group1=factor(sst$melt$group1)
 print("-----------> plotting alpha diversity")
 try({
 p1=ggplot(sst$melt, aes(group1, value)) +
-  geom_boxplot(aes(x=group1, y=as.numeric(as.character(value), stat="identity",
+  geom_boxplot(aes(x=group2, y=as.numeric(as.character(value), stat="identity",
                                           position="dodge"), fill=group2)) + theme_bw() +
-  facet_wrap(~variable, scales="free") + labs(y="Alpha Diversity Measures", x="SampleID", fill="TreatmentGroup") +
+  facet_wrap(~variable, scales="free") + labs(y="Alpha Diversity Measures", x="TreatmentGroup") +
   theme(text=element_text(size=16), axis.text.x = element_text(angle=45, hjust=1, size=10),
-        legend.position = "right", legend.title=element_text(size=12),
+        legend.position = "none", legend.title=element_text(size=12),
         legend.text=element_text(size=12))
-pdf(paste0(path$outdir , "/TAX_AlphaDiv", ".pdf"), width=12 ) ; print(p1); dev.off()
+pdf(paste0(path$outdir , "/TAX_AlphaDiv", ".pdf"), width=8 ) ; print(p1); dev.off()
 })
 sst=NULL;
 
