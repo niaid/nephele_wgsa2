@@ -138,19 +138,16 @@ pdf(paste0(path$outdir, "/TAX_Profile_Heatmap.pdf"), width=14, height = 10); plo
 
 print("-----------> making rarecurve graph")
 try({
-  tryCatch({
-    amp2=amp_subset_samples(amp, minreads = 1000, rarefy=1000000) ## higher rarefication limit: 1M
+    ## sample filtering: seqDepth min threashhold = first non-zero seqDepth sample
+    ## seqDep filtering: seqDepth max threashold = 0.75% of the richest sample
+    ## this is done for prettier plots
+  minqtl=min(unlist(lapply( colSums(amp$abund), \(x) x[x!=0] ))) ## samp seqDepth low thrhld=non-zero 
+  maxqtl=quantile(unlist(lapply( colSums(amp$abund), \(x) x[x!=0] )), 0.75) ## samp seqDepth high threshold
+    
+    amp2=amp_subset_samples(amp, minreads = minqtl, rarefy=maxqtl) ## curve extends to 0.75*max(seqDepth)
     rrc=amp_rarecurve(amp2, color_by = "SampleID", stepsize = 1000)
     pdf(paste0(path$outdir, "/TAX_RareficaitonCurve.pdf"), width=12, height=10); plot(rrc); dev.off()
-    }, error = {
-    amp2=amp_subset_samples(amp, minreads = 1000, rarefy=500000) ## lower rarefication limit: 500K
-    rrc=amp_rarecurve(amp2, color_by = "SampleID", stepsize = 1000)
-    pdf(paste0(path$outdir, "/TAX_RareficaitonCurve.pdf"), width=12, height=10); plot(rrc); dev.off()
-    })
-}) # if samples dont qualify for rarecurves even at 500K reads, then no rerecurve will be made but script should not hault
- 
-# test=amp_subset_samples(amp, minreads = 1000, rarefy=500000)
- # rm(test)
+}) 
 
 print("-----------> making rank abundance / Whittaker plot")
 try({
