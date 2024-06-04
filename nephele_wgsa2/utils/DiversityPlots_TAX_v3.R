@@ -83,13 +83,13 @@ sst$melt$group1=factor(sst$melt$group1)
 print("-----------> plotting alpha diversity")
 try({
 p1=ggplot(sst$melt, aes(group1, value)) +
-  geom_boxplot(aes(x=group1, y=as.numeric(as.character(value), stat="identity",
+  geom_boxplot(aes(x=group2, y=as.numeric(as.character(value), stat="identity",
                                           position="dodge"), fill=group2)) + theme_bw() +
-  facet_wrap(~variable, scales="free") + labs(y="Alpha Diversity Measures", x="SampleID", fill="TreatmentGroup") +
+  facet_wrap(~variable, scales="free") + labs(y="Alpha Diversity Measures", x="TreatmentGroup") +
   theme(text=element_text(size=16), axis.text.x = element_text(angle=45, hjust=1, size=10),
-        legend.position = "right", legend.title=element_text(size=12),
+        legend.position = "none", legend.title=element_text(size=12),
         legend.text=element_text(size=12))
-pdf(paste0(path$outdir , "/TAX_AlphaDiv", ".pdf"), width=12 ) ; print(p1); dev.off()
+pdf(paste0(path$outdir , "/TAX_AlphaDiv", ".pdf"), width=8 ) ; print(p1); dev.off()
 })
 sst=NULL;
 
@@ -111,9 +111,10 @@ try({
 pcoa_bray <- amp_ordinate(amp, filter_species = 0.01, type = "PCoA", sample_label_by = "SampleID", sample_label_size = 3,
                           distmeasure = "bray", sample_color_by = "SampleID", sample_point_size = 4, opacity=1.5,
                           detailed_output = TRUE, transform = "none", sample_shape_by = "TreatmentGroup")
-#pcoa_bray$plot= pcoa_bray$plot + scale_shape_manual(values=c(17, 15,13,18, 4,5,6,7,8) ) + labs(title=title)
-pdf(paste0(path$outdir, "/TAX_BetaDiv_PCoA.pdf"), width=12, height=10); print(pcoa_bray$plot); dev.off()
-png(paste0(path$outdir, "/TAX_BetaDiv_PCoA.png"), width=760, height=640); print(pcoa_bray$plot); dev.off()
+ pcoa_bray$plot= pcoa_bray$plot + guides(color = guide_legend(ncol = 3), shape = guide_legend(ncol = 2)) +
+    theme(legend.position = "right") + ggtitle(title) + scale_shape_manual(values=c(17, 15,13,18, 4,5,6,7,8) )
+  pdf(paste0(path$outdir, "/TAX_BetaDiv_PCoA.pdf"), width=14, height=10); plot(pcoa_bray$plot); dev.off()
+  png(paste0(path$outdir, "/TAX_BetaDiv_PCoA.png"), width=780, height=640); plot(pcoa_bray$plot); dev.off()
 })
 
 print("-----------> making nMDS plot")
@@ -122,8 +123,9 @@ try({
 nmds_bray <- amp_ordinate(amp, filter_species = 0.01, type = "NMDS",  sample_label_by = "SampleID", sample_label_size = 3,
                           distmeasure = "bray", sample_color_by = "SampleID", sample_point_size = 4, opacity = 1.5,
                           detailed_output = TRUE, transform = "none", sample_shape_by = "TreatmentGroup")
-#nmds_bray$plot=nmds_bray$plot + scale_shape_manual(values=c(17, 15,13,18, 4,5,6,7,8))  + labs(title=title)
-pdf(paste0(path$outdir, "/TAX_BetaDiv_nMDS.pdf"), width=12, height=10); plot(nmds_bray$plot); dev.off()
+nmds_bray$plot=nmds_bray$plot + guides(color = guide_legend(ncol = 3), shape = guide_legend(ncol = 2)) +
+    theme(legend.position = "right") + ggtitle(title) + scale_shape_manual(values=c(17, 15,13,18, 4,5,6,7,8) )
+pdf(paste0(path$outdir, "/TAX_BetaDiv_nMDS.pdf"), width=14, height=10); plot(nmds_bray$plot); dev.off()
 })
 
 print("-----------> making heatmap profile graph")
@@ -138,19 +140,16 @@ pdf(paste0(path$outdir, "/TAX_Profile_Heatmap.pdf"), width=14, height = 10); plo
 
 print("-----------> making rarecurve graph")
 try({
-  tryCatch({
-    amp2=amp_subset_samples(amp, minreads = 1000, rarefy=1000000) ## higher rarefication limit: 1M
+    ## sample filtering: seqDepth min threashhold = first non-zero seqDepth sample
+    ## seqDep filtering: seqDepth max threashold = 0.75% of the richest sample
+    ## this is done for prettier plots
+  minqtl=min(unlist(lapply( colSums(amp$abund), \(x) x[x!=0] ))) ## samp seqDepth low thrhld=non-zero 
+  maxqtl=quantile(unlist(lapply( colSums(amp$abund), \(x) x[x!=0] )), 0.75) ## samp seqDepth high threshold
+    
+    amp2=amp_subset_samples(amp, minreads = minqtl, rarefy=maxqtl) ## curve extends to 0.75*max(seqDepth)
     rrc=amp_rarecurve(amp2, color_by = "SampleID", stepsize = 1000)
     pdf(paste0(path$outdir, "/TAX_RareficaitonCurve.pdf"), width=12, height=10); plot(rrc); dev.off()
-    }, error = {
-    amp2=amp_subset_samples(amp, minreads = 1000, rarefy=500000) ## lower rarefication limit: 500K
-    rrc=amp_rarecurve(amp2, color_by = "SampleID", stepsize = 1000)
-    pdf(paste0(path$outdir, "/TAX_RareficaitonCurve.pdf"), width=12, height=10); plot(rrc); dev.off()
-    })
-}) # if samples dont qualify for rarecurves even at 500K reads, then no rerecurve will be made but script should not hault
- 
-# test=amp_subset_samples(amp, minreads = 1000, rarefy=500000)
- # rm(test)
+}) 
 
 print("-----------> making rank abundance / Whittaker plot")
 try({
