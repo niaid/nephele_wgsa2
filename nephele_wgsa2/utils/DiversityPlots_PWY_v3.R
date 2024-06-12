@@ -46,7 +46,7 @@ path$outdir= paste0(args$outdir); dir.create(path$outdir);
 # #importing metadata objects
 print("-----------> reading in mapping file:")
 tables=NA
-tables$meta <- read.table(paste0(args$mfile), header = T, sep="\t", quote = ""); #, row.names = NULL
+tables$meta <- read.table(paste0(args$mfile), header = T, sep="\t", quote = "", check.names=F); #, row.names = NULL
 # print(head(tables$meta))
 row.names(tables$meta) = tables$meta$SampleID # tables$meta=tables$meta %>% relocate(SampleID)
 tables$meta=tables$meta[order(tables$meta$SampleID), ]
@@ -56,7 +56,7 @@ tables$meta; print("-----------> done importing mapping file^^^")
 #https://madsalbertsen.github.io/ampvis2/articles/ampvis2.html
 print("-----------> prepping AMPVIS2 object")
 #tables$amp=cbind(tables$counts, tables$tax) # or 
-tables$amp=read.table(paste0(path$tables, "/merged_Counts+PWY.txt"),  header = T, row.names = 1, sep = "\t", quote = "" )
+tables$amp=read.table(paste0(path$tables, "/merged_Counts+PWY.txt"),  header = T, row.names = 1, sep = "\t", quote = "", check.names=F )
 tables$amp = tables$amp %>% dplyr::rename(Species = Tier3, Order = Tier2, Phylum = Tier1) %>%
   dplyr::select(-c(starts_with("Tier") ) ) #bc AWS::ampvis2.7.17 makes issue with the extra columns from metaCyc DB
 head(tables$amp)
@@ -80,8 +80,9 @@ try({
 pcoa_bray <- amp_ordinate(amp, filter_species = 0.01, type = "PCOA", sample_label_by = "SampleID", sample_label_size = 3,
                           distmeasure = "bray", sample_color_by = "SampleID", sample_point_size = 4, opacity=1.5,
                           detailed_output = TRUE, transform = "none", sample_shape_by = "TreatmentGroup")
-#pcoa_bray$plot= pcoa_bray$plot + scale_shape_manual(values=c(17, 15,13,18, 4,5,6,7,8) ) + labs(title=title)
-pdf(paste0(path$outdir, "/PWY_BetaDiv_PCoA.pdf"), width=12, height=10); plot(pcoa_bray$plot); dev.off()
+pcoa_bray$plot= pcoa_bray$plot + guides(color = guide_legend(ncol = 3), shape = guide_legend(ncol = 2)) +
+    theme(legend.position = "right") + ggtitle(title) + scale_shape_manual(values=c(17, 15,13,18, 4,5,6,7,8) )
+pdf(paste0(path$outdir, "/PWY_BetaDiv_PCoA.pdf"), width=14, height=10); plot(pcoa_bray$plot); dev.off()
 png(paste0(path$outdir, "/PWY_BetaDiv_PCoA.png"), width=760, height=640); plot(pcoa_bray$plot); dev.off()
 })
 
@@ -91,18 +92,20 @@ try({
 nmds_bray <- amp_ordinate(amp, filter_species = 0.01, type = "NMDS", sample_label_by = "SampleID", sample_label_size = 3,
                           distmeasure = "bray", sample_color_by = "SampleID", sample_point_size = 4, opacity = 1.5,
                           detailed_output = TRUE, transform = "none", sample_shape_by = "TreatmentGroup")
-#nmds_bray$plot=nmds_bray$plot + scale_shape_manual(values=c(17, 15,13,18, 4,5,6,7,8)) + labs(title=title)
-pdf(paste0(path$outdir, "/PWY_BetaDiv_nMDS.pdf"), width=12, height=10); plot(nmds_bray$plot); dev.off()
+nmds_bray$plot= nmds_bray$plot + guides(color = guide_legend(ncol = 3), shape = guide_legend(ncol = 2)) +
+    theme(legend.position = "right") + ggtitle(title) + scale_shape_manual(values=c(17, 15,13,18, 4,5,6,7,8) )
+pdf(paste0(path$outdir, "/PWY_BetaDiv_nMDS.pdf"), width=10, height=10); plot(nmds_bray$plot); dev.off()
 })
 
 print("-----------> making heatmap profile graph")
 try({
+  width= 12 + 2/11*(length(colnames(amp$abund)))
 amp_htmp=amp_heatmap(amp, group_by = "SampleID", facet_by = "TreatmentGroup",
                      tax_aggregate = "Species", tax_show=35, plot_values = T,  normalise=T,
                      plot_values_size = 3, showRemainingTaxa = F,  tax_add = "Class") + 
   theme(axis.text.x = element_text(angle = 45, size=10, vjust = 1),
         axis.text.y = element_text(size=8), legend.position="right")
-pdf(paste0(path$outdir, "/PWY_Profile_Heatmap_top35PWYs.pdf"), width=14, height = 10); plot(amp_htmp); dev.off()
+pdf(paste0(path$outdir, "/PWY_Profile_Heatmap_top35PWYs.pdf"), width=width, height = 10); plot(amp_htmp); dev.off()
 })
 
 

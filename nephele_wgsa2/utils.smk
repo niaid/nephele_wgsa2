@@ -43,6 +43,7 @@ def run_fastp_cmd():
     trim_filter = f"--average_qual {average_qual} --length_required {length_required} --cut_front --cut_front_mean_quality {cut_front_mean_quality} --cut_tail  --cut_tail_mean_quality {cut_tail_mean_quality}"
     return base_cmd + " " + trim_filter + " 2>> {output.s_l_text}"           ##--> added + "2>> {output.s_l_text}" for log capture. Might need to be in params <--##
 
+
 def make_biom_file(profiles, taxfiles, samples, map_file, biom_file_name, tax_col, prof_col):
     """
     Make biom file from checkm profile and checkm tree_qa taxonomy across
@@ -60,7 +61,7 @@ def make_biom_file(profiles, taxfiles, samples, map_file, biom_file_name, tax_co
     Returns:
         nothing, but produces biom file named *biom_file_name*.
     """
-    def merge_single_profile_tax(profile, taxfile, sample, tax_col=tax_col, prof_col=prof_col):
+    def merge_single_profile_tax(profile, taxfile, sample, prof_col, tax_col=tax_col):
         """
         Merge profile.txt and bin_TAX.txt file for single sample, and sum ``prof_col`` by ``tax_col``.
         Returns `pandas.DataFrame` with only 2 columns with tax_col column name replaced
@@ -75,8 +76,8 @@ def make_biom_file(profiles, taxfiles, samples, map_file, biom_file_name, tax_co
         tab.rename(columns={prof_col : sample}, inplace=True)
         return(tab)
 
-    ## merge tables over all samples; format string to ensure files match
-    tablist = [merge_single_profile_tax(profiles.format(sample=s), taxfiles.format(sample=s), s) for s in samples]
+    ## merge tables over all samples; format string to ensure files match ANGELINA note I added prof_col.format here 
+    tablist = [merge_single_profile_tax(profiles.format(sample=s), taxfiles.format(sample=s), s, prof_col.format(sample=s)) for s in samples]
     if len(samples) > 1:
         mergedtable = reduce(lambda l,r: pd.merge(l,r, how="outer", on=tax_col), tablist)
     else:
@@ -95,7 +96,8 @@ def make_biom_file(profiles, taxfiles, samples, map_file, biom_file_name, tax_co
     ## read in mapping file
     sample_met = biom.parse.MetadataMap.from_file(map_file)
     biomtab.add_metadata(sample_met, axis='sample')
-    write_biom_table(biomtab, fmt="hdf5", filepath=biom_file_name)
+    write_biom_table(biomtab, fmt="json", filepath=biom_file_name) ###"hdf5"
+
 
 def clean_output():
     # asm_bam=" ".join(expand(ASM + "*.bam", sample=samples))
@@ -144,3 +146,28 @@ def handle_cp_biom():
     elif len(tax_single_biom) == 1 and os.path.exists(tax_single_biom[0]):
         cmd = f"cp {tax_single_biom[0]} {BIOM_FILE_MICROBIOMEDB}"
     return cmd
+
+
+def for_discovir():
+    asm_bam=" ".join(expand(OUT_FILE + ".bam"  , sample=samples))
+    asm_fas=" ".join(expand(OUT_FILE + ".fasta", sample=samples))
+    discoVIR= config["output_dir"] + "/asmb_files/"
+    asmbDIR = config["output_dir"] + "/asmbMetaSpades/"
+
+    command = f"""
+
+    echo "---> moving FASTA & BAM files from assembly to {discoVIR} "
+
+    mkdir -p {discoVIR}
+    mv {asm_bam} {discoVIR}
+    mv {asm_fas} {discoVIR}
+
+    list=$(ls -1 {discoVIR}/*.bam |xargs basename -a -s _assembly.bam)
+
+    for i in ${{list}}; do
+    echo "---> links to create ${{i}}"
+        ln -rs {discoVIR}/${{i}}_assembly.bam   {asmbDIR}/${{i}}_asmb/${{i}}_assembly.bam
+        ln -rs {discoVIR}/${{i}}_assembly.fasta {asmbDIR}/${{i}}_asmb/${{i}}_assembly.fasta
+    done
+    """
+    return command

@@ -1,7 +1,4 @@
 FROM condaforge/mambaforge:23.3.1-1
-ARG AWS_ACCESS_KEY_ID
-ARG AWS_SECRET_ACCESS_KEY
-ARG AWS_SESSION_TOKEN
 
 RUN apt update && apt upgrade -y
 RUN apt install -y unzip pigz
@@ -18,24 +15,18 @@ RUN wget https://github.com/doandm/MinPath/archive/refs/heads/master.zip \
     && mv MinPath-master /usr/local/src/MinPath
 
 # Install R packages
-RUN Rscript -e 'install.packages(c("broom", "tibble", "docopt", "reshape2", "data.table", "biomformat", "fossil", "ggplot2", "vegan", "remotes", "BiocManager", "foreach"), repos = "http://cran.us.r-project.org")'
-RUN Rscript -e 'BiocManager::install("biomformat")'
-RUN Rscript -e 'remotes::install_github("MadsAlbertsen/ampvis2")'
-RUN Rscript -e 'BiocManager::install("S4Vectors")'
-RUN Rscript -e 'install.packages("easypackages", repos = "http://cran.us.r-project.org")'
-RUN Rscript -e 'install.packages("tidyverse", repos = "http://cran.us.r-project.org")'
+ADD dependencies.R /tmp/dependencies.R
+RUN --mount=type=secret,id=GITHUB_PAT GITHUB_PAT=$(cat /run/secrets/GITHUB_PAT) Rscript /tmp/dependencies.R
 
-# testing only
-# RUN mamba install -y -c conda-forge -c bioconda biom-format
-# RUN apt install -y pigz
-# RUN mamba install -y -c conda-forge -c bioconda snakemake=6.1.2
-# RUN export CONDA_PREFIX=/opt/conda && amrfinder -u
-# RUN Rscript -e 'install.packages("easypackages", repos = "http://cran.us.r-project.org")'
-# RUN Rscript -e 'install.packages("tidyverse", repos = "http://cran.us.r-project.org")'
-
-# Install nephele_pipeline_utils: aws codeartifact login --tool pip --repository nephele --domain nephele --domain-owner 566113047672 --region us-east-1
-RUN AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID} AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY} AWS_SESSION_TOKEN=${AWS_SESSION_TOKEN} aws codeartifact login --tool pip --repository nephele --domain nephele --domain-owner 629126632555 --region us-east-1
-RUN pip install nephele_pipeline_utils
+# Install nephele_pipeline_utils
+RUN --mount=type=secret,id=AWS_ACCESS_KEY_ID \
+    --mount=type=secret,id=AWS_SECRET_ACCESS_KEY \
+    --mount=type=secret,id=AWS_SESSION_TOKEN \
+    AWS_ACCESS_KEY_ID=$(cat /run/secrets/AWS_ACCESS_KEY_ID) \
+    AWS_SECRET_ACCESS_KEY=$(cat /run/secrets/AWS_SECRET_ACCESS_KEY) \
+    AWS_SESSION_TOKEN=$(cat /run/secrets/AWS_SESSION_TOKEN) \
+    aws codeartifact login --tool pip --repository nephele --domain nephele --domain-owner 629126632555 --region us-east-1
+RUN pip install nephele_pipeline_utils==0.1.6
 
 # Set the working directory for the pipeline
 WORKDIR /pipeline

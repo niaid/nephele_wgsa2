@@ -27,11 +27,12 @@ def get_samples(samples):
 def main(args):
     try:
         exit_status = 0
+        report_outputs = False
         pipeline = WGSA2Pipeline.from_json(args.json_file_path)
         args = pipeline.pipeline_arguments
         outputs_dir_path = args.outputs_dir_path
+        report_outputs = True
         tmp_dir = outputs_dir_path / "tmp"
-        log(tmp_dir)
         sh.mkdir("-p", str(tmp_dir))
         num_cpus = os.cpu_count()
         # # for bbmap (avoid heap memory issue)
@@ -53,14 +54,14 @@ def main(args):
             f"trim_filter={args.trim_filter} include_ted_files={args.include_ted_files} ted_file_name={pipeline_config.ted_file_name}",
             f"biom_file_name={pipeline_config.biom_file_name}",
             f"decontaminate={args.decontaminate_db_path}",
-            f"classification_db_name={args.classification_db_name.value}",
+            f"classification_db_name={args.classification_db_name}",
             f"classification_db={args.classification_db_path}",
             f"amrfind={args.amrfind}",
             f"denovo_mtx={args.denovo_mtx}",
             f"eggnog_db={args.eggnog_db_path}",
-            f"annotations_type={args.annotations_type.value}",
-            f"annotations_map={args.annotations_map_path}",
-            f"annotations_hrr={args.annotations_hrr_path}",
+            f"annotations_type={args.annotations_type}",
+            f"annotations_map={args.annotations_map_db_path}",
+            f"annotations_hrr={args.annotations_hrr_db_path}",
             f"tax_genes={args.tax_genes}",
             f"krona_tax_db={args.krona_tax_db_path}",
             f"tax_scaffolds={args.tax_scaffolds}",
@@ -78,26 +79,6 @@ def main(args):
         main_pipeline = " ".join(base_command)
         log(main_pipeline)
         main_pipeline_args = shlex.split(main_pipeline)
-        # # Run and flush stdout while waiting for the process to be finished
-        # process = subprocess.Popen(
-        #     main_pipeline_args,
-        #     stdout=subprocess.PIPE,
-        #     stderr=subprocess.PIPE,
-        #     text=True,
-        #     bufsize=1,
-        #     universal_newlines=True,
-        # )
-        # # Loop to continuously read and flush stdout/stderr
-        # while True:
-        #     # Read a line from stdout
-        #     stdout_line = process.stdout.readline()
-        #     if stdout_line:
-        #         # Print the line and flush the output
-        #         log(stdout_line)
-        #     else:
-        #         break  # No more output from stdout
-        # # Wait for the subprocess to complete
-        # process.wait()
         process = subprocess.run(main_pipeline_args)
 
         if process.returncode == 1:
@@ -111,13 +92,28 @@ def main(args):
         error_msg = f"Pipeline Error:\n{traceback.format_exc()}"
         # explicitly writing to stderr
         print(error_msg, file=sys.stderr, flush=True)
-    else:
-        log("Pipeline completed")
     finally:
-        # Copy output details into main/root output folder
-        shutil.copy2(pipeline_config.output_details_file_name, outputs_dir_path)
-        sh.rm("-rf", tmp_dir)
-        exit(exit_status)
+        try:
+            # Copy output details into main/root output folder
+            shutil.copy2(pipeline_config.output_details_file_name, outputs_dir_path)
+            sh.rm("-rf", tmp_dir)
+        except Exception:
+            log(f"Warning: {traceback.format_exc()}")
+
+    # Report outputs
+    if report_outputs:
+        try:
+            pipeline.report_outputs(
+                Path(pipeline_config.outputs_template_file_name),
+                outputs_dir_path / pipeline_config.outputs_report_file_name,
+            )
+        except Exception:
+            log(f"Warning: error reporting outputs:\n {traceback.format_exc()}")
+
+    if exit_status == 0:
+        log("Pipeline completed")
+
+    exit(exit_status)
 
 
 if __name__ == "__main__":
