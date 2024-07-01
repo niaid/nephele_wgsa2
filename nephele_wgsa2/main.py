@@ -15,7 +15,6 @@ from nephele_pipeline_utils.utils import log
 from psutil import virtual_memory
 from schema import WGSA2Pipeline
 
-
 def get_samples(samples):
     results = {}
     for sample in samples:
@@ -24,7 +23,6 @@ def get_samples(samples):
             "r": str(sample.reverse_fastq_file_path),
         }
     return json.dumps(results)
-
 
 def main(args):
     try:
@@ -41,8 +39,7 @@ def main(args):
         mem = virtual_memory()
         mem_gb = int(mem.total / 1024 / 1024 / 1024)
         # Generate mapping file
-        mapping_file_path = outputs_dir_path / pipeline_config.mapping_file_name
-        # pipeline.generate_mapping_file(mapping_file_path)
+        mapping_file_path = outputs_dir_path / pipeline_config.mapping_file_name        
         pipeline.generate_mapping_file(mapping_file_path)
         log("Starting WGSA pipeline...")
         # log(args)
@@ -60,6 +57,7 @@ def main(args):
             f"classification_db_name={args.classification_db_name}",
             f"classification_db={args.classification_db_path}",
             f"amrfind={args.amrfind}",
+            f"denovo_mtx={args.denovo_mtx}",
             f"eggnog_db={args.eggnog_db_path}",
             f"annotations_type={args.annotations_type}",
             f"annotations_map={args.annotations_map_db_path}",

@@ -6,7 +6,7 @@ RUN apt install -y unzip pigz
 # Install dependencies
 # Note: eggnog-mapper=2.1.6 Expected eggNOG DB version: 5.0.2 (http://eggnog5.embl.de/download/emapperdb-5.0.2/)
 # The latest update of PuLP 2.8.0 removed deprecated API calls still used by snakemake
-RUN mamba install -y -c conda-forge -c bioconda samtools bbmap fastp spades bowtie2 metabat2 prodigal checkm-genome krona metaprokka verse pulp=2.7.0 snakemake=6.1.2 kraken2 ncbi-amrfinderplus eggnog-mapper=2.1.6 seqtk r-base sh biom-format awscli
+RUN mamba install -y -c conda-forge -c bioconda samtools bbmap fastp spades bowtie2 metabat2 prodigal checkm-genome krona metaprokka verse pulp=2.7.0 snakemake=6.1.2 kraken2 ncbi-amrfinderplus eggnog-mapper=2.1.6 seqtk sortmerna=4.3.6-0 trinity=2.15.1-3 salmon=1.10.2 r-base sh biom-format awscli
 RUN export CONDA_PREFIX=/opt/conda && amrfinder -u
 # MinPath
 RUN wget https://github.com/doandm/MinPath/archive/refs/heads/master.zip \

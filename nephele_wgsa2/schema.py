@@ -23,6 +23,7 @@ class PipelineArguments(PipelineArguments):
     annotations_hrr_db_path: FilePath
     krona_tax_db_path: DirectoryPath
     amrfind: bool = False
+    denovo_mtx: bool = False
     tax_genes: bool = False
     tax_scaffolds: bool = False
     mag: bool = False
