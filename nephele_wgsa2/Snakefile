@@ -577,6 +577,9 @@ if config["mag"]:
             "--unbinned  -t {threads} -a {input.depths} && touch {output}"
 
     rule checkm_lineage_wf:
+        resources:
+            mem_gb=config["total_mem_gb"]
+        threads: config["num_cpus"]
         input:
             # We do not use the actual output here but need files from metabat2_run step
             rules.metabat2_run.output
