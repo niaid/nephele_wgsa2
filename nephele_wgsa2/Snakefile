@@ -285,12 +285,13 @@ rule run_metaspades:
     params:
         out=ASM,
         tmp_dir=config["tmp_dir"]
+        memGB=184, ## 550
     threads: threads_per_job
     output:
         temp(ASM + "scaffolds.fasta")
     shell:
         "metaspades.py -1 {input.in1} -2 {input.in2} "
-        "--memory 550 --tmp-dir {params.tmp_dir} "
+        "--memory {params.memGB} --tmp-dir {params.tmp_dir} "
         "-o {params.out} -t {threads} --only-assembler"
 
 rule run_bbtools_stats:
@@ -609,6 +610,7 @@ if config["mag"]:
         input:
             bam=rules.samtools_to_bam.output.final_bam,
             fake=rules.metabat2_run.output # We do not use the actual output here but need files from metabat2_run step
+            fake2=rules.checkm_lineage_wf.output, ## we do not input in command but file is needed,
         params:
             ftype="fa",
             mag=MAG
