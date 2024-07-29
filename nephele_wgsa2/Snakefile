@@ -285,7 +285,7 @@ rule run_metaspades:
     params:
         out=ASM,
         tmp_dir=config["tmp_dir"]
-        memGB=192, ## 550
+        memGB=184, ## 550
     threads: threads_per_job
     output:
         temp(ASM + "scaffolds.fasta")
