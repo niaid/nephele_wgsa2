@@ -612,7 +612,8 @@ if config["mag"]:
     rule checkm_coverage:
         input:
             bam=rules.samtools_to_bam.output.final_bam,
-            fake=rules.metabat2_run.output # We do not use the actual output here but need files from metabat2_run step
+            fake=rules.metabat2_run.output, # We do not use the actual output here but need files from metabat2_run step
+            fake2=rules.checkm_lineage_wf.output # we do not input in command but file is needed
         params:
             ftype="fa",
             mag=MAG
