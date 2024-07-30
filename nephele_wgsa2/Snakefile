@@ -588,7 +588,6 @@ if config["mag"]:
             ftype="fa",
             basename=MAG,
             out=MAG_QA
-        threads: threads_per_job
         output:
             MAG_QA + "lineage.ms"
         shell:
@@ -600,7 +599,7 @@ if config["mag"]:
             rules.checkm_lineage_wf.output
         params:
             mag_qa=MAG_QA
-        threads: threads_per_job
+        threads: config["num_cpus"]
         output:
             qa_txt=MAG_QA + "mag_qa.txt",
             tax=MAG_QA + "mag_tax.txt"
@@ -617,7 +616,7 @@ if config["mag"]:
         params:
             ftype="fa",
             mag=MAG
-        threads: threads_per_job
+        threads: config["num_cpus"]
         output:
             MAG_QA + "mag_coverage.txt"
         shell:
