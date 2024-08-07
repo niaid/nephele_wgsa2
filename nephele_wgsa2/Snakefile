@@ -164,7 +164,7 @@ onstart:
     samtools --version | head -n1
     metabat2 2>&1 >/dev/null | grep version
     prodigal -v 2>&1 >/dev/null | head -n2 | tail -n1
-    checkm | head -n2 | tail -n1 | sed 's/^ *//g'
+    conda list checkm -n checkm | tail -n1 | awk '{{print $1, $2}}'
     ktImportText | head -n2 | tail -n1 | sed 's/[^a-zA-Z0-9. ]//g' | sed 's/^ *//g'
     metaprokka --version
     cat {config[minpath_script]} | grep version | head -n1
@@ -590,6 +590,8 @@ if config["mag"]:
             out=MAG_QA
         output:
             MAG_QA + "lineage.ms"
+        conda:
+            "checkm"
         shell:
             "checkm lineage_wf --tab_table --nt --pplacer_threads {threads} "
             "-t {threads} -x {params.ftype} {params.basename} {params.out}"
@@ -603,6 +605,8 @@ if config["mag"]:
         output:
             qa_txt=MAG_QA + "mag_qa.txt",
             tax=MAG_QA + "mag_tax.txt"
+        conda:
+            "checkm"
         shell:
             "checkm qa -o 2 --tab_table -t {threads} -f {output.qa_txt} {input} {params.mag_qa} && "
             "checkm tree_qa -o 2 --tab_table -f {output.tax} {params.mag_qa}"
@@ -619,6 +623,8 @@ if config["mag"]:
         threads: config["num_cpus"]
         output:
             MAG_QA + "mag_coverage.txt"
+        conda:
+            "checkm"
         shell:
             "checkm coverage -x {params.ftype} -t {threads} {params.mag} {output} {input.bam} 2>/dev/null"
 
@@ -627,6 +633,8 @@ if config["mag"]:
             rules.checkm_coverage.output
         output:
             MAG_QA + "mag_profiles.txt"
+        conda:
+            "checkm"
         shell:
             "checkm profile -q {input} --tab_table -f {output}"
 
@@ -660,6 +668,8 @@ if config["mag"]:
         output:
             # Something to signal this rule is completed
             QC_PLOTS + "checkm_plots.done"
+        conda:
+            "checkm"
         shell:
             """
             checkm coding_plot --image_type pdf  -x {params.ftype} {params.mag_qa} {params.mag} {params.out} 95 || true
