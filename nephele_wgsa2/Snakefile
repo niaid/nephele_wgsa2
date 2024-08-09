@@ -164,7 +164,7 @@ onstart:
     samtools --version | head -n1
     metabat2 2>&1 >/dev/null | grep version
     prodigal -v 2>&1 >/dev/null | head -n2 | tail -n1
-    checkm | head -n2 | tail -n1 | sed 's/^ *//g'
+    conda list checkm -n checkm | tail -n1 | awk '{{print $1, $2}}'
     ktImportText | head -n2 | tail -n1 | sed 's/[^a-zA-Z0-9. ]//g' | sed 's/^ *//g'
     metaprokka --version
     cat {config[minpath_script]} | grep version | head -n1
@@ -284,13 +284,14 @@ rule run_metaspades:
         in2=rules.compress_kraken2_decontaminate.output.r
     params:
         out=ASM,
+        mem_gb=config["total_mem_gb"],
         tmp_dir=config["tmp_dir"]
     threads: threads_per_job
     output:
         temp(ASM + "scaffolds.fasta")
     shell:
         "metaspades.py -1 {input.in1} -2 {input.in2} "
-        "--memory 550 --tmp-dir {params.tmp_dir} "
+        "--memory {params.mem_gb} --tmp-dir {params.tmp_dir} "
         "-o {params.out} -t {threads} --only-assembler"
 
 rule run_bbtools_stats:
@@ -577,6 +578,9 @@ if config["mag"]:
             "--unbinned  -t {threads} -a {input.depths} && touch {output}"
 
     rule checkm_lineage_wf:
+        resources:
+            mem_gb=config["total_mem_gb"]
+        threads: config["num_cpus"]
         input:
             # We do not use the actual output here but need files from metabat2_run step
             rules.metabat2_run.output
@@ -584,9 +588,10 @@ if config["mag"]:
             ftype="fa",
             basename=MAG,
             out=MAG_QA
-        threads: threads_per_job
         output:
             MAG_QA + "lineage.ms"
+        conda:
+            "checkm"
         shell:
             "checkm lineage_wf --tab_table --nt --pplacer_threads {threads} "
             "-t {threads} -x {params.ftype} {params.basename} {params.out}"
@@ -596,10 +601,12 @@ if config["mag"]:
             rules.checkm_lineage_wf.output
         params:
             mag_qa=MAG_QA
-        threads: threads_per_job
+        threads: config["num_cpus"]
         output:
             qa_txt=MAG_QA + "mag_qa.txt",
             tax=MAG_QA + "mag_tax.txt"
+        conda:
+            "checkm"
         shell:
             "checkm qa -o 2 --tab_table -t {threads} -f {output.qa_txt} {input} {params.mag_qa} && "
             "checkm tree_qa -o 2 --tab_table -f {output.tax} {params.mag_qa}"
@@ -608,13 +615,16 @@ if config["mag"]:
     rule checkm_coverage:
         input:
             bam=rules.samtools_to_bam.output.final_bam,
-            fake=rules.metabat2_run.output # We do not use the actual output here but need files from metabat2_run step
+            fake=rules.metabat2_run.output, # We do not use the actual output here but need files from metabat2_run step
+            fake2=rules.checkm_lineage_wf.output # we do not input in command but file is needed
         params:
             ftype="fa",
             mag=MAG
-        threads: threads_per_job
+        threads: config["num_cpus"]
         output:
             MAG_QA + "mag_coverage.txt"
+        conda:
+            "checkm"
         shell:
             "checkm coverage -x {params.ftype} -t {threads} {params.mag} {output} {input.bam} 2>/dev/null"
 
@@ -623,6 +633,8 @@ if config["mag"]:
             rules.checkm_coverage.output
         output:
             MAG_QA + "mag_profiles.txt"
+        conda:
+            "checkm"
         shell:
             "checkm profile -q {input} --tab_table -f {output}"
 
@@ -656,6 +668,8 @@ if config["mag"]:
         output:
             # Something to signal this rule is completed
             QC_PLOTS + "checkm_plots.done"
+        conda:
+            "checkm"
         shell:
             """
             checkm coding_plot --image_type pdf  -x {params.ftype} {params.mag_qa} {params.mag} {params.out} 95 || true

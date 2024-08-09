@@ -47,7 +47,7 @@ def main(args):
         log("Starting WGSA pipeline...")
         # log(args)
         base_command = [
-            f"snakemake -p --cores --nocolor",
+            f"snakemake -p --cores --nocolor --use-conda",
             f"--resources mem_gb={mem_gb}",
             f"--directory {tmp_dir}",
         ]
