@@ -22,7 +22,7 @@ on:
 
 jobs:
   build-and-push:
-    runs-on: self-hosted
+    runs-on: self-hosted-ws
 
     steps:
       - name: Determine branch and tag (on push)
@@ -57,7 +57,7 @@ jobs:
 
       - name: Login to AWS ECR
         run: |
-          echo "IMG=${{ env.MGMT_ACCT_ID }}.dkr.ecr.${{ env.REG }}.amazonaws.com/nephele_wgsa2" >> $GITHUB_ENV
+          echo "IMG=${{ env.MGMT_ACCT_ID }}.dkr.ecr.${{ env.REG }}.amazonaws.com/pipeline/nephele_wgsa2" >> $GITHUB_ENV
           aws ecr get-login-password --region ${{ env.REG }} | docker login --username AWS --password-stdin ${{ env.MGMT_ACCT_ID }}.dkr.ecr.${{ env.REG }}.amazonaws.com
 
       - name: Build and tag Docker image
