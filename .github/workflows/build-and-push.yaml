@@ -1,3 +1,5 @@
+# Builds image and pushes to ECR in mgmt space. Sets image pointer in dev.
+# Do not use this workflow to set image pointer in qa and prod.
 name: Build and Push Docker Image to AWS ECR
 
 on:
@@ -12,13 +14,14 @@ on:
         required: false
         default: "main"
       tag:
-        description: "Docker image tag"
+        description: "Docker image version tag"
         required: false
         default: "latest"
-      env:
-        description: "Environment to deploy to"
-        required: false
-        default: "dev"
+
+env:
+  PIPELINE: nephele_wgsa2
+  ENV: dev
+  REG: us-east-1
 
 jobs:
   build-and-push:
@@ -29,15 +32,13 @@ jobs:
         if: github.event_name == 'push'
         run: |
           echo "BRANCH=main" >> $GITHUB_ENV
-          echo "REG=us-east-1" >> $GITHUB_ENV
-          echo "ENV=dev" >> $GITHUB_ENV
+          echo "IMAGE_VERSION_TAG=latest" >> $GITHUB_ENV
 
       - name: Determine branch and tag (on workflow_dispatch)
         if: github.event_name == 'workflow_dispatch'
         run: |
           echo "BRANCH=${{ github.event.inputs.branch }}" >> $GITHUB_ENV
-          echo "ENV=${{ github.event.inputs.env }}" >> $GITHUB_ENV
-          echo "REG=us-east-1" >> $GITHUB_ENV
+          echo "IMAGE_VERSION_TAG=${{ github.event.inputs.tag }}" >> $GITHUB_ENV
 
       - name: Get SSM parameters
         id: ssm-params
@@ -57,7 +58,7 @@ jobs:
 
       - name: Login to AWS ECR
         run: |
-          echo "IMG=${{ env.MGMT_ACCT_ID }}.dkr.ecr.${{ env.REG }}.amazonaws.com/pipeline/nephele_wgsa2" >> $GITHUB_ENV
+          echo "IMG=${{ env.MGMT_ACCT_ID }}.dkr.ecr.${{ env.REG }}.amazonaws.com/pipeline/${{ env.PIPELINE }}" >> $GITHUB_ENV
           aws ecr get-login-password --region ${{ env.REG }} | docker login --username AWS --password-stdin ${{ env.MGMT_ACCT_ID }}.dkr.ecr.${{ env.REG }}.amazonaws.com
 
       - name: Build and tag Docker image
@@ -67,12 +68,12 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ env.AWS_SECRET_ACCESS_KEY }}
           AWS_SESSION_TOKEN: ${{ env.AWS_SESSION_TOKEN }}
         run: |
-          docker build --tag ${{ env.IMG }}:${{ env.SHA }} --tag ${{ env.IMG }}:latest --secret id=GITHUB_PAT --secret id=AWS_ACCESS_KEY_ID --secret id=AWS_SECRET_ACCESS_KEY --secret id=AWS_SESSION_TOKEN .
+          docker build --tag ${{ env.IMG }}:${{ env.SHA }} --tag ${{ env.IMG }}:${{ env.IMAGE_VERSION_TAG }} --secret id=GITHUB_PAT --secret id=AWS_ACCESS_KEY_ID --secret id=AWS_SECRET_ACCESS_KEY --secret id=AWS_SESSION_TOKEN .
 
       - name: Push Docker image to ECR
         run: |
           docker push ${{ env.IMG }}:${{ env.SHA }}
-          docker push ${{ env.IMG }}:latest
+          docker push ${{ env.IMG }}:${{ env.IMAGE_VERSION_TAG }}
 
       - name: Configure deployment AWS credentials
         uses: aws-actions/configure-aws-credentials@v1
@@ -84,7 +85,7 @@ jobs:
       - name: Set latest image pointer in parameter store
         run: |
           aws ssm put-parameter \
-          --name "latest_nephele_wgsa2_image" \
+          --name "latest_${{ env.PIPELINE }}_image" \
           --value "${{ env.IMG }}:${{ env.SHA }}" \
           --type String \
           --overwrite \
