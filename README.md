@@ -3,7 +3,7 @@
 ## Introduction
 The WGSA2 pipeline uses raw paired end (PE) shotgun reads to produce de novo assemblies for each sample in a metagenomic dataset, as well as extract optimal levels of information about the taxonomic and functional composition of a microbial community.
 
-## Datafiles
+## Databases
 Note: Need to provide links to download files
 The following datafiles are needed to run the pipeline
 - decontaminate
@@ -79,3 +79,32 @@ min_read_length: int (default=60) - Filter out reads below this read length. Com
 trim_of_5: int (default=20) - Quality threshold for 5'-end trimming. Come into effect when trim_filter=true
 trim_of_3: int (default=15) - Quality threshold of 3'-end trimming. Come into effect when trim_filter=true
 ```
+
+### Database Parameters in Nephele
+
+- **decontaminate_db_path** choices: 
+
+  - *Human and Mouse DB*: wgsa2/decontam_db/decontam_human+mouse_db/
+  - *Marine DB*: wgsa2/decontam_db/decontam_marine_db/
+  - *Mosquito DB*: wgsa2/decontam_db/decontam_mosq_db/
+  - *Nematode DB*: wgsa2/decontam_db/decontam_nematode_db/
+  - *Rodent DB*: wgsa2/decontam_db/decontam_rodents_db/
+  - *Primates DB*: wgsa2/decontam_db/decontam_primates_db/
+  - *Plants DB*: wgsa2/decontam_db/decontam_plants_db/
+
+- ***front end classification db choices*** and corresponding **classification_db_name**  and **classification_db_path**:
+
+  - *Standard + PlusPF*: PlusPF : wgsa2/classification_db/plusPFV_Mar2023/
+  - *MGBCdb*: MGBCdb: wgsa2/classification_db/MGBCdb/
+  - *EuPATHdb*: EuPATHdb: wgsa2/classification_db/EuPATH_db46_Mar2023/
+
+- ***front end annotation choices*** and corresponding **annotations_type**, **annotations_map_db_path**, and **annotations_hrr_db_path**:
+
+  - *KEGG DB*: ko: wgsa2/minpath_data/KEGG_myfiles_0922/KEGG-ko2map-092022.txt : gsa2/minpath_data/KEGG-HRCHY-092022.txt
+  - *MetaCyc DB*: ec: wgsa2/minpath_data/MetaCyc_myfiles_0922/MetaCyc-ec2pwy_092022.txt : wgsa2/minpath_data/MetaCyc_myfiles_0922/MetaCyc-HRCHY_092022.txt
+
+- **eggnog_db_path** - always the same; not a user choice
+  - wgsa2/eggnog_data/
+  
+- **krona_tax_db_path** - always same; not a user choice
+  - wgsa2/KronaTools_taxonomy/
