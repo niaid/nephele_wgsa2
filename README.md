@@ -82,7 +82,7 @@ trim_of_3: int (default=15) - Quality threshold of 3'-end trimming. Come into ef
 
 ### Database Parameters in Nephele
 
-- **decontaminate_db_path** choices: 
+- **front end decontam choices** and corresponding **decontaminate_db_path**: 
 
   - *Human and Mouse DB*: wgsa2/decontam_db/decontam_human+mouse_db/
   - *Marine DB*: wgsa2/decontam_db/decontam_marine_db/
@@ -100,7 +100,7 @@ trim_of_3: int (default=15) - Quality threshold of 3'-end trimming. Come into ef
 
 - ***front end annotation choices*** and corresponding **annotations_type**, **annotations_map_db_path**, and **annotations_hrr_db_path**:
 
-  - *KEGG DB*: ko: wgsa2/minpath_data/KEGG_myfiles_0922/KEGG-ko2map-092022.txt : gsa2/minpath_data/KEGG-HRCHY-092022.txt
+  - *KEGG DB*: ko: wgsa2/minpath_data/KEGG_myfiles_0922/KEGG-ko2map-092022.txt : wgsa2/minpath_data/KEGG-HRCHY-092022.txt
   - *MetaCyc DB*: ec: wgsa2/minpath_data/MetaCyc_myfiles_0922/MetaCyc-ec2pwy_092022.txt : wgsa2/minpath_data/MetaCyc_myfiles_0922/MetaCyc-HRCHY_092022.txt
 
 - **eggnog_db_path** - always the same; not a user choice
