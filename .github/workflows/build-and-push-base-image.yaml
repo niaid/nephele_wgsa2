@@ -1,5 +1,5 @@
 # Builds base image and pushes to ECR in mgmt space in public registry domain.
-name: Build and Push Docker Image to AWS ECR
+name: Build and Push Base Docker Image to AWS ECR
 
 on:
   push:
