@@ -27,12 +27,6 @@ jobs:
     runs-on: self-hosted
 
     steps:
-      - name: Determine branch and tag (on push)
-        if: github.event_name == 'push'
-        run: |
-          echo "BRANCH=main" >> $GITHUB_ENV
-          echo "IMAGE_VERSION_TAG=latest" >> $GITHUB_ENV
-
       - name: Determine branch and tag (on workflow_dispatch)
         if: github.event_name == 'workflow_dispatch'
         run: |
