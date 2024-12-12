@@ -2,10 +2,6 @@
 name: Build and Push Base Docker Image to AWS ECR
 
 on:
-  push:
-    branches:
-      - main
-
   workflow_dispatch:
     inputs:
       branch:
