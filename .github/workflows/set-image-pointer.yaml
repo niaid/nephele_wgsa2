@@ -1,9 +1,13 @@
-# Used to set image pointer mainly in qa and prod.
+# Used to set image pointer for dev/qa/prod.
 name: Set latest image pointer in parameter store
 
 on:
   workflow_dispatch:
     inputs:
+      branch:
+        description: "Git branch to set pointer"
+        required: false
+        default: "main"
       env:
         description: "Environment to set image pointer to"
         required: false
@@ -29,6 +33,7 @@ jobs:
         run: |
           echo "IMAGE_TAG=${{ github.event.inputs.tag }}" >> $GITHUB_ENV
           echo "ENV=${{ github.event.inputs.env }}" >> $GITHUB_ENV
+          echo "BRANCH=${{ github.event.inputs.branch }}" >> $GITHUB_ENV
           echo "SHA=${{ github.event.inputs.sha }}" >> $GITHUB_ENV
 
       - name: Get SSM parameters
@@ -38,13 +43,17 @@ jobs:
           echo "DEPLOYMENT_ACCT_ID=$(aws ssm get-parameter --with-decryption --name "/monarch-ro/space-accounts/${{ env.ENV }}" --region ${{ env.REG }} | jq -r '.["Parameter"]["Value"]')" >> $GITHUB_ENV
           echo "GITHUB_PAT=$(aws ssm get-parameter --with-decryption --name "/github/niaid/nephele_github_pat" --region ${{ env.REG }} | jq -r '.["Parameter"]["Value"]')" >> $GITHUB_ENV
 
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.BRANCH }}
+
       - name: Get git SHA from latest commit
         if: env.SHA == ''
         run: echo "SHA=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
 
-      - name: Get IMG
-        run: |
-          echo "IMG=${{ env.MGMT_ACCT_ID }}.dkr.ecr.${{ env.REG }}.amazonaws.com/pipeline/${{ env.PIPELINE }}" >> $GITHUB_ENV
+      - name: AWS ECR Image Location
+        run: echo "IMG=public.ecr.aws/niaid_nephele/pipeline/${{ env.PIPELINE }}" >> $GITHUB_ENV
 
       - name: Configure deployment AWS credentials
         uses: aws-actions/configure-aws-credentials@v1
