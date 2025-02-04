@@ -66,5 +66,11 @@
         "title": "PWY merged gene TPM table",
         "description": "PWY merged gene TPM table",
         "is_regex_path": true
+    },
+    {
+        "type": "MISCELLANEOUS",
+        "path": "TED.tar",
+        "title": "TED files",
+        "description": "TED files"
     }
 ]
