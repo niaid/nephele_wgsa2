@@ -2,7 +2,7 @@ from pathlib import Path
 
 from nephele_pipeline_utils.enums import DataType
 from nephele_pipeline_utils.parser import NepheleArgumentParser
-from nephele_pipeline_utils.types import boolean, path, directory, field
+from nephele_pipeline_utils.types import boolean, path, directory, field, mapping_file
 
 from config import pipeline_config
 from enums import ClassificationDbType, AnnotationsType
@@ -130,7 +130,7 @@ def parse_args():
     )
     parser.add_argument(
         "--mapping_file_path",
-        type=path("csv"),
+        type=mapping_file,
         required=True,
         help="Input path to mapping file",
     )
