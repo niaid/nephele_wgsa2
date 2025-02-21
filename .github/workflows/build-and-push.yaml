@@ -2,29 +2,24 @@
 name: Build and Push Docker Image to AWS ECR
 
 on:
-  push:
-    branches:
-      - main
-
   workflow_dispatch:
     inputs:
       branch:
         description: "Git branch to containerize"
-        required: false
-        default: "main"
+        required: true
+        default: "nephele-workspace"
       dockerfile:
         # Dockerfile.update if only repo code is updated. Else, Dockerfile
         description: "Docker file to use"
-        required: false
+        required: true
         default: "Dockerfile.update"
       tag:
         description: "Docker image version tag"
-        required: false
+        required: true
         default: "latest"
 
 env:
   PIPELINE: nephele_wgsa2
-  ENV: dev
   REG: us-east-1
 
 jobs:
@@ -32,13 +27,6 @@ jobs:
     runs-on: self-hosted-ws
 
     steps:
-      - name: Determine branch and tag (on push)
-        if: github.event_name == 'push'
-        run: |
-          echo "BRANCH=main" >> $GITHUB_ENV
-          echo "IMAGE_VERSION_TAG=latest" >> $GITHUB_ENV
-          echo "DOCKERFILE=Dockerfile" >> $GITHUB_ENV
-
       - name: Determine branch and tag (on workflow_dispatch)
         if: github.event_name == 'workflow_dispatch'
         run: |
@@ -49,7 +37,6 @@ jobs:
       - name: Get SSM parameters
         id: ssm-params
         run: |
-          echo "MGMT_ACCT_ID=$(aws ssm get-parameter --with-decryption --name "/monarch-ro/space-accounts/mgmt" --region ${{ env.REG }} | jq -r '.["Parameter"]["Value"]')" >> $GITHUB_ENV
           echo "GITHUB_PAT=$(aws ssm get-parameter --with-decryption --name "/github/niaid/nephele_github_pat" --region ${{ env.REG }} | jq -r '.["Parameter"]["Value"]')" >> $GITHUB_ENV
 
       - name: Checkout code
