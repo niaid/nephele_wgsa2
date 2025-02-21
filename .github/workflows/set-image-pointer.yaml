@@ -1,4 +1,4 @@
-# Used to set image pointer for dev/qa/prod.
+# Used to set image pointer for dev/qa/prod. Either branch or sha is required as input with workflow_dispatch.
 name: Set latest image pointer in parameter store
 
 on:
@@ -7,11 +7,16 @@ on:
       branch:
         description: "Git branch to set pointer"
         required: false
-        default: "main"
+        default: "nephele-workspace"
       env:
         description: "Environment to set image pointer to"
-        required: false
-        default: "qa"
+        required: true
+        default: "dev"
+        type: choice
+        options:
+          - "dev"
+          - "qa"
+          - "prod"
       # Git commit SHA with which the docker image was tagged. If not provided, will use the SHA of the latest commit.
       # sha is useful as user input during workflow run in case the latest commit is ahead of the commit in the docker image.
       sha:
@@ -39,9 +44,7 @@ jobs:
       - name: Get SSM parameters
         id: ssm-params
         run: |
-          echo "MGMT_ACCT_ID=$(aws ssm get-parameter --with-decryption --name "/monarch-ro/space-accounts/mgmt" --region ${{ env.REG }} | jq -r '.["Parameter"]["Value"]')" >> $GITHUB_ENV
           echo "DEPLOYMENT_ACCT_ID=$(aws ssm get-parameter --with-decryption --name "/monarch-ro/space-accounts/${{ env.ENV }}" --region ${{ env.REG }} | jq -r '.["Parameter"]["Value"]')" >> $GITHUB_ENV
-          echo "GITHUB_PAT=$(aws ssm get-parameter --with-decryption --name "/github/niaid/nephele_github_pat" --region ${{ env.REG }} | jq -r '.["Parameter"]["Value"]')" >> $GITHUB_ENV
 
       - name: Checkout code
         uses: actions/checkout@v4
