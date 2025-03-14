@@ -306,7 +306,8 @@ rule run_bbtools_stats:
         "sed $'s/_cov_/ cov_/g' {input} > {output.out1} && "
         "stats.sh in={output.out1} out={output.out2} && "
         "printf \"\\nTEDreads mapping stats:\\n\"  >> {output.out2} && "
-        "rm -rf {params.asm}K* {params.asm}pipeline_state {params.asm}tmp {params.asm}misc {params.asm}before_rr.fasta "
+        "rm -rf {params.asm}K21 {params.asm}K33/ {params.asm}K55 "
+        "{params.asm}pipeline_state {params.asm}tmp {params.asm}misc {params.asm}before_rr.fasta "
         "{params.asm}dataset.info {params.asm}*params* {params.asm}*.gfa {params.asm}first_pe_contigs.fasta "
         "{params.asm}run_spades.sh {params.asm}*.yaml {params.asm}*.paths {params.asm}assembly_graph.fastg"
 
