@@ -30,6 +30,8 @@ def main(args):
     tmp_dir = outputs_dir_path / "tmp"
     sh.mkdir("-p", str(tmp_dir))
     num_cpus = os.cpu_count()
+    if num_cpus > 48:
+        num_cpus = int(num_cpus / 1.25)
     # # for bbmap (avoid heap memory issue)
     mem = virtual_memory()
     mem_gb = int(mem.total / 1024 / 1024 / 1024)
