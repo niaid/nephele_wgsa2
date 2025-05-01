@@ -72,5 +72,19 @@
         "path": "TED.tar",
         "title": "TED files",
         "description": "TED files"
+    },
+    {
+        "type": "MISCELLANEOUS",
+        "path": "asmb_files/{sample_id}_assembly.bam",
+        "title": "Assembly bam file for a sample",
+        "description": "Assembly bam file for a sample to be used by DiscoVir pipeline",
+        "is_regex_path": true
+    },
+    {
+        "type": "FASTA",
+        "path": "asmb_files/{sample_id}_assembly.fasta",
+        "title": "Assembly fasta file for a sample",
+        "description": "Assembly fasta file for a sample to be used by DiscoVir pipeline",
+        "is_regex_path": true
     }
 ]
