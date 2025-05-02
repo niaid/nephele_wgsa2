@@ -1,1 +1,1 @@
-BEGIN{OFS="\t"} {a[$1]+=$2; sum+= $2 }END{for(i in a) print i,a[i]*1e6/(sum)}
+BEGIN { OFS="\t" }NR>1{ sum[$1] += $2; count[$1] += 1 }END {for (i in sum) print i, sum[i] }
