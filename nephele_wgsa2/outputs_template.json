@@ -74,7 +74,7 @@
         "description": "TED files"
     },
     {
-        "type": "MISCELLANEOUS",
+        "type": "BAM",
         "path": "asmb_files/{sample_id}_assembly.bam",
         "title": "Assembly bam file for {sample_id}",
         "description": "Assembly bam file for a sample to be used by DiscoVir pipeline",
