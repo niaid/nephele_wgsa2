@@ -38,6 +38,7 @@ jobs:
         id: ssm-params
         run: |
           echo "GITHUB_PAT=$(aws ssm get-parameter --with-decryption --name "/github/niaid/nephele_github_pat" --region ${{ env.REG }} | jq -r '.["Parameter"]["Value"]')" >> $GITHUB_ENV
+          echo "MGMT_ACCT_ID=$(aws ssm get-parameter --with-decryption --name "/monarch-ro/space-accounts/mgmt" --region ${{ env.REG }} --query "Parameter.Value" --output text)" >> $GITHUB_ENV
 
       - name: Checkout code
         uses: actions/checkout@v4
@@ -60,7 +61,7 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ env.AWS_SECRET_ACCESS_KEY }}
           AWS_SESSION_TOKEN: ${{ env.AWS_SESSION_TOKEN }}
         run: |
-          docker build -f ${{ env.DOCKERFILE }} --tag ${{ env.IMG }}:${{ env.SHA }} --tag ${{ env.IMG }}:${{ env.IMAGE_VERSION_TAG }} --secret id=GITHUB_PAT --secret id=AWS_ACCESS_KEY_ID --secret id=AWS_SECRET_ACCESS_KEY --secret id=AWS_SESSION_TOKEN .
+          docker build -f ${{ env.DOCKERFILE }} --tag ${{ env.IMG }}:${{ env.SHA }} --tag ${{ env.IMG }}:${{ env.IMAGE_VERSION_TAG }} --secret id=GITHUB_PAT --secret id=AWS_ACCESS_KEY_ID --secret id=AWS_SECRET_ACCESS_KEY --secret id=AWS_SESSION_TOKEN --build-arg MGMT_ACCT_ID=${{ env.MGMT_ACCT_ID }} .
 
       - name: Push Docker image to ECR
         run: |
