@@ -75,6 +75,12 @@ def parse_args():
         help="Add Antimicrobial Resistance genes & peptide finding",
     )
     parser.add_argument(
+        "--denovo_mtx",
+        type=boolean,
+        default=False,
+        help="Denovo mtx",
+    )
+    parser.add_argument(
         "--tax_genes",
         type=boolean,
         default=False,
