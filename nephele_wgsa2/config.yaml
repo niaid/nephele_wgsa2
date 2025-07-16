@@ -11,4 +11,4 @@ awk_joinTPM_script: /pipeline/utils/join2files_f2.awk
 KO_listfile: /pipeline/utils/KO_list.txt
 EC_listfile: /pipeline/utils/EC_list.txt
 amrfinder_db: /opt/conda/share/amrfinderplus/data/latest
-sortmerna_db: /mnt
+sortmerna_db: /mnt/rRNA_databases_v4
