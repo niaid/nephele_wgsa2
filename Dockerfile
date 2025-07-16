@@ -18,6 +18,15 @@ RUN wget https://github.com/doandm/MinPath/archive/refs/heads/master.zip \
 
 RUN mamba create -n checkm -y -c conda-forge -c bioconda python=3.8 checkm-genome=1.2.2
 
+# Download and unzip sortmerna database
+RUN wget https://github.com/biocore/sortmerna/releases/download/v4.3.4/database.tar.gz \
+    && mkdir /mnt/rRNA_databases_v4 \
+    && tar -xzvf database.tar.gz -C /mnt/rRNA_databases_v4 \
+    ## Speed of rRNA filtering increases significantly if the database is pre-indexed:
+    && sortmerna --index 1 \
+       --ref /mnt/rRNA_databases_v4/smr_v4.3_default_db.fasta \
+       --idx-dir /mnt/rRNA_databases_v4
+
 # Install R packages
 ADD dependencies.R /tmp/dependencies.R
 RUN --mount=type=secret,id=GITHUB_PAT GITHUB_PAT=$(cat /run/secrets/GITHUB_PAT) Rscript /tmp/dependencies.R
