@@ -1,10 +1,11 @@
 # Design, development & documentation
 # Angelina Angelova PhD, Metagenomics Analysis Specialist, Science Support Section, BCBB/OCICB/OSMO/OD/NIAID/NIH
+# Katie McCauley MPH, Metagenomics Specialist, Science Support Section, BCBB/OCICB/OSMO/OD/NIAID/NIH
 # Duc Doan, Software Engineer, Bioinformatics Software Section, BCBB/OCICB/OSMO/OD/NIAID/NIH
 configfile: "/pipeline/config.yaml"
 include: "/pipeline/utils.smk"
 
-TED_READS = config["output_dir"] + "/TEDreads/"
+TED_READS = config["output_dir"] + ("/MTX_TEDreads/" if config["denovo_mtx"] else "/TEDreads")
 TAX_PROFILES = config["output_dir"] + "/TAXprofiles/"
 DBNAME = config["classification_db_name"]
 # if "plusPFV" in config["classification_db"]:
@@ -18,18 +19,20 @@ TED_TMP_NAME = "TED_out/"
 TED_TMP = config["output_dir"] + "/" + TED_TMP_NAME
 TED_FILE_NAME = config["output_dir"] + "/" + config["ted_file_name"]
 METASPADES = config["output_dir"] + "/asmbMetaSpades/"
+TRINITY = config["output_dir"] + "/asmbTrinity/"
 ASM = METASPADES + "{sample}_asmb/"
-OUT_FILE = ASM + "{sample}_assembly"
-GENES = ASM + "genes/"
+ASM_T = TRINITY + "{sample}_asmb/"
+OUT_FILE = (ASM_T if config["denovo_mtx"] else ASM) + "{sample}_assembly"
+GENES = (ASM_T if config["denovo_mtx"] else ASM) + "genes/"
 PREGENES_PREFIX = GENES + "PREDgenes"
 ANNOTATIONS = GENES + "annotations/"
 PATHWAYS = GENES + "pathways/"
 PREGENESTAX = GENES + "genesTAX_" + DBNAME + "/"
 GENETAX_PREFIX = PREGENESTAX + "geneTAX"
 GENETAX = TAX_PROFILES + "geneTAX_" + DBNAME + "/"              ##--> "geneTAX/"  <-- ##
-SCAFFTAX = ASM + "scaffTAX_" + DBNAME + "/"                     ##-->
+SCAFFTAX = (ASM_T if config["denovo_mtx"] else ASM) + "scaffTAX_" + DBNAME + "/"                     ##-->
 SCAFFTAX_PREFIX = SCAFFTAX + "scaffTAX"                         ##--> "scafftax" <-- ##
-MAG = ASM + "MAGs/"
+MAG = (ASM_T if config["denovo_mtx"] else ASM) + "MAGs/"
 MAG_QA = MAG + "magsQA/"
 QC_PLOTS = MAG_QA + "QCplots/"
 TAXBIN = TAX_PROFILES + "MAGs_TAX/"
@@ -66,7 +69,6 @@ threads_per_job = get_num_threads_per_job(len(samples))
 
 pipeline_output = [
     TED_READS_TAX + "TAXplots_readsTAX_" + DBNAME +".html",             ##--> "TAXplots_TEDreads.html",
-    expand(ASM + "add_de_replication_stats.done", sample=samples),
     expand(OUT_FILE + "_depths.txt",sample=samples),
     expand(OUT_FILE + "_scaffCoverage.txt",sample=samples),
     expand(PREGENES_PREFIX + "_stats.txt", sample=samples),
@@ -112,6 +114,16 @@ if config["mag"]:
         expand(QC_PLOTS + "checkm_plots.done", sample=samples),
         TAXBIN + "TAXplots_MAGx.html",
         BIOM_FILE_6C
+    ])
+
+if config["denovo_mtx"]:
+    pipeline_output.extend([
+        expand(ASM_T + "add_de_replication_stats.done", sample=samples),
+       expand(TED_TMP + "{sample}_R1_ted_mtx.fastq.gz", sample=samples)
+    ])
+else:
+    pipeline_output.extend([
+        expand(ASM + "add_de_replication_stats.done", sample=samples)
     ])
 
 # Merging binned files from all samples into 1 collated table only run when users provide at least 2 samples
@@ -164,7 +176,7 @@ onstart:
     samtools --version | head -n1
     metabat2 2>&1 >/dev/null | grep version
     prodigal -v 2>&1 >/dev/null | head -n2 | tail -n1
-    conda list checkm -n checkm | tail -n1 | awk '{{print $1, $2}}'
+    checkm | head -n2 | tail -n1 | sed 's/^ *//g'
     ktImportText | head -n2 | tail -n1 | sed 's/[^a-zA-Z0-9. ]//g' | sed 's/^ *//g'
     metaprokka --version
     cat {config[minpath_script]} | grep version | head -n1
@@ -173,6 +185,8 @@ onstart:
     amrfinder --version | awk '{{print "AMRFinder version", $1}}'
     emapper.py --version | tail -n1 | awk '{{print $1}}'
     R --version | head -n1
+    sortmerna --version | head -n6 | tail -n1
+    Trinity --version | head -n1
     snakemake --version | awk '{{print "Snakemake version", $1}}'
     """)
 
@@ -233,14 +247,55 @@ rule compress_kraken2_decontaminate:
         "pigz -c {input.f} > {output.f} &&"                 ##--> added the pigz -c > filename option"  <--##
         "pigz -c {input.r} > {output.r}"                    ##--> added the pigz -c > filename option"  <--##
 
+# MTX-KM sortmerna:
+rule remove_rRNA:
+    resources:
+        mem_mb=lambda wildcards: int(config["total_mem_gb"]) * 1000
+    input:
+        f=rules.run_kraken2_decontaminate.output.unclassified_out1,
+        r=rules.run_kraken2_decontaminate.output.unclassified_out2
+    output:
+        logfile=TED_READS + "{sample}_sortmerna.log",
+        f=TED_READS + "{sample}_sortmerna_fwd.fq",
+        r=TED_READS + "{sample}_sortmerna_rev.fq"
+    threads: threads_per_job
+    params:
+        ref_db=config["sortmerna_db"],
+        basename=TED_READS + "{sample}_sortmerna",
+        aligned="{sample}_sortmerna_aligned.log",
+        base_dir=TED_READS
+    shell:
+        "sortmerna --reads {input.f} --reads {input.r} "
+        "--ref {params.ref_db}/smr_v4.3_default_db.fasta -m {resources.mem_mb} "
+        "--workdir {params.basename} --threads {threads} --idx-dir {params.ref_db}/idx "
+        "--fastx --paired_out --out2 --other {params.basename} &> {output.logfile} && "
+        "mv {params.basename}/out/aligned.log {params.base_dir}/{params.aligned} && "
+        "rm -r {params.basename}"
+
+## Borrowed for sortmerna:
+rule compress_rRNA_filter:                                     
+    input:
+        f=rules.remove_rRNA.output.f,
+        r=rules.remove_rRNA.output.r,
+        f_mgx=rules.compress_kraken2_decontaminate.output.f,
+        r_mgx=rules.compress_kraken2_decontaminate.output.r
+    output:
+        f=TED_TMP + "{sample}_R1_ted_mtx.fastq.gz",
+        r=TED_TMP + "{sample}_R2_ted_mtx.fastq.gz"
+    shell:
+        "pigz -c {input.f} > {output.f} &&"
+        "pigz -c {input.r} > {output.r} &&"
+        "rm {input.f} {input.r} {input.f_mgx} {input.r_mgx}"
+        ## Removing kraken decontaminate from TED_TMP because in mtx it's not the final TED reads.
+
 
 # Step 3 starts
 rule run_kraken2_classification:
     resources:
-            mem_gb=config["total_mem_gb"]
+        mem_gb=config["total_mem_gb"]
     input:
-        f=rules.compress_kraken2_decontaminate.output.f,
-        r=rules.compress_kraken2_decontaminate.output.r
+        f=lambda wildcards: rules.compress_rRNA_filter.output.f if config["denovo_mtx"] else rules.compress_kraken2_decontaminate.output.f,
+        r=lambda wildcards: rules.compress_rRNA_filter.output.r if config["denovo_mtx"] else rules.compress_kraken2_decontaminate.output.r
     threads: threads_per_job
     params:
         classification_db=config["classification_db"]
@@ -284,21 +339,40 @@ rule run_metaspades:
         in2=rules.compress_kraken2_decontaminate.output.r
     params:
         out=ASM,
-        mem_gb=config["total_mem_gb"],
         tmp_dir=config["tmp_dir"]
     threads: threads_per_job
     output:
         temp(ASM + "scaffolds.fasta")
     shell:
         "metaspades.py -1 {input.in1} -2 {input.in2} "
-        "--memory {params.mem_gb} --tmp-dir {params.tmp_dir} "
+        "--memory 550 --tmp-dir {params.tmp_dir} "
         "-o {params.out} -t {threads} --only-assembler"
+
+## MTX-KM: Trinity:
+rule run_trinity:
+    resources:
+        mem_gb=config['total_mem_gb']
+    input:
+        f=rules.compress_rRNA_filter.output.f,
+        r=rules.compress_rRNA_filter.output.r
+    params:
+        outdir=ASM_T,
+        out= ASM_T + "trinity_{sample}",
+        logfile=ASM_T + "{sample}_trinity.log",
+        mem=str(config['total_mem_gb']) + "G"
+    output:
+        temp(ASM_T + "trinity_{sample}.Trinity.fasta")
+    threads: threads_per_job
+    shell:
+        "Trinity --seqType fq --left {input.f} --right {input.r} --CPU {threads} "
+        "--output {params.out} --full_cleanup --max_memory {params.mem} &> {params.logfile}"
+
 
 rule run_bbtools_stats:
     input:
-        rules.run_metaspades.output
+        lambda wildcards: rules.run_trinity.output if config["denovo_mtx"] else rules.run_metaspades.output
     params:
-        asm=ASM
+        asm=lambda wildcards: ASM_T if config["denovo_mtx"] else ASM
     output:
         out1=OUT_FILE + ".fasta",
         out2=OUT_FILE + "_stats.txt"
@@ -306,8 +380,7 @@ rule run_bbtools_stats:
         "sed $'s/_cov_/ cov_/g' {input} > {output.out1} && "
         "stats.sh in={output.out1} out={output.out2} && "
         "printf \"\\nTEDreads mapping stats:\\n\"  >> {output.out2} && "
-        "rm -rf {params.asm}K21 {params.asm}K33/ {params.asm}K55 "
-        "{params.asm}pipeline_state {params.asm}tmp {params.asm}misc {params.asm}before_rr.fasta "
+        "rm -rf {params.asm}K* {params.asm}pipeline_state {params.asm}tmp {params.asm}misc {params.asm}before_rr.fasta "
         "{params.asm}dataset.info {params.asm}*params* {params.asm}*.gfa {params.asm}first_pe_contigs.fasta "
         "{params.asm}run_spades.sh {params.asm}*.yaml {params.asm}*.paths {params.asm}assembly_graph.fastg"
 
@@ -316,26 +389,26 @@ rule bowtie2_build:
     input:
         rules.run_bbtools_stats.output.out1
     params:
-        basename=ASM + "{sample}.db"
+        basename=(ASM_T if config["denovo_mtx"] else ASM) + "{sample}.db"
     threads: threads_per_job
     output:
         # to signal this step is completed
-        temp(ASM + "bowtie2_build.done")
+        temp((ASM_T if config["denovo_mtx"] else ASM) + "bowtie2_build.done")
     shell:
        "bowtie2-build --quiet --threads {threads} {input} {params.basename} && touch {output}"
 
 rule bowtie2_run:
     input:
-        in1=rules.compress_kraken2_decontaminate.output.f,
-        in2=rules.compress_kraken2_decontaminate.output.r,
-        in3=rules.bowtie2_build.output # fake input so it can run after bowtie2_build
+        in1=lambda wildcards: rules.compress_rRNA_filter.output.f if config["denovo_mtx"] else rules.compress_kraken2_decontaminate.output.f,
+        in2=lambda wildcards: rules.compress_rRNA_filter.output.r if config["denovo_mtx"] else rules.compress_kraken2_decontaminate.output.r,
+        in3=rules.bowtie2_build.output, # fake input so it can run after bowtie2_build
     params:
-        index=ASM + "{sample}.db",
+        index=(ASM_T if config["denovo_mtx"] else ASM) + "{sample}.db",
         in4=rules.run_bbtools_stats.output.out2 # if in4 is in input, it will cause this step to re-run all the time (due to input changes)
     threads: threads_per_job
     output:
-        sam=temp(ASM + "{sample}.sam")
-        # sam=ASM + "{sample}.sam"
+        sam=temp((ASM_T if config["denovo_mtx"] else ASM) + "{sample}.sam")
+        # sam=(ASM_T if config["denovo_mtx"] else ASM) + "{sample}.sam"
     shell:
         "bowtie2 --phred33 --sensitive-local --no-unal --seed 4 "
         "-1 {input.in1} -2 {input.in2} "
@@ -352,11 +425,11 @@ rule samtools_to_bam:
         markdup_tmp=config["tmp_dir"] + "{sample}_markdup"
     threads: threads_per_job
     output:
-        bam=temp(ASM + "{sample}.bam"),
-        bam_colated=temp(ASM + "{sample}_colated.bam"),
-        bam_fixmate=temp(ASM + "{sample}_fixmate.bam"),
-        bam_fixmate_sorted=temp(ASM + "{sample}_fixmate_sorted.bam"),
-        tmp_markdup=temp(ASM + "{sample}_tmp_markdup.txt"),
+        bam=temp((ASM_T if config["denovo_mtx"] else ASM) + "{sample}.bam"),
+        bam_colated=temp((ASM_T if config["denovo_mtx"] else ASM) + "{sample}_colated.bam"),
+        bam_fixmate=temp((ASM_T if config["denovo_mtx"] else ASM) + "{sample}_fixmate.bam"),
+        bam_fixmate_sorted=temp((ASM_T if config["denovo_mtx"] else ASM) + "{sample}_fixmate_sorted.bam"),
+        tmp_markdup=temp((ASM_T if config["denovo_mtx"] else ASM) + "{sample}_tmp_markdup.txt"),
         final_bam=OUT_FILE + ".bam"
     shell:
         "samtools sort {input} -o {output.bam} -@ {threads} -T {params.sort_tmp} && "
@@ -373,10 +446,10 @@ rule add_de_replication_stats:
         in2=rules.samtools_to_bam.output.tmp_markdup
     params:
         stats_file=OUT_FILE + "_stats.txt",
-        tmp_out=ASM + "{sample}_tmp_file.txt"
+        tmp_out=(ASM_T if config["denovo_mtx"] else ASM) + "{sample}_tmp_file.txt"
     output:
         # to signal this step is completed
-        ASM + "add_de_replication_stats.done"
+        (ASM_T if config["denovo_mtx"] else ASM) + "add_de_replication_stats.done"
     shell:
         "cat {input.in1} <(printf \"\\nRead alignment de-replication stats:\\n\") {input.in2} > {params.tmp_out} && "
         "mv {params.tmp_out} {params.stats_file} && touch {output}"
@@ -385,13 +458,13 @@ rule scaffold_and_read_counts:
     input:
         final_bam=rules.samtools_to_bam.output.final_bam
     output:
-        tmp_scaffcov=temp(ASM + "tmp_scaffcov.txt"),
-        tmp_basecov=temp(ASM + "tmp_basecov.txt"),
-        tmp_idx=temp(ASM + "tmp_idx.txt"),
-        tmp_readcount=temp(ASM + "tmp_readcount.txt"),
+        tmp_scaffcov=temp((ASM_T if config["denovo_mtx"] else ASM) + "tmp_scaffcov.txt"),
+        tmp_basecov=temp((ASM_T if config["denovo_mtx"] else ASM) + "tmp_basecov.txt"),
+        tmp_idx=temp((ASM_T if config["denovo_mtx"] else ASM) + "tmp_idx.txt"),
+        tmp_readcount=temp((ASM_T if config["denovo_mtx"] else ASM) + "tmp_readcount.txt"),
         depths=OUT_FILE + "_depths.txt",
-        tmp_scaffcov1=temp(ASM + "tmp_scaffcov1.txt"),                                                                                                         ##--> added tmp file <--##
-        scaffCoverage=OUT_FILE + "_scaffCoverage.txt"
+        tmp_scaffcov1=temp((ASM_T if config["denovo_mtx"] else ASM) + "tmp_scaffcov1.txt"),                                                                                                         ##--> added tmp file <--##
+        scaffCoverage=OUT_FILE + "_scaffCoverage.txt",
     shell:
         "pileup.sh {input.final_bam} out={output.tmp_scaffcov} overwrite=true && "
         "sort -o {output.tmp_scaffcov} {output.tmp_scaffcov} && "
@@ -579,9 +652,6 @@ if config["mag"]:
             "--unbinned  -t {threads} -a {input.depths} && touch {output}"
 
     rule checkm_lineage_wf:
-        resources:
-            mem_gb=config["total_mem_gb"]
-        threads: config["num_cpus"]
         input:
             # We do not use the actual output here but need files from metabat2_run step
             rules.metabat2_run.output
@@ -589,10 +659,9 @@ if config["mag"]:
             ftype="fa",
             basename=MAG,
             out=MAG_QA
+        threads: threads_per_job
         output:
             MAG_QA + "lineage.ms"
-        conda:
-            "checkm"
         shell:
             "checkm lineage_wf --tab_table --nt --pplacer_threads {threads} "
             "-t {threads} -x {params.ftype} {params.basename} {params.out}"
@@ -602,12 +671,10 @@ if config["mag"]:
             rules.checkm_lineage_wf.output
         params:
             mag_qa=MAG_QA
-        threads: config["num_cpus"]
+        threads: threads_per_job
         output:
             qa_txt=MAG_QA + "mag_qa.txt",
             tax=MAG_QA + "mag_tax.txt"
-        conda:
-            "checkm"
         shell:
             "checkm qa -o 2 --tab_table -t {threads} -f {output.qa_txt} {input} {params.mag_qa} && "
             "checkm tree_qa -o 2 --tab_table -f {output.tax} {params.mag_qa}"
@@ -616,16 +683,13 @@ if config["mag"]:
     rule checkm_coverage:
         input:
             bam=rules.samtools_to_bam.output.final_bam,
-            fake=rules.metabat2_run.output, # We do not use the actual output here but need files from metabat2_run step
-            fake2=rules.checkm_lineage_wf.output # we do not input in command but file is needed
+            fake=rules.metabat2_run.output # We do not use the actual output here but need files from metabat2_run step
         params:
             ftype="fa",
             mag=MAG
-        threads: config["num_cpus"]
+        threads: threads_per_job
         output:
             MAG_QA + "mag_coverage.txt"
-        conda:
-            "checkm"
         shell:
             "checkm coverage -x {params.ftype} -t {threads} {params.mag} {output} {input.bam} 2>/dev/null"
 
@@ -634,8 +698,6 @@ if config["mag"]:
             rules.checkm_coverage.output
         output:
             MAG_QA + "mag_profiles.txt"
-        conda:
-            "checkm"
         shell:
             "checkm profile -q {input} --tab_table -f {output}"
 
@@ -669,8 +731,6 @@ if config["mag"]:
         output:
             # Something to signal this rule is completed
             QC_PLOTS + "checkm_plots.done"
-        conda:
-            "checkm"
         shell:
             """
             checkm coding_plot --image_type pdf  -x {params.ftype} {params.mag_qa} {params.mag} {params.out} 95 || true
@@ -746,14 +806,16 @@ rule gene_annotation:
     params:
         eggnog_db=config["eggnog_db"],
         out_dir=ANNOTATIONS,
-        tmp_dir=config["tmp_dir"]
+        tmp_dir=config["tmp_dir"],
+        blockSize=16,
+        idxChunks=4
     output:
         emapper_hits=ANNOTATIONS + "annots.emapper.hits",
         emapper_seed_orthologs=ANNOTATIONS + "annots.emapper.seed_orthologs",
         emapper_annotations=ANNOTATIONS + "annots.emapper.annotations"
     shell:
         "emapper.py -i {input} -o annots --output_dir {params.out_dir} --cpu {threads} "
-        "--itype proteins --block_size 4 --index_chunks 2 --data_dir {params.eggnog_db} "
+        "--itype proteins --block_size {params.blockSize} --index_chunks {params.idxChunks} --data_dir {params.eggnog_db} "
         "--override --temp_dir {params.tmp_dir}  --scratch_dir {params.tmp_dir} --dbmem"
 
 rule gene_annotation_grep:
@@ -766,10 +828,10 @@ rule gene_annotation_grep:
         keggmap=ANNOTATIONS + "annots.KEGGmap.txt"
     shell:
         """
-        grep \"NODE_\" {input} | cut -f 1,11 | sed -e 's/\\t-//g' | grep -e $'\\t' | awk '{{n=split($2,s,\",\");for (i=1;i<=n;i++) {{$2=s[i];print}}}}' | sed -e 's/\\s/\\t/g' > {output.ec} || true
-        grep \"NODE_\" {input} | cut -f 1,5 > {output.cog} || true
-        grep \"NODE_\" {input} | cut -f1,12 | grep \"ko:\" | sed 's/ko://g' | awk '{{n=split($2,s,\",\");for (i=1;i<=n;i++) {{$2=s[i];print}}}}' | sed -e 's/\\s/\\t/g' > {output.ko} || true
-        grep \"NODE_\" {input} | cut -f1,13 | grep \"ko\" | sed 's/,map.*//g' | sed 's/ko/map/g' | awk '{{n=split($2,s,\",\");for (i=1;i<=n;i++) {{$2=s[i];print}}}}' | sed -e 's/\\s/\\t/g' > {output.keggmap} || true
+        grep -E \"NODE_|TRINITY_\" {input} | cut -f 1,11 | sed -e 's/\\t-//g' | grep -e $'\\t' | awk '{{n=split($2,s,\",\");for (i=1;i<=n;i++) {{$2=s[i];print}}}}' | sed -e 's/\\s/\\t/g' > {output.ec} || true
+        grep -E \"NODE_|TRINITY_\" {input} | cut -f 1,5 > {output.cog} || true
+        grep -E \"NODE_|TRINITY_\" {input} | cut -f1,12 | grep \"ko:\" | sed 's/ko://g' | awk '{{n=split($2,s,\",\");for (i=1;i<=n;i++) {{$2=s[i];print}}}}' | sed -e 's/\\s/\\t/g' > {output.ko} || true
+        grep -E \"NODE_|TRINITY_\" {input} | cut -f1,13 | grep \"ko\" | sed 's/,map.*//g' | sed 's/ko/map/g' | awk '{{n=split($2,s,\",\");for (i=1;i<=n;i++) {{$2=s[i];print}}}}' | sed -e 's/\\s/\\t/g' > {output.keggmap} || true
         """
  
 rule gene_annot_seqExtract:                                                                       ##--> added rule, but seqtk will be needed <--##
@@ -820,11 +882,11 @@ rule gene_annot_geneTPMs:                                                       
         TPMec=ANNOTATIONS + "{sample}_geneTPMtab.ec.txt"
     shell:
         """
-        cut -f1,7 {input.abukos} | sed $'s/#KO.*//g' | awk -F'\\t' -f {params.awk_geneTPM_script} > {output.tmpko}
+        cut -f1,6 {input.abukos} | sed $'s/#KO.*//g' | awk -F'\\t' -f {params.awk_geneTPM_script} > {output.tmpko}
         awk -F'\\t' -f {params.awk_joinTPM_script} {params.KO_list} {output.tmpko} | \
         sed '1s/^/#KO\\tgeneTPM\\tgeneNAME\\n/'> {output.TPMko}
 
-        cut -f1,7 {input.abuecs} | sed $'s/#EC.*//g' | awk -F'\\t' -f {params.awk_geneTPM_script} > {output.tmpec}
+        cut -f1,6 {input.abuecs} | sed $'s/#EC.*//g' | awk -F'\\t' -f {params.awk_geneTPM_script} > {output.tmpec}
         awk -F'\\t' -f {params.awk_joinTPM_script} {params.EC_list} {output.tmpec} | \
         sed '1s/^/#EC\\tgeneTPM\\tgeneNAME\\n/'> {output.TPMec}
         """
