@@ -204,7 +204,8 @@ rule run_fastp:
         r=temp(TED_READS + "{sample}_R2_te.fastq.gz"),
         s_l_html=TED_READS + "{sample}_fastplog.html",
         s_l_json=temp(TED_READS + "{sample}_fastp.json"),                       ## no change, correct as is
-        s_l_text=TED_READS + "{sample}_fastplog.txt"                           ##--> added to cmd() but maybe not needed <--##
+    params:
+        s_l_text=TED_READS + "{sample}_fastplog.txt"
     run:
         shell(run_fastp_cmd())                                                 ##--> added to cmd def (in utils) code to collect the ouptut log for each sample <--##
 
