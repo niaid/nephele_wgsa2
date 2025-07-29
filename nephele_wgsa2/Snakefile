@@ -367,7 +367,7 @@ rule run_trinity:
     shell:
         "Trinity --seqType fq --left {input.f} --right {input.r} --CPU {params.threads} "
         "--output {params.out} --full_cleanup --max_memory {params.mem} "
-        "--grid_node_CPU {params.phase2_CPUs} --grid_node_max_memory {params.phase2_mmem} &> {params.logfile}"
+        "--grid_node_CPU {params.phase2_CPU} --grid_node_max_memory {params.phase2_mmem} &> {params.logfile}"
 
 
 rule run_bbtools_stats:
