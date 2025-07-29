@@ -41,7 +41,7 @@ def run_fastp_cmd():
         cut_front_mean_quality = config["trim_of_5"]
         cut_tail_mean_quality = config["trim_of_3"]
     trim_filter = f"--average_qual {average_qual} --length_required {length_required} --cut_front --cut_front_mean_quality {cut_front_mean_quality} --cut_tail  --cut_tail_mean_quality {cut_tail_mean_quality}"
-    return base_cmd + " " + trim_filter + " 2>> {output.s_l_text}"           ##--> added + "2>> {output.s_l_text}" for log capture. Might need to be in params <--##
+    return base_cmd + " " + trim_filter + " 2>> {params.s_l_text}"        ### moved to params for log-capture <--##
 
 
 def make_biom_file(profiles, taxfiles, samples, map_file, biom_file_name, tax_col, prof_col):
