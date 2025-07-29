@@ -204,7 +204,8 @@ rule run_fastp:
         r=temp(TED_READS + "{sample}_R2_te.fastq.gz"),
         s_l_html=TED_READS + "{sample}_fastplog.html",
         s_l_json=temp(TED_READS + "{sample}_fastp.json"),                       ## no change, correct as is
-        s_l_text=TED_READS + "{sample}_fastplog.txt"                           ##--> added to cmd() but maybe not needed <--##
+    params:
+        s_l_text=TED_READS + "{sample}_fastplog.txt"
     run:
         shell(run_fastp_cmd())                                                 ##--> added to cmd def (in utils) code to collect the ouptut log for each sample <--##
 
@@ -247,10 +248,7 @@ rule compress_kraken2_decontaminate:
         "pigz -c {input.f} > {output.f} &&"                 ##--> added the pigz -c > filename option"  <--##
         "pigz -c {input.r} > {output.r}"                    ##--> added the pigz -c > filename option"  <--##
 
-# MTX-KM sortmerna:
 rule remove_rRNA:
-    resources:
-        mem_mb=lambda wildcards: int(config["total_mem_gb"]) * 1000
     input:
         f=rules.run_kraken2_decontaminate.output.unclassified_out1,
         r=rules.run_kraken2_decontaminate.output.unclassified_out2
@@ -263,11 +261,12 @@ rule remove_rRNA:
         ref_db=config["sortmerna_db"],
         basename=TED_READS + "{sample}_sortmerna",
         aligned="{sample}_sortmerna_aligned.log",
-        base_dir=TED_READS
+        base_dir=TED_READS,
+        threads= (threads_per_job - 4)
     shell:
         "sortmerna --reads {input.f} --reads {input.r} "
-        "--ref {params.ref_db}/smr_v4.3_default_db.fasta -m {resources.mem_mb} "
-        "--workdir {params.basename} --threads {threads} --idx-dir {params.ref_db}/idx "
+        "--ref {params.ref_db}/smr_v4.3_default_db.fasta "
+        "--workdir {params.basename} --threads {params.threads} --idx-dir {params.ref_db}/idx "
         "--fastx --paired_out --out2 --other {params.basename} &> {output.logfile} && "
         "mv {params.basename}/out/aligned.log {params.base_dir}/{params.aligned} && "
         "rm -r {params.basename}"
@@ -348,24 +347,27 @@ rule run_metaspades:
         "--memory 550 --tmp-dir {params.tmp_dir} "
         "-o {params.out} -t {threads} --only-assembler"
 
-## MTX-KM: Trinity:
 rule run_trinity:
     resources:
         mem_gb=config['total_mem_gb']
     input:
         f=rules.compress_rRNA_filter.output.f,
         r=rules.compress_rRNA_filter.output.r
+    threads: threads_per_job
     params:
         outdir=ASM_T,
         out= ASM_T + "trinity_{sample}",
+        phase2_CPU = 1,
+        phase2_mmem = str(2) + "G",
         logfile=ASM_T + "{sample}_trinity.log",
-        mem=str(config['total_mem_gb']) + "G"
+        mem=str(config['total_mem_gb']) + "G",
+        threads= (threads_per_job - 4)
     output:
         temp(ASM_T + "trinity_{sample}.Trinity.fasta")
-    threads: threads_per_job
     shell:
-        "Trinity --seqType fq --left {input.f} --right {input.r} --CPU {threads} "
-        "--output {params.out} --full_cleanup --max_memory {params.mem} &> {params.logfile}"
+        "Trinity --seqType fq --left {input.f} --right {input.r} --CPU {params.threads} "
+        "--output {params.out} --full_cleanup --max_memory {params.mem} "
+        "--grid_node_CPU {params.phase2_CPUs} --grid_node_max_memory {params.phase2_mmem} &> {params.logfile}"
 
 
 rule run_bbtools_stats:
