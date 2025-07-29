@@ -357,8 +357,6 @@ rule run_trinity:
     params:
         outdir=ASM_T,
         out= ASM_T + "trinity_{sample}",
-        phase2_CPU = 1,
-        phase2_mmem = str(2) + "G",
         logfile=ASM_T + "{sample}_trinity.log",
         mem=str(config['total_mem_gb']) + "G",
         threads= (threads_per_job - 4)
@@ -366,8 +364,7 @@ rule run_trinity:
         temp(ASM_T + "trinity_{sample}.Trinity.fasta")
     shell:
         "Trinity --seqType fq --left {input.f} --right {input.r} --CPU {params.threads} "
-        "--output {params.out} --full_cleanup --max_memory {params.mem} "
-        "--grid_node_CPU {params.phase2_CPU} --grid_node_max_memory {params.phase2_mmem} &> {params.logfile}"
+        "--output {params.out} --full_cleanup --max_memory {params.mem} &> {params.logfile}"
 
 
 rule run_bbtools_stats:
