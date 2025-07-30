@@ -253,21 +253,19 @@ rule remove_rRNA:
         f=rules.run_kraken2_decontaminate.output.unclassified_out1,
         r=rules.run_kraken2_decontaminate.output.unclassified_out2
     output:
-        logfile=TED_READS + "{sample}_sortmerna.log",
         f=TED_READS + "{sample}_sortmerna_fwd.fq",
         r=TED_READS + "{sample}_sortmerna_rev.fq"
-    resources:
-        mem_mb=lambda wildcards: int(config["total_mem_gb"] * 1000)
     threads: threads_per_job
     params:
         ref_db=config["sortmerna_db"],
         basename=TED_READS + "{sample}_sortmerna",
         aligned="{sample}_sortmerna_aligned.log",
         base_dir=TED_READS,
-        threads=lambda wildcards: int(threads_per_job - 4)
+        threads=lambda wildcards: int(threads_per_job - 4),
+        logfile=TED_READS + "{sample}_sortmerna.log"
     shell:
         "sortmerna --reads {input.f} --reads {input.r} "
-        "--ref {params.ref_db}/smr_v4.3_default_db.fasta  -m {resources.mem_mb} "
+        "--ref {params.ref_db}/smr_v4.3_default_db.fasta "
         "--workdir {params.basename} --threads {params.threads} --idx-dir {params.ref_db}/idx "
         "--fastx --paired_out --out2 --other {params.basename} &> {output.logfile} && "
         "mv {params.basename}/out/aligned.log {params.base_dir}/{params.aligned} && "
