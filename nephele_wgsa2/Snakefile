@@ -351,7 +351,7 @@ rule run_metaspades:
 
 rule run_trinity:
     resources:
-        mem_gb=(config['total_mem_gb'] // 3)
+        mem_gb=lambda wildcards: int(config['total_mem_gb'] // 3)
     input:
         f=rules.compress_rRNA_filter.output.f,
         r=rules.compress_rRNA_filter.output.r
@@ -360,8 +360,8 @@ rule run_trinity:
         outdir=ASM_T,
         out= ASM_T + "trinity_{sample}",
         logfile=ASM_T + "{sample}_trinity.log",
-        mem=str(config['total_mem_gb']) + "G",
-        threads= (threads_per_job - 4),
+        mem=str(config['total_mem_gb'] // 3) + "G",
+        threads=lambda wildcards: int(threads_per_job - 4),
         bfly_CPU=2,
         bfly_HeapSpace="20G"
     output:
