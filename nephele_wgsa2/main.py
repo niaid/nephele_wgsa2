@@ -14,6 +14,7 @@ from nephele_pipeline_utils.utils import log
 from config import pipeline_config
 from parser import parser, parse_args
 
+print("Demonstration of Workflow Actions -- Katie")
 
 def post_clean_up(args):
     try:
