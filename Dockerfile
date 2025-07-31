@@ -25,7 +25,7 @@ RUN wget https://github.com/biocore/sortmerna/releases/download/v4.3.4/database.
     ## Speed of rRNA filtering increases significantly if the database is pre-indexed:
     && sortmerna --index 1 \
        --ref /mnt/rRNA_databases_v4/smr_v4.3_default_db.fasta \
-       --idx-dir /mnt/rRNA_databases_v4
+       --idx-dir /mnt/rRNA_databases_v4/idx
 
 # Install R packages
 ADD dependencies.R /tmp/dependencies.R
