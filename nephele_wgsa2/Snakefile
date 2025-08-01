@@ -264,12 +264,22 @@ rule remove_rRNA:
         threads=lambda wildcards: int(threads_per_job - 4),
         logfile=TED_READS + "{sample}_sortmerna.log"
     shell:
-        "sortmerna --reads {input.f} --reads {input.r} "
-        "--ref {params.ref_db}/smr_v4.3_default_db.fasta "
-        "--workdir {params.basename} --threads {params.threads} --idx-dir {params.ref_db}/idx "
-        "--fastx --paired_out --out2 --other {params.basename} &> {params.logfile} && "
-        "mv {params.basename}/out/aligned.log {params.base_dir}/{params.aligned} && "
-        "rm -r {params.basename}"
+        """
+        sortmerna --reads {input.f} --reads {input.r} \
+        --ref {params.ref_db}/smr_v4.3_default_db.fasta \
+        --workdir {params.basename} --threads {params.threads} --idx-dir {params.ref_db}/idx \
+        --fastx --paired_out --out2 --other {params.basename} &> {params.logfile}
+        
+        mv {params.basename}/out/aligned.log {params.base_dir}/{params.aligned}
+        
+        rm -r {params.basename}
+
+        line_count=$(wc -l < {output.f})
+        if [ "$line_count" -lt 400 ]; then
+            echo "ERROR: Fewer than 100 reads remain after rRNA filtering for {sample}, and reads are unlikely to assemble. If this dataset is 16S rRNA amplicon reads, consider using our DADA2 or QIIME pipelines."
+            exit
+        fi
+        """
 
 ## Borrowed for sortmerna:
 rule compress_rRNA_filter:                                     
@@ -365,9 +375,16 @@ rule run_trinity:
     output:
         temp(ASM_T + "trinity_{sample}.Trinity.fasta")
     shell:
-        "Trinity --seqType fq --left {input.f} --right {input.r} --CPU {params.threads} "
-        "--output {params.out} --full_cleanup --max_memory {params.mem} "
-        "--bflyHeapSpaceMax {params.bfly_HeapSpace} --bflyCPU {params.bfly_CPU} &> {params.logfile}"
+        """
+        Trinity --seqType fq --left {input.f} --right {input.r} --CPU {params.threads}
+        --output {params.out} --full_cleanup --max_memory {params.mem}
+        --bflyHeapSpaceMax {params.bfly_HeapSpace} --bflyCPU {params.bfly_CPU} &> {params.logfile}
+        line_count=$(wc -l < {output})
+        if grep -q "No butterfly assemblies to report" {params.logfile} || [ "$line_count" -lt 2 ] ; then
+            echo "ERROR: Trinity unable to assemble reads into transcripts for {sample}. Confirm that your data are whole-genome sequence reads (not amplicon), and possibly use the Short Read QC pipeline to ensure high-quality reads."
+            exit 1
+        fi
+        """
 
 rule run_bbtools_stats:
     input:
