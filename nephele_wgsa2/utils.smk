@@ -102,8 +102,8 @@ def make_biom_file(profiles, taxfiles, samples, map_file, biom_file_name, tax_co
 def clean_output():
     # asm_bam=" ".join(expand(ASM + "*.bam", sample=samples))
     # asm_bai=" ".join(expand(ASM + "*.bai", sample=samples))
-    asm_bt2=" ".join(expand(ASM + "*.bt2", sample=samples))
-    asm_done=" ".join(expand(ASM + "*.done", sample=samples))
+    asm_bt2=" ".join(expand(ASM_T if config["denovo_mtx"] else ASM + "*.bt2", sample=samples))
+    asm_done=" ".join(expand(ASM_T if config["denovo_mtx"] else ASM + "*.done", sample=samples))
     qc_plots_done=" ".join(expand(QC_PLOTS + "*.done", sample=samples))
     pwy_plots_done=PWY_DIVERSITY_PLOTS + "*.done"
     tax_plots_done=TAX_DIVERSITY_PLOTS + "*.done"
