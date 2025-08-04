@@ -69,7 +69,7 @@ threads_per_job = get_num_threads_per_job(len(samples))
 
 pipeline_output = [
     TED_READS_TAX + "TAXplots_readsTAX_" + DBNAME +".html",             ##--> "TAXplots_TEDreads.html",
-    expand(ASM_T if config["denovo_mtx"] else ASM + "add_de_replication_stats.done", sample=samples)
+    expand(ASM_T if config["denovo_mtx"] else ASM + "add_de_replication_stats.done", sample=samples),
     expand(OUT_FILE + "_depths.txt",sample=samples),
     expand(OUT_FILE + "_scaffCoverage.txt",sample=samples),
     expand(PREGENES_PREFIX + "_stats.txt", sample=samples),
