@@ -377,9 +377,10 @@ rule run_trinity:
         temp(ASM_T + "trinity_{sample}.Trinity.fasta")
     shell:
         """
-        Trinity --seqType fq --left {input.f} --right {input.r} --CPU {params.threads}
-        --output {params.out} --full_cleanup --max_memory {params.mem}
-        --bflyHeapSpaceMax {params.bfly_HeapSpace} --bflyCPU {params.bfly_CPU} &> {params.logfile}
+        Trinity --seqType fq --left {input.f} --right {input.r} --CPU {params.threads} \
+            --output {params.out} --full_cleanup --max_memory {params.mem} \
+            --bflyHeapSpaceMax {params.bfly_HeapSpace} --bflyCPU {params.bfly_CPU} &> {params.logfile}
+        
         line_count=$(wc -l < {output})
         if grep -q "No butterfly assemblies to report" {params.logfile} || [ "$line_count" -lt 2 ] ; then
             echo "ERROR: Trinity unable to assemble reads into transcripts for {wildcards.sample}. Confirm that your data are whole-genome sequence reads (not amplicon), and possibly use the Short Read QC pipeline to ensure high-quality reads."
