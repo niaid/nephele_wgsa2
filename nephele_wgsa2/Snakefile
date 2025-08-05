@@ -5,7 +5,7 @@
 configfile: "/pipeline/config.yaml"
 include: "/pipeline/utils.smk"
 
-TED_READS = config["output_dir"] + ("/MTX_TEDreads/" if config["denovo_mtx"] else "/TEDreads")
+TED_READS = config["output_dir"] + ("/TEDreads_mtx/" if config["denovo_mtx"] else "/TEDreads")
 TAX_PROFILES = config["output_dir"] + "/TAXprofiles/"
 DBNAME = config["classification_db_name"]
 # if "plusPFV" in config["classification_db"]:
