@@ -276,7 +276,7 @@ rule remove_rRNA:
 
         line_count=$(wc -l < {output.f})
         if [ "$line_count" -lt 400 ]; then
-            echo "ERROR: Fewer than 100 reads remain after rRNA filtering for {sample}, and reads are unlikely to assemble. If this dataset is 16S rRNA amplicon reads, consider using our DADA2 or QIIME pipelines."
+            echo "ERROR: Fewer than 100 reads remain after rRNA filtering for {wildcards.sample}, and reads are unlikely to assemble. If this dataset is 16S rRNA amplicon reads, consider using our DADA2 or QIIME pipelines."
             exit
         fi
         """
@@ -382,7 +382,7 @@ rule run_trinity:
         --bflyHeapSpaceMax {params.bfly_HeapSpace} --bflyCPU {params.bfly_CPU} &> {params.logfile}
         line_count=$(wc -l < {output})
         if grep -q "No butterfly assemblies to report" {params.logfile} || [ "$line_count" -lt 2 ] ; then
-            echo "ERROR: Trinity unable to assemble reads into transcripts for {sample}. Confirm that your data are whole-genome sequence reads (not amplicon), and possibly use the Short Read QC pipeline to ensure high-quality reads."
+            echo "ERROR: Trinity unable to assemble reads into transcripts for {wildcards.sample}. Confirm that your data are whole-genome sequence reads (not amplicon), and possibly use the Short Read QC pipeline to ensure high-quality reads."
             exit 1
         fi
         """
