@@ -46,7 +46,7 @@ Contains the dataset-wide functional analysis results from the pipeline, includi
 
 ### `asmb_files` folder
 
-**Contains the per-sample final assembly `fasta` and `bam` files
+**Contains the per-sample final assembly `fasta` and `bam` files**
 
 for convenient uploads in downstream processing pipelines such as Nephele's DiscoVir pipeline.
 
