@@ -5,7 +5,7 @@
 configfile: "/pipeline/config.yaml"
 include: "/pipeline/utils.smk"
 
-TED_READS = config["output_dir"] + ("/MTX_TEDreads/" if config["denovo_mtx"] else "/TEDreads")
+TED_READS = config["output_dir"] + ("/TEDreads_mtx/" if config["denovo_mtx"] else "/TEDreads")
 TAX_PROFILES = config["output_dir"] + "/TAXprofiles/"
 DBNAME = config["classification_db_name"]
 # if "plusPFV" in config["classification_db"]:
@@ -176,7 +176,7 @@ onstart:
     samtools --version | head -n1
     metabat2 2>&1 >/dev/null | grep version
     prodigal -v 2>&1 >/dev/null | head -n2 | tail -n1
-    checkm | head -n2 | tail -n1 | sed 's/^ *//g'
+    conda list checkm -n checkm | tail -n1 | awk '{{print $1,$2}}'
     ktImportText | head -n2 | tail -n1 | sed 's/[^a-zA-Z0-9. ]//g' | sed 's/^ *//g'
     metaprokka --version
     cat {config[minpath_script]} | grep version | head -n1
@@ -264,12 +264,22 @@ rule remove_rRNA:
         threads=lambda wildcards: int(threads_per_job - 4),
         logfile=TED_READS + "{sample}_sortmerna.log"
     shell:
-        "sortmerna --reads {input.f} --reads {input.r} "
-        "--ref {params.ref_db}/smr_v4.3_default_db.fasta "
-        "--workdir {params.basename} --threads {params.threads} --idx-dir {params.ref_db}/idx "
-        "--fastx --paired_out --out2 --other {params.basename} &> {params.logfile} && "
-        "mv {params.basename}/out/aligned.log {params.base_dir}/{params.aligned} && "
-        "rm -r {params.basename}"
+        """
+        sortmerna --reads {input.f} --reads {input.r} \
+        --ref {params.ref_db}/smr_v4.3_default_db.fasta \
+        --workdir {params.basename} --threads {params.threads} --idx-dir {params.ref_db}/idx \
+        --fastx --paired_out --out2 --other {params.basename} &> {params.logfile}
+        
+        mv {params.basename}/out/aligned.log {params.base_dir}/{params.aligned}
+        
+        rm -r {params.basename}
+
+        line_count=$(wc -l < {output.f})
+        if [ "$line_count" -lt 400 ]; then
+            echo "ERROR: Fewer than 100 reads remain after rRNA filtering for {wildcards.sample}, and reads are unlikely to assemble. If this dataset is 16S rRNA amplicon reads, consider using our DADA2 or QIIME pipelines."
+            exit
+        fi
+        """
 
 ## Borrowed for sortmerna:
 rule compress_rRNA_filter:                                     
@@ -338,13 +348,14 @@ rule run_metaspades:
         in2=rules.compress_kraken2_decontaminate.output.r
     params:
         out=ASM,
-        tmp_dir=config["tmp_dir"]
+        tmp_dir=config["tmp_dir"],
+        mem_gb=config["total_mem_gb"],
     threads: threads_per_job
     output:
         temp(ASM + "scaffolds.fasta")
     shell:
         "metaspades.py -1 {input.in1} -2 {input.in2} "
-        "--memory 550 --tmp-dir {params.tmp_dir} "
+        "--memory {params.mem_gb} --tmp-dir {params.tmp_dir} "
         "-o {params.out} -t {threads} --only-assembler"
 
 rule run_trinity:
@@ -365,9 +376,17 @@ rule run_trinity:
     output:
         temp(ASM_T + "trinity_{sample}.Trinity.fasta")
     shell:
-        "Trinity --seqType fq --left {input.f} --right {input.r} --CPU {params.threads} "
-        "--output {params.out} --full_cleanup --max_memory {params.mem} "
-        "--bflyHeapSpaceMax {params.bfly_HeapSpace} --bflyCPU {params.bfly_CPU} &> {params.logfile}"
+        """
+        Trinity --seqType fq --left {input.f} --right {input.r} --CPU {params.threads} \
+            --output {params.out} --full_cleanup --max_memory {params.mem} \
+            --bflyHeapSpaceMax {params.bfly_HeapSpace} --bflyCPU {params.bfly_CPU} &> {params.logfile}
+        
+        line_count=$(wc -l < {output})
+        if grep -q "No butterfly assemblies to report" {params.logfile} || [ "$line_count" -lt 2 ] ; then
+            echo "ERROR: Trinity unable to assemble reads into transcripts for {wildcards.sample}. Confirm that your data are whole-genome sequence reads (not amplicon), and possibly use the Short Read QC pipeline to ensure high-quality reads."
+            exit 1
+        fi
+        """
 
 rule run_bbtools_stats:
     input:
@@ -381,7 +400,8 @@ rule run_bbtools_stats:
         "sed $'s/_cov_/ cov_/g' {input} > {output.out1} && "
         "stats.sh in={output.out1} out={output.out2} && "
         "printf \"\\nTEDreads mapping stats:\\n\"  >> {output.out2} && "
-        "rm -rf {params.asm}K* {params.asm}pipeline_state {params.asm}tmp {params.asm}misc {params.asm}before_rr.fasta "
+        "rm -rf {params.asm}K21/ {params.asm}K33/ {params.asm}K55/ "
+        "{params.asm}pipeline_state {params.asm}tmp {params.asm}misc {params.asm}before_rr.fasta "
         "{params.asm}dataset.info {params.asm}*params* {params.asm}*.gfa {params.asm}first_pe_contigs.fasta "
         "{params.asm}run_spades.sh {params.asm}*.yaml {params.asm}*.paths {params.asm}assembly_graph.fastg"
 
@@ -653,6 +673,9 @@ if config["mag"]:
             "--unbinned  -t {threads} -a {input.depths} && touch {output}"
 
     rule checkm_lineage_wf:
+        resources:
+            mem_gb=config["total_mem_gb"],
+        threads: config["num_cpus"]
         input:
             # We do not use the actual output here but need files from metabat2_run step
             rules.metabat2_run.output
@@ -660,9 +683,10 @@ if config["mag"]:
             ftype="fa",
             basename=MAG,
             out=MAG_QA
-        threads: threads_per_job
         output:
             MAG_QA + "lineage.ms"
+        conda:
+            "checkm"
         shell:
             "checkm lineage_wf --tab_table --nt --pplacer_threads {threads} "
             "-t {threads} -x {params.ftype} {params.basename} {params.out}"
@@ -672,10 +696,12 @@ if config["mag"]:
             rules.checkm_lineage_wf.output
         params:
             mag_qa=MAG_QA
-        threads: threads_per_job
+        threads: config["num_cpus"]
         output:
             qa_txt=MAG_QA + "mag_qa.txt",
             tax=MAG_QA + "mag_tax.txt"
+        conda:
+            "checkm"
         shell:
             "checkm qa -o 2 --tab_table -t {threads} -f {output.qa_txt} {input} {params.mag_qa} && "
             "checkm tree_qa -o 2 --tab_table -f {output.tax} {params.mag_qa}"
@@ -684,13 +710,16 @@ if config["mag"]:
     rule checkm_coverage:
         input:
             bam=rules.samtools_to_bam.output.final_bam,
-            fake=rules.metabat2_run.output # We do not use the actual output here but need files from metabat2_run step
+            fake=rules.metabat2_run.output, # We do not use the actual output here but need files from metabat2_run step
+            fake2=rules.checkm_lineage_wf.output # we do not input in command but file is needed
         params:
             ftype="fa",
             mag=MAG
-        threads: threads_per_job
+        threads: config["num_cpus"]
         output:
             MAG_QA + "mag_coverage.txt"
+        conda:
+            "checkm"
         shell:
             "checkm coverage -x {params.ftype} -t {threads} {params.mag} {output} {input.bam} 2>/dev/null"
 
@@ -699,6 +728,8 @@ if config["mag"]:
             rules.checkm_coverage.output
         output:
             MAG_QA + "mag_profiles.txt"
+        conda:
+            "checkm"
         shell:
             "checkm profile -q {input} --tab_table -f {output}"
 
@@ -732,6 +763,8 @@ if config["mag"]:
         output:
             # Something to signal this rule is completed
             QC_PLOTS + "checkm_plots.done"
+        conda:
+            "checkm"
         shell:
             """
             checkm coding_plot --image_type pdf  -x {params.ftype} {params.mag_qa} {params.mag} {params.out} 95 || true
@@ -883,11 +916,11 @@ rule gene_annot_geneTPMs:                                                       
         TPMec=ANNOTATIONS + "{sample}_geneTPMtab.ec.txt"
     shell:
         """
-        cut -f1,6 {input.abukos} | sed $'s/#KO.*//g' | awk -F'\\t' -f {params.awk_geneTPM_script} > {output.tmpko}
+        cut -f1,7 {input.abukos} | sed $'s/#KO.*//g' | awk -F'\\t' -f {params.awk_geneTPM_script} > {output.tmpko}
         awk -F'\\t' -f {params.awk_joinTPM_script} {params.KO_list} {output.tmpko} | \
         sed '1s/^/#KO\\tgeneTPM\\tgeneNAME\\n/'> {output.TPMko}
 
-        cut -f1,6 {input.abuecs} | sed $'s/#EC.*//g' | awk -F'\\t' -f {params.awk_geneTPM_script} > {output.tmpec}
+        cut -f1,7 {input.abuecs} | sed $'s/#EC.*//g' | awk -F'\\t' -f {params.awk_geneTPM_script} > {output.tmpec}
         awk -F'\\t' -f {params.awk_joinTPM_script} {params.EC_list} {output.tmpec} | \
         sed '1s/^/#EC\\tgeneTPM\\tgeneNAME\\n/'> {output.TPMec}
         """
