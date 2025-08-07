@@ -57,6 +57,7 @@ def main(args):
         f"classification_db={args.classification_db_path}",
         f"amrfind={args.amrfind}",
         f"denovo_mtx={args.denovo_mtx}",
+        f"sortmerna_db={args.sortmerna_db_path}",
         f"eggnog_db={args.eggnog_db_path}",
         f"annotations_type={args.annotations_type}",
         f"annotations_map={args.annotations_map_db_path}",

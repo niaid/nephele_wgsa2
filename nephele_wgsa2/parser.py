@@ -81,6 +81,12 @@ def parse_args():
         help="Denovo mtx",
     )
     parser.add_argument(
+        "--sortmerna_db_path",
+        type=directory,
+        default=None,
+        help="Sortmerna db path",
+    )
+    parser.add_argument(
         "--tax_genes",
         type=boolean,
         default=False,
