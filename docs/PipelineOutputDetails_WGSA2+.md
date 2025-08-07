@@ -1,4 +1,4 @@
-## Pipeline output details (version 0.1.9)
+## WGSA2+ Pipeline output details (version 0.1.9, August 2025)
 
 ### Global Files
 
