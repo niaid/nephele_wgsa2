@@ -152,7 +152,7 @@ def for_discovir():
     asm_bam=" ".join(expand(OUT_FILE + ".bam"  , sample=samples))
     asm_fas=" ".join(expand(OUT_FILE + ".fasta", sample=samples))
     discoVIR= config["output_dir"] + "/asmb_files/"
-    asmbDIR = config["output_dir"] + "/asmbMetaSpades/"
+    asmbDIR = config["output_dir"] + ("/asmbTrinity/" if config["denovo_mtx"] else "/asmbMetaSpades/")
 
     command = f"""
 
