@@ -14,9 +14,9 @@
 
 **Contains dataset-wide taxonomic results**
 
-Although listed first here, this folder is one of the last produced by the pipeline as it contains the dataset-wide taxonomic results (visualizations, summaries and community matrices) produced from each processed sample. 
+Although listed first here, this folder is one of the last produced by the pipeline as it contains the dataset-wide taxonomic results (visualizations, summaries and community matrices) produced from each processed sample.
 
-Complete contents of this folder will depend on the options selected for the pipeline.
+Complete contents of this folder will depend on the options selected for the pipeline, including the database (`<DBname>`):
 
 - `ReadsTAX_<DBname>` folder (default): Contains logs and reports from the taxonomic classification of TED reads ([see TEDreads section below](#tedreadstedreads_mtx-folder)). Sub-folders:
   - `bin` folder: files used by Krona for creating the `TAXplots` html chart. These are the text versions of the per-sample taxonomic reports from the TED reads, and they are visualized in the `TAXplots_ReadsTAX_<DBname>.html` report.
@@ -24,10 +24,9 @@ Complete contents of this folder will depend on the options selected for the pip
   - `reports` folder: contains Kraken2 report files of the taxonomic classifications produced for each sample.
   - `TAXplots_ReadsTAX_<DBname>.html` file: interactive Krona chart of the TED read-based taxonomic profiles, collected in the `bin` folder.
   - `merged_tables` folder (**conditional on ≥ 2 samples**): a folder containing the collated taxonomic abundance matrix from the entire dataset. Creation of this folder is not performed for datasets with less than 2 samples. The TAX abundance matrix is reported in 6 tab-delimited text files and 1 biom file. The files are named based on content and format of certain profile information. **TAX-labels** designate files that contain the taxonomy in separate columns per rank, the **Lineage-labels** designate files representing the lineage of each taxonomy (all tax ranks) in 1 column (ranks separated by ';' within the column). **Counts-label** indicates files representing the abundance counts of each taxonomy for each sample (collated across dataset). The **biom file** represents counts for each sample and lineage column. This is the source file for the `for_analyze_with_microbiomedb.biom` file in the primary folder.
-	- `DivPlots` folder (**conditional on ≥ 2 samples**): Diversity plots and exploratory statistics for the dataset (**note new location** is within `ReadsTAX` folder as it summarizes the data from the ReadTAX profiles). The plots include alpha diversity indices table and boxplot (`TAX_AlphaDiv.txt` and `TAX_AlphaDiv.pdf`), beta diversity PCoA and nMDS ordination plots (`TAX_BetaDiv_nMDS.pdf` & `TAX_BetaDiv_PCoA.pdf`, require ≥ 3 samples), TAX content heatmap (`TAX_Profile_Heatmap.pdf`), Rankabundance (`TAX_RankAbundanceCurve.pdf`) and Rarefaction Curves (`TAX_RareficationCurve.pdf`). In some cases (e.g. ordination plots), some exploratory statistics will fail due to the content of the dataset.
-
-- `geneTAX_<DBname>` & `scaffTAX_<DBname>` folders **(based on user selections)**: Conditional on the choice of classification DB, visual summary of the gene-based taxonomic annotations for each sample, are presented here. Note **MGBCdb does not produce visual summaries**. This folder contains a `bin` folder with text versions of the profiles from each sample and a `TAXplots_genetax.html` interactive krona plot summary file of the gene-based taxonomic profiles from each sample.
-- `MAGs_TAX` folder **(based on user selections)**: This folder is generated only if MAGs creation and taxonomic profiling is selected, and is *Metagenomics Mode ONLY*. It contains the TAX classification and abundances of the MAGs. It also contains a `bin` folder with text versions of the MAG-based taxonomic profiles and visualizations by KronaTools (`TAXplots_MAGx.html`). It will also contain a `MAG-based_Counts+TAX.biom` biom file summarizing the MAG-based taxonomic profiles of all samples.
+	- `DivPlots` folder (**conditional on ≥ 2 samples**): Diversity plots and exploratory statistics for the dataset, summarizing the data from the ReadTAX profiles. Alpha diversity indices are provided, as well as a boxplot (`TAX_AlphaDiv.txt` and `TAX_AlphaDiv.pdf`), beta diversity PCoA and nMDS ordination plots (`TAX_BetaDiv_nMDS.pdf` & `TAX_BetaDiv_PCoA.pdf`, require ≥ 3 samples), TAX content heatmap (`TAX_Profile_Heatmap.pdf`), Rankabundance (`TAX_RankAbundanceCurve.pdf`) and Rarefaction Curves (`TAX_RareficationCurve.pdf`). In some cases (e.g. ordination plots), some exploratory statistics will fail due to the content of the dataset.
+- `geneTAX_<DBname>` & `scaffTAX_<DBname>` folders **(based on user selections)**: Conditional on the choice of classification DB, a visual summary of the gene-based taxonomic annotations for each sample are presented here. Note **MGBCdb does not produce visual summaries**. This folder contains a `bin` folder with text versions of the profiles from each sample and a `TAXplots_genetax.html` interactive krona plot summary file of the gene-based taxonomic profiles from each sample.
+- `MAGs_TAX` folder **(based on user selections)**: This folder is generated only if "MAGs & MAG TAX annotations" is selected, and is *Metagenomics Mode ONLY*. It contains the TAX classification and abundances of the MAGs. It also contains a `bin` folder with text versions of the MAG-based taxonomic profiles and visualizations by KronaTools (`TAXplots_MAGx.html`). It will also contain a `MAG-based_Counts+TAX.biom` biom file summarizing the MAG-based taxonomic profiles of all samples.
 
 Note: the scaffold-based taxonomic annotations option will not produce visualizations, but annotations are reported within each sample's assembly folder.
 
@@ -35,7 +34,7 @@ Note: the scaffold-based taxonomic annotations option will not produce visualiza
 
 **Contains dataset-wide functional results**
 
-Contains the dataset-wide functional analysis results from the pipeline, including pathway inferred profiles (PWY) and gene-based profiles. The folder will contain one folder, named based on the **metabolic pathway database** chosen at submission: `keggPWYs.MP` (default choice) or `metacycPWYs.MP` (alternative choice) folder. Either folder will have the same structure:
+Contains the dataset-wide functional analysis results from the pipeline, including pathway inferred profiles (PWY) and gene-based profiles. This folder will contain another folder, named based on the **metabolic pathway database** chosen at submission: `keggPWYs.MP` (default choice) or `metacycPWYs.MP` (alternative choice). Either folder will have the same structure:
 
 - `PWYplots_[ko2gg or ec2cc].html`: an interactive krona html report with the functional profiles for each sample (KronaTools), based on inferred PWYs.
 - `pwybin` folder: per-sample text reports of the PWYs identity & abundances files. The files are used to create the html report & biom files.
@@ -48,9 +47,9 @@ Contains the dataset-wide functional analysis results from the pipeline, includi
 
 **Contains the per-sample final assembly `fasta` and `bam` files**
 
-for convenient uploads in downstream processing pipelines such as Nephele's DiscoVir pipeline.
+For convenient uploads in downstream processing pipelines such as Nephele's DiscoVir pipeline.
 
-At the end of WGSA2+ processing, the pipeline will copy the `fasta` and `bam` files from each assembly into the `asmb_files/` folder. This is done to conveniently use these results in downstream pipelines like Nephele's DiscoVir pipeline. The `{sampName}_assembly.{fasta,bam}` files are also linked to their original locations in each sample's assembly folder (`{asmbMetaSpades}/{sampName}_asmb` in *Metagenomics Mode* OR `{asmbTrinity}/{sampName}_asmb/` in *Metatranscriptomics Mode*, [see below for details](#asmbmetaspadesasmbtrinity-folder))
+At the end of WGSA2+ processing, the pipeline will copy the `fasta` and `bam` files from each assembly into the `asmb_files/` folder. This is done to conveniently use these results in downstream pipelines like Nephele's DiscoVir pipeline. The `{sampName}_assembly.{fasta,bam}` files are also linked to their original locations in each sample's assembly folder (`{asmbMetaSpades}/{sampName}_asmb` in **Metagenomics Mode** OR `{asmbTrinity}/{sampName}_asmb/` in **Metatranscriptomics Mode**, [see below for details](#asmbmetaspadesasmbtrinity-folder))
 
 ## Detailed Results
 
