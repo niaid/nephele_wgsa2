@@ -26,7 +26,7 @@ Complete contents of this folder will depend on the options selected for the pip
   - `merged_tables` folder (**conditional on ≥ 2 samples**): a folder containing the collated taxonomic abundance matrix from the entire dataset. Creation of this folder is not performed for datasets with less than 2 samples. The TAX abundance matrix is reported in 6 tab-delimited text files and 1 biom file. The files are named based on content and format of certain profile information. **TAX-labels** designate files that contain the taxonomy in separate columns per rank, the **Lineage-labels** designate files representing the lineage of each taxonomy (all tax ranks) in 1 column (ranks separated by ';' within the column). **Counts-label** indicates files representing the abundance counts of each taxonomy for each sample (collated across dataset). The **biom file** represents counts for each sample and lineage column. This is the source file for the `for_analyze_with_microbiomedb.biom` file in the primary folder.
 	- `DivPlots` folder (**conditional on ≥ 2 samples**): Diversity plots and exploratory statistics for the dataset, summarizing the data from the ReadTAX profiles. Alpha diversity indices are provided, as well as a boxplot (`TAX_AlphaDiv.txt` and `TAX_AlphaDiv.pdf`), beta diversity PCoA and nMDS ordination plots (`TAX_BetaDiv_nMDS.pdf` & `TAX_BetaDiv_PCoA.pdf`, require ≥ 3 samples), TAX content heatmap (`TAX_Profile_Heatmap.pdf`), Rankabundance (`TAX_RankAbundanceCurve.pdf`) and Rarefaction Curves (`TAX_RareficationCurve.pdf`). In some cases (e.g. ordination plots), some exploratory statistics will fail due to the content of the dataset.
 - `geneTAX_<DBname>` & `scaffTAX_<DBname>` folders **(based on user selections)**: Conditional on the choice of classification DB, a visual summary of the gene-based taxonomic annotations for each sample are presented here. Note **MGBCdb does not produce visual summaries**. This folder contains a `bin` folder with text versions of the profiles from each sample and a `TAXplots_genetax.html` interactive krona plot summary file of the gene-based taxonomic profiles from each sample.
-- `MAGs_TAX` folder **(based on user selections)**: This folder is generated only if "MAGs & MAG TAX annotations" is selected, and is *Metagenomics Mode ONLY*. It contains the TAX classification and abundances of the MAGs. It also contains a `bin` folder with text versions of the MAG-based taxonomic profiles and visualizations by KronaTools (`TAXplots_MAGx.html`). It will also contain a `MAG-based_Counts+TAX.biom` biom file summarizing the MAG-based taxonomic profiles of all samples.
+- `MAGs_TAX` folder **(based on user selections)**: This folder is generated only if "MAGs & MAG TAX annotations" is selected, and is **Metagenomics Mode** *ONLY*. It contains the TAX classification and abundances of the MAGs. It also contains a `bin` folder with text versions of the MAG-based taxonomic profiles and visualizations by KronaTools (`TAXplots_MAGx.html`). It will also contain a `MAG-based_Counts+TAX.biom` biom file summarizing the MAG-based taxonomic profiles of all samples.
 
 Note: the scaffold-based taxonomic annotations option will not produce visualizations, but annotations are reported within each sample's assembly folder.
 
@@ -57,9 +57,9 @@ At the end of WGSA2+ processing, the pipeline will copy the `fasta` and `bam` fi
 
 ### `TEDreads`/`TEDreads_mtx` folder
 
-Output of Steps 1 & 2. These log files track the stats of samples through the trimming, filtering (T), error correction (E) and decontamination (D) Steps (TED Steps). When using **Metatranscriptomics Mode**, this folder will be called `TEDreads_mtx` and contain additional logs from sortMeRNA. If you chose the **Output TEDread FASTQ files** user option, we recommend downloading & storing the TEDreads to this folder. For each sample you will see the following files:
+Output of Steps 1 & 2. These log files track the stats of samples through the trimming, filtering (T), error correction (E) and decontamination (D) Steps (TED Steps). When using **Metatranscriptomics Mode**, this folder will be called `TEDreads_mtx` and contain additional logs from sortMeRNA. If you chose the **Output TEDread FASTQ files** user option, we recommend downloading & storing the TEDreads in this folder. For each sample you will see the following files:
 
-- `<SampName>_fastplog.[html,txt]`: log file with filtering, trimming and error-correction stats, in HTML and TXT format
+- `<SampName>_fastplog.[html,txt]`: log file with filtering, trimming and error-correction stats, in HTML and TXT format.
 - `<SampName>_kr2_decontam[REPORT,LOG].txt`: files reporting abundance and classification details of the host reads removed from the dataset.
 - `<SampName>_sortmerna.log` (if **Metatranscriptomics Mode** is selected): standard error log file provided by SortMeRNA, which may help in debugging.
 - `<SampName>_sortmerna_aligned.log` (if **Metatranscriptomics Mode** is selected): this log file is produced at the end of SortMeRNA and provides additional information about the command and parameters used. It also describes the number and proportion of reads that were identified as rRNA under the "Results" section (see "Total reads passing E-value threshold"). Samples having fewer than 100 reads after SortMeRNA are considered not suitable for proceeding in the assembly pipeline.
@@ -69,7 +69,7 @@ Output of Steps 1 & 2. These log files track the stats of samples through the tr
 
 **Contain per-sample assembly-related results**
 
-This folder is the dataset's most detailed per-sample results. For metagenomics datasets, it will be named `asmbMetaSpades`, while in **Metatranscriptomics Mode**, it will be `asmbTrinity`. Each sample with sufficient reads for assembly will have its own sub-folder here (`<SampleName>_asmb`), the content of which will be consistent across samples, but will depend on the **user options** selected (e.g. _AMR finding_, _MAGs & MAG TAX Annotations_, etc). The aggregated results of the pipeline (see above) will be produced from select files and information from here (for each sample).
+This folder is the dataset's most detailed per-sample results. For **Metagenomics Mode**, it will be named `asmbMetaSpades`, while in **Metatranscriptomics Mode**, it will be `asmbTrinity`. Each sample with sufficient reads for assembly will have its own sub-folder here (`<SampleName>_asmb`), the content of which will be consistent across samples, but will depend on the **user options** selected (e.g. _AMR finding_, _MAGs & MAG TAX annotations_, etc). The aggregated results of the pipeline (see above) will be produced from select files and information from here (for each sample).
 
 Organized into sub-folders based on the chronological order of the workflow steps, the `asmbMetaSpades` or `asmbTrinity` folder contains the following:
 
@@ -90,25 +90,26 @@ Note: To save on output size, the `{sampName}_assembly.fasta` & `{sampName}_asse
 
 #### Gene-related Files 
 
-##### within `<SampName>_asmb/genes` folder
+##### Within `<SampName>_asmb/genes` folder
 
 This folder contains files with information about predicted features (likely genes) within each assembly. These files have the prefix `PREDgenes`:
 
-  - `PREDgenes.{faa, fna, gff, gtf}` text files: contain information about the predicted features/genes from the sample, described as amino acid (AA) sequences (.faa), nucleotide (NT) sequences (.fna), or scaffold names and coordinates (.gff & .gtf) files.
-  - `PREDgenes_ABUNtab.txt` text file: **provides feature abundance values** with information about feature length, coverage and estimated abundances in RPK (reads per kilobases) and TPM (transcripts per million) score for each feature (instance of gene; iTPM). This value is the same in both Metagenomics Mode and Metatranscriptomics Mode.
+  - `PREDgenes.{faa, fna, gff, gtf}` text files: contains information about the predicted features/genes from the sample, described as amino acid (AA) sequences (.faa), nucleotide (NT) sequences (.fna), or scaffold names and coordinates (.gff & .gtf) files.
+  - `PREDgenes_ABUNtab.txt` text file: **provides feature abundance values** with information about feature length, coverage and estimated abundances in RPK (reads per kilobases) and TPM (transcripts per million) score for each feature (instance of gene; iTPM). This value is calculated the same in both **Metagenomics Mode** and **Metatranscriptomics Mode**.
   - `PREDgenes_stats.txt`: overall stats of predicted features including information about annotation yields, etc.
-  - `genesTAX_<DBname>` folder **(if selected)**: Taxonomic association of each predicted feature (gene) within the sample. The Kraken2 report is provided (`taxREPORT.txt`), along with produced human- & Krona-readable `<sampName>_4krona.txt` file (used to produce Krona charts in `TAXprofiles/geneTAX` folder). Additionally, the PREDgenes_ABUNtab.txt file is re-provided and amended with gene-based taxonomic affiliation (`PREDgenes_ABUNtab+tax.txt` file).
-  - `AMRs` folder **(if selected)**: A folder containing results from the AMR-finding algorithm, if elected during submission. Files `AMRs{.faa & _info.txt}` contain the amino-acid sequences and characterizing information (element name, symbol, type, coverage and other stats) for each predicted AMR. 
+  - `genesTAX_<DBname>` folder **(if selected)**: Taxonomic association of each predicted feature (gene) within the sample. The Kraken2 report is provided (`taxREPORT.txt`), along with produced human- & Krona-readable `<sampName>_4krona.txt` file (used to produce Krona charts in `TAXprofiles/geneTAX` folder). Additionally, the `PREDgenes_ABUNtab.txt` file is re-provided and amended with gene-based taxonomic affiliation (`PREDgenes_ABUNtab+tax.txt` file).
+  - `AMRs` folder **(if selected)**: A folder containing results from the AMR-finding algorithm, if selected during submission. Files `AMRs{.faa & _info.txt}` contain the amino acid sequences and characterizing information (element name, symbol, type, coverage and other stats) for each predicted AMR. 
 
-#### annotation-related files 
+#### annotation-related files
+
 ##### within `<SampName>_asmb/genes/annotations`
     
 Folder containing information about successfully annotated features - features recognized as homologues of known genes.
 
  - `annots.emapper.{annotations, hits, seed_orthologs}.txt` files: raw outputs of EggNOG-mapper2, from which various annotation types are extracted for analysis. These files also provide highly-detailed and interweaved information about each annotated gene.
  - `annots.{ko, ec, KEGGmap, COG}.txt` files: extracted annotations for each annotation type (KO, EC, KEGGmap and COG annotation respectively) from the e-mapper raw output files.
- - `annots.{ko,ec}.{fna,faa}` files: conveniently extracted NT and AA sequences from the annotated genes
- - `ANNOTgenes_ABUNDtab.{ko,ec}.txt`: a subset of the `PREDgenes_ABUNtab.txt` text file from `$SampName_asmb/genes`, containing only the predicted features with successfully assigned KO or EC annotations (_Note_: the provided gene information (length, cov, RPK and iTPM) is again, per instance of the gene in the sample => multiple features with the same annotation exist). 
+ - `annots.{ko,ec}.{fna,faa}` files: conveniently extracted NT and AA sequences from the annotated genes.
+ - `ANNOTgenes_ABUNDtab.{ko,ec}.txt`: a subset of the `PREDgenes_ABUNtab.txt` text file from `<SampName>_asmb/genes`, containing only the predicted features with successfully assigned KO or EC annotations (_Note_: the provided gene information (length, cov, RPK and iTPM) is again, per instance of the gene in the sample => multiple features with the same annotation exist). 
  - `geneTPMtab.{ko,ec}.txt`: files summarizing **gene abundances for each unique gene** with KO or EC annotation types. _Note_: It is this file that is collected from each sample in the `PWYprofiles/<DBname>PWY.MP/genebin` folder, and used to produce the gene-based community matrix in the `PWYprofiles/<DBname>PWY.MP/merged_tables` folder.
 
 
@@ -125,7 +126,7 @@ This folder contains inferred pathways information (from MinPATH) based on the p
 #### MAGs-related information 
 ##### within `$SampName_asmb/MAGs` optional folder
 
-This folder contains output from metagenome assembled genomes (MAGs) if the **MAGs and MAG TAX Annotations** option was selected at submission. It contains binned scaffolds forming draft genomes and their quality assessments. The number of files will vary based on the community composition, organismal abundance and sequence representation. MAGs analysis is only available in **Metagenomics Mode**.
+This folder contains output from metagenome assembled genomes (MAGs) if the **MAGs and MAG TAX Annotations** option was selected at submission. It contains binned scaffolds forming draft genomes and their quality assessments. The number of files will vary based on the community composition, organismal abundance and sequence representation. MAG analysis is only available in **Metagenomics Mode**.
 
   - MAGs FASTA files (draft genomes):
 
