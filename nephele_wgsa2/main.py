@@ -1,15 +1,12 @@
 import os
-import shlex
 import shutil
-import subprocess
 import traceback
 
 from psutil import virtual_memory
 import sh
 
 from nephele_pipeline_utils.decorators import pre_post_step
-from nephele_pipeline_utils.exceptions import NephelePipelineError
-from nephele_pipeline_utils.utils import log
+from nephele_pipeline_utils.utils import log, exec_cmnd
 
 from config import pipeline_config
 from parser import parser, parse_args
@@ -77,16 +74,7 @@ def main(args):
         )
     base_command.extend(snakemake_config)
     main_pipeline = " ".join(base_command)
-    log(main_pipeline)
-    main_pipeline_args = shlex.split(main_pipeline)
-    process = subprocess.run(main_pipeline_args)
-
-    if process.returncode == 1:
-        error_message = (
-            "There is an error while executing the pipeline. Please see logfile.txt for more information. "
-            "Tip: search for keyword, i.e., Error in rule, to figure out which step(s) cause the failure."
-        )
-        raise NephelePipelineError(error_message)
+    exec_cmnd(main_pipeline)
 
 
 if __name__ == "__main__":
