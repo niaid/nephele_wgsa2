@@ -380,6 +380,8 @@ rule run_trinity:
         Trinity --seqType fq --left {input.f} --right {input.r} --CPU {params.threads} \
             --output {params.out} --full_cleanup --max_memory {params.mem} \
             --bflyHeapSpaceMax {params.bfly_HeapSpace} --bflyCPU {params.bfly_CPU} &> {params.logfile}
+
+        rm {output}.gene_trans_map
         
         line_count=$(wc -l < {output})
         if grep -q "No butterfly assemblies to report" {params.logfile} || [ "$line_count" -lt 2 ] ; then
