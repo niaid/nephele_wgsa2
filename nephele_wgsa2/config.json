@@ -2,7 +2,7 @@
     "name": "WGSA2",
     "version": "0.1.9",
     "mapping_file_name": "mapping_file.txt",
-    "output_details_file_name": "WGSA2_output_details_Apr_2024.pdf",
+    "output_details_file_name": "WGSA2plus_Output_Details_August2025.pdf",
     "ted_file_name": "TED.tar",
     "biom_file_name": "for_analyze_with_microbiomedb.biom"
 }
