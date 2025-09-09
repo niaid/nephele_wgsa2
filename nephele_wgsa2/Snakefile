@@ -5,7 +5,7 @@
 configfile: "/pipeline/config.yaml"
 include: "/pipeline/utils.smk"
 
-TED_READS = config["output_dir"] + ("/TEDreads_mtx/" if config["denovo_mtx"] else "/TEDreads")
+TED_READS = config["output_dir"] + ("/TEDreads_mtx/" if config["denovo_mtx"] else "/TEDreads/")
 TAX_PROFILES = config["output_dir"] + "/TAXprofiles/"
 DBNAME = config["classification_db_name"]
 # if "plusPFV" in config["classification_db"]:
@@ -843,8 +843,8 @@ rule gene_annotation:
         eggnog_db=config["eggnog_db"],
         out_dir=ANNOTATIONS,
         tmp_dir=config["tmp_dir"],
-        blockSize=16,
-        idxChunks=4
+        blockSize=4,
+        idxChunks=2
     output:
         emapper_hits=ANNOTATIONS + "annots.emapper.hits",
         emapper_seed_orthologs=ANNOTATIONS + "annots.emapper.seed_orthologs",
