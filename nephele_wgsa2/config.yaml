@@ -2,7 +2,7 @@ minpath_script: /usr/local/src/MinPath/MinPath.py ## Duc chaned it to Poorani's 
 kreport2krona_script: /pipeline/utils/report2krona_wTAXid_last.py
 gff2gtf_script: /pipeline/utils/gff2gtf.sh
 genes2krona_script: /pipeline/utils/genes2KronaTable.py
-pwy_table_merging_script: /pipeline/utils/TableMerging_PWY_v4.R
+pwy_table_merging_script: /pipeline/utils/TableMergingShortReads_PWY_v5.R
 tax_table_merging_script: /pipeline/utils/TableMerging_TAX_v4.R
 pwy_diversity_plots_script: /pipeline/utils/DiversityPlots_PWY_v3.R
 tax_diversity_plots_script: /pipeline/utils/DiversityPlots_TAX_v3.R
