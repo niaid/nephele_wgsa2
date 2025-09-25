@@ -4,7 +4,7 @@ gff2gtf_script: /pipeline/utils/gff2gtf.sh
 genes2krona_script: /pipeline/utils/genes2KronaTable.py
 pwy_table_merging_script: /pipeline/utils/TableMergingShortReads_PWY_v5.R
 tax_table_merging_script: /pipeline/utils/TableMerging_TAX_v4.R
-pwy_diversity_plots_script: /pipeline/utils/DiversityPlots_PWY_v3.R
+pwy_diversity_plots_script: /pipeline/utils/DiversityPlots_PWY_v3b.R
 tax_diversity_plots_script: /pipeline/utils/DiversityPlots_TAX_v3.R
 awk_geneTPM_script: /pipeline/utils/calc_geneTPM.awk
 awk_joinTPM_script: /pipeline/utils/join2files_f2.awk

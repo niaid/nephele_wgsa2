@@ -94,7 +94,7 @@ write.table(Lin, file.path(output$dir, "merged_allTiers.txt"),
 noTAX <- setdiff(names(merged), tiers)
 noTAX <- merged[, noTAX] %>% relocate(allTiers, .after=last_col() )
 write.table(noTAX, file.path(output$dir, "merged_Counts+allTiers.txt"),
-            sep="\t", col.names=NA, quote = F, na="")
+            sep="\t", col.names=TRUE, row.names = F, quote = F, na="")
 
 write.table(merged[,names(data)], file.path(output$dir, "merged_Counts.txt"),
             sep="\t", col.names=NA, quote = F, na="")
