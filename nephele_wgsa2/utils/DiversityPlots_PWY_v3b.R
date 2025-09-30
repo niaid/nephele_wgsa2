@@ -81,6 +81,7 @@ pcoa_bray <- amp_ordinate(amp, filter_species = 0.01, type = "PCOA", sample_labe
                           detailed_output = TRUE, transform = "none", sample_shape_by = "TreatmentGroup")
 #pcoa_bray$plot= pcoa_bray$plot + scale_shape_manual(values=c(17, 15,13,18, 4,5,6,7,8) )
 pdf(paste0(path$outdir, "/PWY_BetaDiv_PCoA.pdf"), width=12, height=10); plot(pcoa_bray$plot); dev.off()
+png(paste0(path$outdir, "/PWY_BetaDiv_PCoA.png"), width=760, height=640); plot(pcoa_bray$plot); dev.off()
 })
 
 print("-----------> making nMDS plot")
