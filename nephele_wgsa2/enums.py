@@ -4,7 +4,7 @@ from nephele_pipeline_utils.enums import StrEnum
 class ClassificationDbType(StrEnum):
     PLUSPFV = "plusPFV"
     MGBCDB = "MGBCdb"
-    UHGG = "UHGG"
+    UHGGDB = "UHGGdb"
     EUPATHDB = "EuPATHdb"
 
 
