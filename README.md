@@ -1,7 +1,7 @@
 # Nephele WGSA2 pipeline
 
 ## Introduction
-The WGSA2 pipeline uses raw paired end (PE) shotgun reads to produce de novo assemblies for each sample in a metagenomic dataset, as well as extract optimal levels of information about the taxonomic and functional composition of a microbial community.
+The WGSA2+ pipeline uses raw paired end (PE) shotgun reads to produce de novo assemblies for each sample in a metagenomic or metatranscriptomics dataset, as well as extract information about the taxonomic and functional composition of microbial communities.
 
 ## Datafiles
 Note: Need to provide links to download files
@@ -11,6 +11,7 @@ The following datafiles are needed to run the pipeline
 - eggnog
 - annotations
 - krona
+- sortmerna
 
 ## Sample input.json
 ```
@@ -43,6 +44,8 @@ The following datafiles are needed to run the pipeline
         "decontaminate_db_path": "/dbs/decontam_db/decontam_marine_db",
         "classification_db_name": "plusPFV",
         "classification_db_path": "/dbs/classification_db/plusPFV_Mar2023",
+        "denovo_mtx": "false",
+        "sortmerna_db_path": "none",
         "eggnog_db_path": "/dbs/eggnog_data",
         "annotations_type": "ko",
         "annotations_map_db_path": "/dbs/minpath_data/KEGG_myfiles_0922/KEGG-ko2map-092022.txt",
@@ -61,13 +64,15 @@ The following datafiles are needed to run the pipeline
 
 ```
 decontaminate_db_path: str - path to the decontamination database, inclusive of the host organism of your dataset
-classification_db_name: str {plusPFV | MGBCdb | EuPATHdb}
+classification_db_name: str {plusPFV | MGBCdb | UHGGdb | EuPATHdb}
 classification_db_path: str - path to the taxonomic classification DB that best suits your dataset
 eggnog_db_path: str - path to your eggnog datafile
 annotations_type: str {ko | ec}
 annotations_map_db_path: str - path to your annotations map file
 annotations_hrr_db_path: str - path to your annotations hrr file
 krona_tax_db_path: str - path to your krona tax datafile
+denovo_mtx: bool (default=false) - Run pipeline in metagenomics or metatranscriptomics mode
+sortmerna_db_path: str - path to sortmerna database files
 amrfind: bool (default=false) - Add Antimicrobial Resistance genes & peptide finding
 tax_genes: bool (default=false) - Add taxonomic annotation to be produced from genes per sample
 tax_scaffolds: bool (default=false) - Add taxonomic annotation to be produced from scaffolds per sample

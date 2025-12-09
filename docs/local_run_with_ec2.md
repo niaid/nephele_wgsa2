@@ -70,7 +70,7 @@ sudo docker image tag public.ecr.aws/niaid_nephele/pipeline/nephele_wgsa2:latest
 ### Run image
 In a terminal tab connected to EC2 instance via ssh, enter the nephele_wgsa2_local_test folder, and run the image.
 ```
-sudo docker run --rm -it -v $(pwd)/inputs:/inputs -v $(pwd)/outputs:/outputs -v /home/ec2-user/dbs:/dbs pipeline_container --mapping_file_path /inputs/mapping_file.csv --decontaminate_db_path=/dbs/decontam_db/decontam_marine_db --classification_db_name=plusPFV --classification_db_path=/dbs/classification_db/plusPFV_Mar2023 --eggnog_db_path=/dbs/eggnog_data --annotations_type=ko --annotations_map_db_path=/dbs/minpath_data/KEGG_myfiles_0922/KEGG-ko2map-092022.txt --annotations_hrr_db_path=/dbs/minpath_data/KEGG_myfiles_0922/KEGG-HRCHY-092022.txt --krona_tax_db_path=/dbs/KronaTools_taxonomy --amrfind=True --tax_genes=True --tax_scaffolds=True --mag=True --include_ted_files=True
+sudo docker run --rm -it -v $(pwd)/inputs:/inputs -v $(pwd)/outputs:/outputs -v /home/ec2-user/dbs:/dbs pipeline_container --mapping_file_path /inputs/mapping_file.csv --decontaminate_db_path=/dbs/decontam_db/decontam_marine_db --classification_db_name=plusPFV --classification_db_path=/dbs/classification_db/plusPFV_Mar2023 --denovo_mtx=False --sortmerna_db_path=none --eggnog_db_path=/dbs/eggnog_data --annotations_type=ko --annotations_map_db_path=/dbs/minpath_data/KEGG_myfiles_0922/KEGG-ko2map-092022.txt --annotations_hrr_db_path=/dbs/minpath_data/KEGG_myfiles_0922/KEGG-HRCHY-092022.txt --krona_tax_db_path=/dbs/KronaTools_taxonomy --amrfind=True --tax_genes=True --tax_scaffolds=True --mag=True --include_ted_files=True
 ```
 
 For subsequent runs, clear the outputs folder
