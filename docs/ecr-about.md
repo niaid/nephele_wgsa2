@@ -1,20 +1,20 @@
 # About Nephele WGSA2+
 
-This Docker image contains the WGSA2+ (Whole Genome Shotgun Amplicon 2 Plus) pipeline for the Nephele microbiome analysis platform. WGSA2+ is a comprehensive metagenomics pipeline that processes paired-end shotgun sequencing data to produce de novo assemblies, taxonomic classifications, and functional annotations for microbial communities.
+This Docker image contains the WGSA2+ (Whole Genome Shotgun Assemply 2 Plus) pipeline for the Nephele microbiome analysis platform. WGSA2+ is a comprehensive metagenomics/metatranscriptomics pipeline that processes paired-end shotgun sequencing data to produce de novo assemblies, taxonomic classifications, and functional annotations for microbial communities.
 
 ## Features
 
 - **Quality Control**: Trimming, error correction, and quality filtering of raw reads
 - **Decontamination**: Removal of host and contaminant sequences
-- **De Novo Assembly**: Sample-level metagenomic assembly using MEGAHIT
+- **De Novo Assembly**: Sample-level short read assembly using metaSPAdes (or Trinity in mtx mode)
 - **Taxonomic Classification**: Multiple classification approaches:
-  - Read-based classification (Kraken2)
-  - Gene-based classification (optional)
-  - Scaffold-based classification (optional)
-  - MAG-based classification (optional)
+  - Read-based classification (default; Kraken2)
+  - Gene-based classification (optional; Kraken2)
+  - Scaffold-based classification (optional; Kraken2)
+  - MAG-based classification (optional; METABAT, CheckM)
 - **Functional Annotation**: Gene prediction and annotation using:
   - eggNOG-mapper for orthology assignment
-  - MinPath for pathway inference
+  - MinPath for pathway inference with selected pathway databases
   - KEGG or MetaCyc pathway databases
 - **Antimicrobial Resistance**: Optional AMRFinderPlus analysis
 - **Metagenome-Assembled Genomes (MAGs)**: Optional binning and MAG reconstruction
@@ -43,33 +43,47 @@ This Docker image contains the WGSA2+ (Whole Genome Shotgun Amplicon 2 Plus) pip
 
 ### Decontamination Databases
 
-Various host organism databases available for removing host sequences from metagenomic data.
+Various host organism collections available as databases for removing host sequences from data:
+Human and Mouse, Marine, Mosquito, Nematode, Rodent, Primates, Plants, Tick, Bat
 
 ## Pipeline Workflow
 
 1. **Read Processing**: Quality trimming and error correction
-2. **Decontamination**: Host sequence removal
-3. **Assembly**: De novo metagenomic assembly per sample
-4. **Gene Prediction**: ORF prediction from assembled contigs
-5. **Taxonomic Annotation**: Classification at multiple levels (reads, genes, scaffolds, MAGs)
-6. **Functional Annotation**: Orthology assignment and pathway inference
-7. **Abundance Quantification**: Read mapping and TPM calculation
-8. **Diversity Analysis**: Alpha and beta diversity metrics
-9. **Visualization**: Interactive charts and publication-ready plots
+2. **Host decontamination**: Host sequence removal
+3. **Taxonomic annotation**: Taxonomic classification of cleaned reads (TEDreads)
+4. **Assembly**: De novo metagenomic assembly per sample
+5. **Gene Prediction**: Genomic features prediction from assembled contigs
+6. **Functional Annotation**: Orthology assignment of gene annotations and pathway inference
+7. **Abundance Quantification**: Read mapping and TPM calculation for genes and pathway abundance estimations
+8. **Taxonomic annotation 2** (optional): Classification of genes, scaffolds and/or MAGs
+9. **Metagenome-predited genomes** (optional): prediction of metagenome assembled genomes (MAGs) and quality control
+10. **Antimicrobial gene finding** (optional): scanning predicted features for antimicrobial resistance genes
+11. **Diversity Analysis**: Alpha and beta diversity metrics across full dataset
+12. **Visualization**: Interactive charts and dataset summary plots
 
 ## Output Organization
 
 The pipeline produces organized outputs including:
 
+- **TEDreads**: per-sample reports and logs produced from host decontamination step
 - **TAXprofiles**: Dataset-wide taxonomic abundance matrices and visualizations
-- **PWYprofiles**: Functional pathway profiles and gene abundance tables
+  - **readsTAX_{tax_db_name}**: taxonomic annotations of reads per sample for dataset
+      - **merged_tables**: dataset-wide community metrics tables 
+      - **DivPlots**: dataset-wide summary plots of taxonomic diversity metrics 
+  - **geneTAX_{tax_db_name}/MAGsTAX** (conditional): taxonomic annotations of genes, scaffolds or MAGs for dataset
+- **PWYprofiles/{pwy_db_name}**: Dataset-wide functional pathway profiles and gene abundance tables
+    - **merged_tables/**: dataset-wide functional diversity metrics
+    - **DiversityPlots/**: dataset-wide summary plots of functional diversity metrics
+- **asmb{assembler}/{SampleName}**:Per-sample assembly results, assembly stats and detailed downstream processing files, including
+  - **[gene/scaff]TAX_{tax_db_name}/** (conditional): taxonomic annotations of genes or scaffolds based on election
+  - **MAGs/** (conditional): produced MAGs within sample
+  - **genes/**: taxonomic gene prediction and annotation details within sample
 - **asmb_files**: Assembly FASTA and BAM files for downstream analysis
-- **Per-sample folders**: Individual sample results with detailed annotations
 - **BIOM files**: Standardized format for integration with other tools
 
 ## Use Cases
 
-- **Microbiome Profiling**: Comprehensive taxonomic and functional characterization
+- **Microbiome Profiling**: Comprehensive taxonomic and functional characterization of short read shotgun metagenomic data
 - **Human Gut Studies**: Optimized databases and workflows for human microbiome research
 - **Environmental Metagenomics**: Flexible database options for diverse environments
 - **Pathogen Detection**: Support for viral, fungal, and eukaryotic pathogen identification
@@ -79,8 +93,8 @@ The pipeline produces organized outputs including:
 
 ## Key Publications
 
-**MEGAHIT Assembly:**
-Li, D., et al. (2015). MEGAHIT: an ultra-fast single-node solution for large and complex metagenomics assembly via succinct de Bruijn graph. Bioinformatics, 31(10):1674-1676.
+**metaSPAdes Assembly:**
+Nurk, S., Meleshko, D., Korobeynikov, A., & Pevzner, P. A. (2017). metaSPAdes: a new versatile de novo metagenomic assembler. Genome Research, 27(5), 824–834. 
 
 **Kraken2 Classification:**
 Wood, D.E., et al. (2019). Improved metagenomic analysis with Kraken 2. Genome Biology, 20:257.

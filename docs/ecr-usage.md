@@ -20,6 +20,8 @@ docker run -v /path/to/inputs:/inputs \
   --decontaminate_db_path /dbs/decontam_db/decontam_marine_db \
   --classification_db_name plusPFV \
   --classification_db_path /dbs/classification_db/plusPFV_Mar2023 \
+  --denovo_mtx False \
+ 	--sortmerna_db_path None \
   --eggnog_db_path /dbs/eggnog_data \
   --annotations_type ko \
   --annotations_map_db_path /dbs/minpath_data/KEGG_myfiles_0922/KEGG-ko2map-092022.txt \
@@ -42,6 +44,7 @@ docker run -v /path/to/inputs:/inputs \
 - `--annotations_map_db_path`: Path to your annotations map file
 - `--annotations_hrr_db_path`: Path to your annotations hierarchy file
 - `--krona_tax_db_path`: Path to your Krona taxonomy database
+- `--sortmerna_db_path`: Path to sortMeRNA database or none
 
 ### Database Selection
 
@@ -120,7 +123,7 @@ Contains dataset-wide functional analysis results:
 - Interactive pathway visualizations (`PWYplots_[ko2gg or ec2cc].html`)
 - Per-sample pathway and gene abundance files
 - Merged abundance matrices (≥2 samples)
-- Functional diversity plots (≥2 samples)
+- Functional diversity plots (≥3 samples)
 
 ### asmb_files Folder
 Contains per-sample final assembly FASTA and BAM files for downstream processing
@@ -132,7 +135,7 @@ Each sample gets a dedicated folder with:
 - Taxonomic classifications
 - Quality control reports
 
-## Complete Example
+## Example with Metagenomics
 
 ```bash
 docker run \
@@ -144,6 +147,8 @@ docker run \
   --decontaminate_db_path /dbs/decontam_db/decontam_marine_db \
   --classification_db_name UHGGdb \
   --classification_db_path /dbs/classification_db/UHGG \
+  --denovo_mtx False \
+ 	--sortmerna_db_path None \
   --eggnog_db_path /dbs/eggnog_data \
   --annotations_type ko \
   --annotations_map_db_path /dbs/minpath_data/KEGG_myfiles_0922/KEGG-ko2map-092022.txt \
@@ -174,7 +179,7 @@ docker run \
   --annotations_map_db_path /dbs/minpath_data/KEGG_myfiles_0922/KEGG-ko2map-092022.txt \
   --annotations_hrr_db_path /dbs/minpath_data/KEGG_myfiles_0922/KEGG-HRCHY-092022.txt \
   --krona_tax_db_path /dbs/KronaTools_taxonomy \
-  --denovo_mtx \
+  --denovo_mtx true \
   --sortmerna_db_path /dbs/sortmerna_db
 ```
 
