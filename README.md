@@ -84,3 +84,26 @@ min_read_length: int (default=60) - Filter out reads below this read length. Com
 trim_of_5: int (default=20) - Quality threshold for 5'-end trimming. Come into effect when trim_filter=true
 trim_of_3: int (default=15) - Quality threshold of 3'-end trimming. Come into effect when trim_filter=true
 ```
+
+
+## DB Path Values
+```
+export enum DecontaminateDbPathValues {
+  HumanMouse = "/dbs/wgsa2/decontam_db/decontam_human+mouse_db/",
+  Marine = "/dbs/wgsa2/decontam_db/decontam_marine_db/",
+  Mosquito = "/dbs/wgsa2/decontam_db/decontam_mosq_db/",
+  Nematode = "/dbs/wgsa2/decontam_db/decontam_nematode_db/",
+  Rodent = "/dbs/wgsa2/decontam_db/decontam_rodents_db/",
+  Primates = "/dbs/wgsa2/decontam_db/decontam_primates_db/",
+  Tick = "/dbs/wgsa2/decontam_tickDB/",
+  Bat = "/dbs/wgsa2/decontam_batDB/",
+  Plants = "/dbs/wgsa2/decontam_db/decontam_plants_db/",
+}
+ 
+export enum ClassificationDbPath {
+  PlusPF = "/dbs/wgsa2plus_lora/plus_PFV_Oct2025/",
+  MGBCdb = "/dbs/gsa2plus_lora/classification_db/MGBCdb/",
+  UHGGdb = "/dbs/wgsa2plus_lora/UHGG2_Nov2022/",
+  EuPATHdb = "/dbs/wgsa2plus_lora/classification_db/EuPATH_db46_Mar2023/",
+}
+```
