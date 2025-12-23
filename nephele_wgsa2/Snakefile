@@ -325,12 +325,16 @@ rule kreport2krona_per_sample:
     params:
         kreport2krona_script=config["kreport2krona_script"]
     output:
+        tmpfile=temp(TED_READS_TAX_KLOGS + "reports/tmp_{sample}.txt"),
         binfile=TED_READS_TAX + "bin/{sample}_wTAXid_4krona.txt"
     shell:
-        "python3 {params.kreport2krona_script} --report-file {input.krfile} --no-tax-prefixes -o {output.binfile} &&"                                  ##--> updated  code <--## 
+        "sed -e 's_\\tR[12]\\t(.*)(Viruses|Bacteria|Eukaryota|Archaea)_\\tD\\t\\1\\2_g'  {input.krfile} > {output.tmpfile} &&"
+        "python3 {params.kreport2krona_script} --report-file {output.tmpfile} --no-tax-prefixes -o {output.binfile} &&"                                  ##--> updated  code <--## 
         "sed -i 's/\\tUnclassified\\t\\t\\t\\t\\t\\t\\t0/\\tUnclassified\\tUnclassified\\tUnclassified\\tUnclassified\\tUnclassified\\tUnclassified\\tUnclassified\\t0/g' {output.binfile}"
- ##--> removing the table merging capapcity of the kreport2krona_per_sample rule, since it overprints the bin/files (required output)
- ##--> removed the mod_kreport2krona_output rule cuz mods are above and no output <--## 
+ ##--> the first SED "fixes" the domain taxonomic rankings in the taxREPORT from the new R1/R2 root designation to the old D designation (consistent)
+ ##--> kreport2krona_script is edited to disable table merging, since it overprints the bin/files (required output)
+ ##--> removed the mod_kreport2krona_output rule cuz mods are above and no output 
+ ##--> last SED "fixes" the Unclassified row to contain string in all lineage columns <--## 
 
 
 rule kreport2krona_import_text:
