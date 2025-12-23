@@ -102,8 +102,8 @@ export enum DecontaminateDbPathValues {
  
 export enum ClassificationDbPath {
   PlusPF = "/dbs/wgsa2plus_lora/plus_PFV_Oct2025/",
-  MGBCdb = "/dbs/gsa2plus_lora/classification_db/MGBCdb/",
+  MGBCdb = "/dbs/wgsa2plus_lora/MGBCdb/",
   UHGGdb = "/dbs/wgsa2plus_lora/UHGG2_Nov2022/",
-  EuPATHdb = "/dbs/wgsa2plus_lora/classification_db/EuPATH_db46_Mar2023/",
+  EuPATHdb = "/dbs/wgsa2plus_lora/EuPATH_db46_Mar2023/",
 }
 ```
