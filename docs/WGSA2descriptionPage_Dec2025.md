@@ -67,12 +67,12 @@ Given the nature of library preparation and shotgun sequencing, it is necessary 
      * [Content report](==🔴add file for link download==)
 
 6. **Tick Decontamination DB (NEW!)**
-     * Description: genomes of ~33 tick species (+human) 
+     * Description: genomes of 14 tick species (+human) 
      * [Content information and download](https://zenodo.org/uploads/17913269)
      * [Content report](==🔴add file for link download==)
 
 7. **Bat Decontamination DB (NEW!)**
-     * Description: genomes of 33 bat species (+human)
+     * Description: genomes of 9 bat species (+human)
      * [Content information and download](https://zenodo.org/uploads/17913858)
      * [Content report](==🔴add file for link download==)
   
