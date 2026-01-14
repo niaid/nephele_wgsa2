@@ -8,6 +8,8 @@ docker pull public.ecr.aws/niaid_nephele/pipeline/nephele_wgsa2:latest
 
 ## Run the Pipeline
 
+We recommend using Docker and ensuring you have `root` access. For Singularity or Apptainer, see below for additional details.
+
 Run the pipeline by providing parameters as command-line arguments:
 
 ```bash
@@ -57,6 +59,17 @@ docker run -v /path/to/inputs:/inputs \
 - `--annotations_type` (required): Annotations type
   - `ko`: KEGG Orthology (default)
   - `ec`: Enzyme Commission
+
+## Singularity or Apptainer
+
+To run the pipeline with Singularity or Apptainer, the command needs to be adjusted slightly.
+
+```
+singularity exec -B {bind_paths} wgsa2.img \
+    sh -c "cd /pipeline && python main.py {user_options}"
+```
+
+Here, all user options will need to stay within the quotation marks to be read accurately by the pipeline.
 
 ## Input Files Format
 
