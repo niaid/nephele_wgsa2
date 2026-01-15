@@ -53,10 +53,6 @@ This Docker image contains the WGSA2+ (Whole Genome Shotgun Assemply 2 Plus) pip
 - **[KEGG](https://www.kegg.jp/kegg/)**: Kyoto Encyclopedia of Genes and Genomes - metabolic pathways and enzyme functions
 - **[MetaCyc](https://metacyc.org/)**: curated database of experimentally elucidated metabolic pathways from all domains of life
 
-### Decontamination Databases
-
-Various host organism collections available as databases for removing host sequences from data:
-Human and Mouse, Marine, Mosquito, Nematode, Rodent, Primates, Plants, Tick, Bat
 
 ## Pipeline Workflow
 
