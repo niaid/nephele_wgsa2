@@ -28,18 +28,30 @@ This Docker image contains the WGSA2+ (Whole Genome Shotgun Assemply 2 Plus) pip
 
 ## Supported Databases
 
+### Host Decontamination Databases
+
+- **[Human and Mouse Decontamination DB](https://zenodo.org/records/17873172)**: genomes of Human and Mouse 
+- **[Primates Decontamination DB](https://zenodo.org/records/17882674)**: genomes of common primates (+human)
+- **[Rodent Decontamination DB](https://zenodo.org/records/17882258)**:genomes of mouse, hamster and other rodent species (+human)
+- **[Nematode Decontamination DB](https://zenodo.org/records/17872145)**: genomes of ~15 nematode species (+human)
+- **[Mosquito Decontamination DB](https://zenodo.org/records/17871419)**:genomes of 2 mosquito species (+human)
+- **[Tick Decontamination DB](https://zenodo.org/uploads/17913269)**: genomes of 14 tick species (+human) 
+- **[Bat Decontamination DB](https://zenodo.org/uploads/17913858)**: genomes of 9 bat species (+human)
+- **[Marine Decontamination DB](https://zenodo.org/records/17873185)**: genomes of 18 common marine host organisms (+human)
+- **[Plants Decontamination DB](https://ftp.ncbi.nlm.nih.gov/genomes/refseq/plant/)**: reference genomes of ~111 plant species from NCBI (no human) collected in 2023
+
 ### Taxonomic Classification Databases
 
-- **plusPFV**: PlusPFP database with Protozoa, Fungi, and Viruses - comprehensive reference for diverse microbiomes (default)
-- **MGBCdb**: Microbial Genomes Bacterial Collection - specialized bacterial genome collection
-- **UHGGdb**: Unified Human Gastrointestinal Genome database - optimized for human gut microbiome studies
-- **EuPATHdb**: Eukaryotic Pathogen database - specialized for eukaryotic pathogens
+- **[plusPFV](https://benlangmead.github.io/aws-indexes/k2)**: Standard RefSeq database with Protozoa, Fungi, and Viruses (PlusPF) from 10/15/2025
+- **[MGBCdb](https://github.com/BenBeresfordJones/MGBC)**: Mouse Gastrointestinal Bacterial Catalogue from 11/16/2021
+- **[UHGG2db](https://ftp.ebi.ac.uk/pub/databases/metagenomics/mgnify_genomes/human-gut/v2.0.2/)**: Unified Human Gastrointestinal Genome database v2
+- **[EuPATHdb](https://benlangmead.github.io/aws-indexes/k2)**: Eukaryotic Pathogen database from 4/18/2023
 
 ### Functional Annotation Databases
 
-- **eggNOG**: Evolutionary genealogy of genes: Non-supervised Orthologous Groups
-- **KEGG**: Kyoto Encyclopedia of Genes and Genomes - metabolic pathways and enzyme functions
-- **MetaCyc**: Alternative metabolic pathway database
+- **[EggNOG v5.0](http://eggnog5.embl.de/#/app/home)**: Evolutionary genealogy of genes: Non-supervised Orthologous Groups
+- **[KEGG](https://www.kegg.jp/kegg/)**: Kyoto Encyclopedia of Genes and Genomes - metabolic pathways and enzyme functions
+- **[MetaCyc](https://metacyc.org/)**: curated database of experimentally elucidated metabolic pathways from all domains of life
 
 ### Decontamination Databases
 
