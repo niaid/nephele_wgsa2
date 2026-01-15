@@ -398,7 +398,7 @@ rule run_bbtools_stats:
     input:
         lambda wildcards: rules.run_trinity.output if config["denovo_mtx"] else rules.run_metaspades.output
     params:
-        asm=lambda wildcards: ASM_T if config["denovo_mtx"] else ASM
+        asm=(ASM_T if config["denovo_mtx"] else ASM)
     output:
         out1=OUT_FILE + ".fasta",
         out2=OUT_FILE + "_stats.txt"
