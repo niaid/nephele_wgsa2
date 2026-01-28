@@ -147,7 +147,7 @@ def CalcHierarchy(mapping, annotations, coverage, operation, limit, verbose):
                 hier_c[parent].append(count)
             except KeyError:
                 hier_c[parent] = [count]
-    (hier_sdev, hier_c) = Calculate(hier_c, operation)
+    hier_sdev, hier_c = Calculate(hier_c, operation)
     return (hier_sdev, hier_c)
 
 
@@ -249,8 +249,8 @@ def main():
         args.infile
     )  ## Read annotations the same way as above, then get length of the list for counts
     coverage = ReadCoverage(args.coverage, lengths)
-    (max_hier, hierarchy) = ReadHierarchy(args.hierarchy)
-    (hier_sdev, hier_counts) = CalcHierarchy(
+    max_hier, hierarchy = ReadHierarchy(args.hierarchy)
+    hier_sdev, hier_counts = CalcHierarchy(
         mapping, annotations, coverage, args.operation, limit, args.verbose
     )
 
