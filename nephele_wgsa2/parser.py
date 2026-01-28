@@ -25,11 +25,25 @@ def parse_args():
         help="path to the decontamination database, inclusive of the host organism of your dataset",
     )
     parser.add_argument(
+        "--kr2confidence_host",
+        type=field(int, ge=0.0, le=1),
+        default=0.05,
+        required=True,
+        help="kraken2 confidence value for identifying host reads",
+    )
+    parser.add_argument(
         "--classification_db_name",
         type=str,
         required=True,
         choices=ClassificationDbType.values(),
         help="classification db name",
+    )
+    parser.add_argument(
+        "--kr2confidence_taxonomic",
+        type=field(int, ge=0.0, le=1),
+        default=0.15,
+        required=True,
+        help="kraken2 confidence value for taxonomic classificaitons",
     )
     parser.add_argument(
         "--classification_db_path",
@@ -69,22 +83,28 @@ def parse_args():
         help="path to your krona tax data",
     )
     parser.add_argument(
-        "--amrfind",
+        "--find_args",
         type=boolean,
         default=False,
-        help="Add Antimicrobial Resistance genes & peptide finding",
+        help="Add steps for Antimicrobial Resistance Gene identification",
+    )
+    parser.add_argument(
+        "--read_norm",
+        type=boolean,
+        default=False,
+        help="Run read normalization",
+    )
+    parser.add_argument(
+        "--readCoverage",
+        type=field(int, ge=10, le=80),
+        default=50,
+        help="Normalize reads to this coverage (Min 10, Max = 80)",
     )
     parser.add_argument(
         "--denovo_mtx",
         type=boolean,
         default=False,
         help="Denovo mtx",
-    )
-    parser.add_argument(
-        "--sortmerna_db_path",
-        type=directory,
-        default=None,
-        help="Sortmerna db path",
     )
     parser.add_argument(
         "--tax_genes",
