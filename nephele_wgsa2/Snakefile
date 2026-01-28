@@ -183,6 +183,7 @@ onstart:
     # amrfinder --version | awk '{{print "AMRFinder version", $1}}'
     rgi -h |grep "Resistance Gene Identifier - " | sed 's/ - / version /g'
     emapper.py --version | tail -n1 | awk '{{print $1}}'
+    conda list rgi -n rgi | tail -n1 | awk '{{print $1, $2}}'
     R --version | head -n1
     ##sortmerna --version | head -n6 | tail -n1
     ribodetector_cpu --version | awk '{{print "ribodetector version", $2}}'
@@ -858,7 +859,8 @@ if config["find_args"]:
             rgi_raw =RGI_DIR + "RGI_raw.txt",
             rgi_main=RGI_DIR + "RGI_main.txt",
             rgi_faas=RGI_DIR + "RGI_seqs.faa",
-
+        conda:
+            "rgi"
         shell:"""
             mkdir -p {params.outDIR}
 
