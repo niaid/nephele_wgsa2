@@ -54,9 +54,8 @@ def main(args):
         f"classification_db_name={args.classification_db_name}",
         f"classification_db={args.classification_db_path}",
         f"kr2confidence_taxonomic={kr2confidence_taxonomic}",
-        #f"amrfind={args.amrfind}",
-        f"find_args={args.find_args}"
-        f"read_norm={args.read_norm}",
+        # f"amrfind={args.amrfind}",
+        f"find_args={args.find_args}" f"read_norm={args.read_norm}",
         f"denovo_mtx={args.denovo_mtx}",
         f"sortmerna_db={args.sortmerna_db_path}",
         f"eggnog_db={args.eggnog_db_path}",
@@ -77,9 +76,9 @@ def main(args):
             ]
         )
     if args.read_norm:
-            snakemake_config.extend(
+        snakemake_config.extend(
             [
-                  f"readCoverage={args.readCoverage}",
+                f"readCoverage={args.readCoverage}",
             ]
         )
     base_command.extend(snakemake_config)
