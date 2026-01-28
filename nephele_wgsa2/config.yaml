@@ -12,3 +12,4 @@ KO_listfile: /pipeline/utils/KO_list.txt
 EC_listfile: /pipeline/utils/EC_list.txt
 #amrfinder_db: /opt/conda/share/amrfinderplus/data/latest
 CARD_DB: /opt/conda/share/CARD_db/v3.2.9/CARD_db-v3.2.9
+argSCR_rgi: /pipeline/utils/RGI_merger.py
