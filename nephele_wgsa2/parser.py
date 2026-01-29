@@ -7,7 +7,6 @@ from nephele_pipeline_utils.types import boolean, path, directory, field, mappin
 from config import pipeline_config
 from enums import ClassificationDbType, AnnotationsType
 
-
 parser = NepheleArgumentParser(data_type=DataType.PE)
 
 
