@@ -5,6 +5,9 @@
 configfile: "/pipeline/config.yaml"
 include: "/pipeline/utils.smk"
 
+log_path = snakemake.logger.logfile
+outputs_dir = Path(config["output_dir"])
+
 TED_READS = config["output_dir"] + ("/TEDreads_mtx/" if config["denovo_mtx"] else "/TEDreads_mgx/")
 TAX_PROFILES = config["output_dir"] + "/TAXprofiles/"
 DBNAME = config["classification_db_name"]
@@ -190,6 +193,11 @@ onstart:
     Trinity --version | head -n1
     snakemake --version | awk '{{print "Snakemake version", $1}}'
     """)
+onsuccess:
+    shell("cp {log_path} {outputs_dir}/snakemake.log")
+
+onerror:
+    shell("cp {log_path} {outputs_dir}/snakemake.log")
 
 rule all:
     input:
