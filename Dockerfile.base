@@ -17,7 +17,7 @@ RUN wget https://github.com/doandm/MinPath/archive/refs/heads/master.zip \
 
 RUN mamba create -n checkm -y -c conda-forge -c bioconda python=3.8 checkm-genome=1.2.2
 
-RUN mamba create -n rgi -y -c conda-forge -c bioconda python=3.8 rgi=6.0.2
+RUN mamba create -n rgi -y -c conda-forge -c bioconda python=3.8 rgi=6.0.5
 
 # Install R packages
 ADD dependencies.R /tmp/dependencies.R
