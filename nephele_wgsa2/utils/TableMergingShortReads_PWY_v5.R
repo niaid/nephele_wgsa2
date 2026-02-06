@@ -18,11 +18,11 @@ args <- docopt(doc)
 print(args)
 # for manual prep #this is if the .sh does not provide arguments
 # args <-docopt(doc, args = c(
-#  # "--wdir"   , "/Users/angelovaag/Documents/tests/table_merging_tests/ ",                             # "/path/to/WmGS_v2/tests/" ,
-#  "--binDIR" , "/Users/angelovaag/Documents/tests/table_merging_test/binDIR_ec/",                    # "/path/to/PWYprofiles/bin/",
-#  "--sccList", "/Users/angelovaag/Documents/tests/table_merging_test/scclist.txt",               # "/path/to/SccList.txt",
-#  "--outdir" , "/Users/angelovaag/Documents/tests/table_merging_test/merged_tables_v5_ec/",          # "/path/to/PWYprofiles/merged_tables/" )
-#  "--genesDIR",  "/Users/angelovaag/Documents/tests/table_merging_test/genebin/") )
+#  # "--wdir"   , "dbLinks/merging/table_merging_tests/ ",                             # "/path/to/WmGS_v2/tests/" ,
+#  "--binDIR" , "dbLinks/merging/table_merging_test/binDIR_ec/",                    # "/path/to/PWYprofiles/bin/",
+#  "--sccList", "dbLinks/merging/table_merging_test/scclist.txt",               # "/path/to/SccList.txt",
+#  "--outdir" , "dbLinks/merging/table_merging_test/merged_tables_v5_ec/",          # "/path/to/PWYprofiles/merged_tables/" )
+#  "--genesDIR",  "dbLinks/merging/table_merging_test/genebin/") )
 # # args
 # print("-----------> docopt settings------^^^^")
 # load("PWY_TableMerging_v3.RData")
@@ -80,7 +80,7 @@ output$dir<- args$outdir
 print(paste("------> exporting PWY data at:", output$dir))
 dir.create(output$dir)
 
-write.table(merged, file.path(output$dir, "merged_Counts+PWY+allTiers.txt"),
+write.table(merged, file.path(output$dir, ".merged_Counts+PWY+allTiers.txt"), ## invisible file
             sep="\t", col.names=NA, quote = F, na="")
 
 noHier <- setdiff(names(merged), c("allTiers"))
@@ -88,7 +88,7 @@ write.table(merged[,noHier], file.path(output$dir, "merged_Counts+PWY.txt"),
             sep="\t", col.names=NA, quote = F, na="")
 
 Lin <- select(merged, "allTiers")
-write.table(Lin, file.path(output$dir, "merged_allTiers.txt"),
+write.table(Lin, file.path(output$dir, ".merged_allTiers.txt"), ## invisible file
             sep="\t", col.names=NA, quote = F, na="")
 
 noTAX <- setdiff(names(merged), tiers)
@@ -96,12 +96,12 @@ noTAX <- merged[, noTAX] %>% relocate(allTiers, .after=last_col() )
 write.table(noTAX, file.path(output$dir, "merged_Counts+allTiers.txt"),
             sep="\t", col.names=TRUE, row.names = F, quote = F, na="")
 
-write.table(merged[,names(data)], file.path(output$dir, "merged_Counts.txt"),
+write.table(merged[,names(data)], file.path(output$dir, ".merged_Counts.txt"), ## invisible file
             sep="\t", col.names=NA, quote = F, na="")
 
 noCounts<-setdiff(names(merged), c(names(data), "allTiers") )
-write.table(merged[,noCounts], file.path(output$dir, "merged_PWY.txt"),
-            sep="\t", col.names=NA, quote = F, na="")
+write.table(merged[,noCounts], file.path(output$dir, ".merged_PWY.txt"), ## invisible file
+            sep="\t", col.names=NA, quote = F, na="") 
 
 # bim <-biomformat::make_biom(merged[,names(data)], observation_metadata = merged[,noCounts])
 # biomformat::write_biom(bim, biom_file = paste0(output$dir, "merged_Counts+PWY_json.biom") )
@@ -153,5 +153,5 @@ if(args$genesDIR == "NA" ){ print("---> no geneTABLES to merge. Disabled.")}else
 
 # rm(noCounts, noHier)
 #save R image
-save.image(paste0(output$dir, "/TableMerging_v4.RData") )
+save.image(paste0(output$dir, "/.TableMergingShortReads_v6.RData") )
 

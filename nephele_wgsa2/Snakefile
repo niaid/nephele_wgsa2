@@ -5,33 +5,37 @@
 configfile: "/pipeline/config.yaml"
 include: "/pipeline/utils.smk"
 
+log_path = snakemake.logger.logfile
+outputs_dir = Path(config["output_dir"])
+
 TED_READS = config["output_dir"] + ("/TEDreads_mtx/" if config["denovo_mtx"] else "/TEDreads_mgx/")
 TAX_PROFILES = config["output_dir"] + "/TAXprofiles/"
 DBNAME = config["classification_db_name"]
 TED_READS_TAX = TAX_PROFILES + "readsTAX_" + DBNAME +"/"
-TED_TMP_NAME = "TEDreads_fqs/"
-TED_TMP = config["output_dir"] + "/" + TED_TMP_NAME
-TED_FILE_NAME = config["output_dir"] + "/" + config["ted_file_name"]
+TED_READS_FQS_NAME = "TEDreads_fqs/"
+TED_READS_FQS = config["output_dir"] + "/" + TED_READS_FQS_NAME
 ASMB_MGX = config["output_dir"] + "/asmbMGX/"
 ASMB_MTX = config["output_dir"] + "/asmbMTX/"
 ASMB_MGX_SAMPLE = ASMB_MGX + "{sample}_asmb/"
 ASMB_MTX_SAMPLE = ASMB_MTX + "{sample}_asmb/"
-OUT_FILE = (ASMB_MTX_SAMPLE if config["denovo_mtx"] else ASMB_MGX_SAMPLE) + "{sample}_assembly/"
+OUT_FILE = (ASMB_MTX_SAMPLE if config["denovo_mtx"] else ASMB_MGX_SAMPLE) + "{sample}"
 FUNC_DIR = (ASMB_MTX_SAMPLE if config["denovo_mtx"] else ASMB_MGX_SAMPLE) + "functional/"
+TAXN_DIR = (ASMB_MTX_SAMPLE if config["denovo_mtx"] else ASMB_MGX_SAMPLE) + "taxonomic/"
+RGI_DIR = FUNC_DIR + "RGI/"
 GENES = FUNC_DIR + "genes/"
 PREGENES_PREFIX = GENES + "PREDgenes"
-ANNOTATS = FUNC_DIR + "annotations/"
-PATHWAYS = FUNC_DIR + "pathways/"
-PREGENESTAX = GENES + "genesTAX_" + DBNAME + "/"
+PREGENESTAX = TAXN_DIR + "genesTAX_" + DBNAME + "/"
 GENETAX_PREFIX = PREGENESTAX + "geneTAX"
 GENETAX = TAX_PROFILES + "geneTAX_" + DBNAME + "/"
-TAXN_DIR = (ASMB_MTX_SAMPLE if config["denovo_mtx"] else ASMB_MGX_SAMPLE) + "taxonomic/"
-SCAFFTAX = TAXN_DIR + "scaffTAX_" + DBNAME + "/"
-SCAFFTAX_PREFIX = SCAFFTAX + "scaffTAX"
+ANNOTATS = FUNC_DIR + "annotations/"
+
+SCAFTAX_DIR = TAXN_DIR + "scafTAX_" + DBNAME + "/"
+SCAFTAX_PREFIX = SCAFTAX_DIR + "scafTAX"
+SCAFTAX=TAX_PROFILES + "scafTAX_" + DBNAME + "/"
 MAG = TAXN_DIR + "MAGs/"
 MAG_QA = MAG + "magsQA/"
 QC_PLOTS = MAG_QA + "QCplots/"
-TAXBIN = TAX_PROFILES + "MAGs_TAX/"
+TAXBIN = TAX_PROFILES + "magsTAX_checkM/"
 PWY_PROFILES = config["output_dir"] + "/PWYprofiles/"
 
 if config["annotations_type"] == "ko":
@@ -42,6 +46,7 @@ else:
     PWYLABEL="ec2mc"
     ANNO_TYPE="ec"
     PWYDIR = PWY_PROFILES + "mtccPWYs.MP/"
+PATHWAYS = FUNC_DIR + "pathways/"
 PATHWAYS_PREFIX = PATHWAYS + PWYLABEL
 GENEBIN = PWYDIR + "genebin/"
 PWYBIN  = PWYDIR + "pwybin/"
@@ -57,7 +62,6 @@ BIOM_FILE_6C=TAXBIN + "MAG-based_Counts+TAX.biom"
 PWYBIOM = PWYDIR + "bioms/"
 TAXBIOM = TED_READS_TAX + "bioms/"
 TED_READS_TAX_KLOGS = TED_READS_TAX + "klogs/"
-DISCOVIR = config["output_dir"] + "/asmb_files/"
 
 # samples = read_mapping_file()
 samples = config["samples"]
@@ -65,8 +69,8 @@ threads_per_job = get_num_threads_per_job(len(samples))
 
 pipeline_output = [
     TED_READS_TAX + "TAXplots_readsTAX_" + DBNAME +".html",
-    expand(OUT_FILE + "_depths.txt",sample=samples),
-    expand(OUT_FILE + "_scaffCoverage.txt",sample=samples),
+    expand(OUT_FILE + "_asmbDepths.txt",sample=samples),
+    expand(OUT_FILE + "_asmbCovr.txt",sample=samples),
     expand(PREGENES_PREFIX + "_stats.txt", sample=samples),
     PWYPLOTS,
     expand(PWYBIOM + "{sample}_json.biom", sample=samples),
@@ -83,84 +87,58 @@ pipeline_output = [
 # Output for step 6D (AMRFinder; optional)
 if config["find_args"]:
     pipeline_output.extend([
-        # expand(GENES + "AMRs/AMRs.faa", sample=samples),
-        # expand(GENES + "AMRs/AMRs_info.txt", sample=samples),
-        expand(GENES + "RGI/RGI_main.txt", sample = samples),
+        expand(RGI_DIR + "RGI_main.txt", sample = samples),
         PWY_MERGED_TABLES + "merged_argsTPMtable.txt"
     ])
 
 # Output for step 6A (optional)
 if config["tax_genes"]:
     pipeline_output.extend([
-        expand(GENETAX_PREFIX + "_ABUNtab+tax.txt", sample=samples),
+        expand(GENETAX_PREFIX + "_ABUNtab_wTAX.txt", sample=samples),
+        GENETAX + "TAXplots_genesTAX_" + DBNAME + ".html"
     ])
-    if DBNAME != "mgbcDB":
-        pipeline_output.extend([
-            GENETAX + "TAXplots_genesTAX_" + DBNAME + ".html"
-        ])
+    # if DBNAME != "mgbcDB":
+    #     pipeline_output.extend([
+    #         GENETAX + "TAXplots_genesTAX_" + DBNAME + ".html"
+    #     ])
 
 # Output for step 6B (optional) 
 if config["tax_scaffolds"]:
     pipeline_output.extend([
-        expand(SCAFFTAX_PREFIX + "_scaffCovr+tax.txt", sample=samples)
+        expand(SCAFTAX_PREFIX + "_asmbCovr_wTAX.txt", sample=samples),
+        SCAFTAX + "TAXplots_scaffTAX_" + DBNAME + ".html" ## approximate bundnaces
     ])
 
 # Output for step 6C (optional)
 if config["mag"]:
     pipeline_output.extend([
         expand(MAG_QA + "mag_SUMMARY.txt", sample=samples),
-        expand(QC_PLOTS + "checkm_plots.done", sample=samples),
-        TAXBIN + "TAXplots_MAGx.html",
+        expand(QC_PLOTS + "_checkm_plots.done", sample=samples),
+        TAXBIN + "TAXplots_MAGs.html",
         BIOM_FILE_6C
     ])
 
 if config["denovo_mtx"]:
     pipeline_output.extend([
-        expand(ASMB_MTX_SAMPLE + "add_de_replication_stats.done", sample=samples),
-       expand(TED_TMP + "{sample}_R1_ted_mtx.fastq.gz", sample=samples)
+        expand(ASMB_MTX_SAMPLE + "_added_derep_stats.done", sample=samples),
+        expand(TED_READS_FQS + "{sample}_R1_ted_mtx.fastq.gz", sample=samples)
     ])
 else:
     pipeline_output.extend([
-        expand(ASMB_MGX_SAMPLE + "add_de_replication_stats.done", sample=samples)
+        expand(ASMB_MGX_SAMPLE + "_added_derep_stats.done", sample=samples)
     ])
 
 # Merging binned files from all samples into 1 collated table only run when users provide at least 2 samples
 if len(samples) > 1:
     pipeline_output.extend([
-        # PWY_MERGED_TABLES + "merged_Counts+PWY+Tiers.txt",
-        # PWY_MERGED_TABLES + "merged_Counts+PWY.txt",
-        # PWY_MERGED_TABLES + "merged_Counts+PWY_json.biom",
-        # PWY_MERGED_TABLES + "merged_Tiers.txt",
-        # PWY_MERGED_TABLES + "merged_Counts+Tiers.txt",
-        # PWY_MERGED_TABLES + "merged_Counts.txt",
-        # PWY_MERGED_TABLES + "merged_PWY.txt",
-        # PWY_MERGED_TABLES + "PWY_collation.log",
-        # TAX_MERGED_TABLES + "merged_Couns+TAX+Lineage.txt",
-        # TAX_MERGED_TABLES + "merged_Counts+TAX.txt",
-        # TAX_MERGED_TABLES + "merged_Counts+TAX_json.biom",
-        # TAX_MERGED_TABLES + "merged_Lineage.txt",
-        # TAX_MERGED_TABLES + "merged_Counts+Lineage.txt",
-        # TAX_MERGED_TABLES + "merged_Counts.txt",
-        # TAX_MERGED_TABLES + "merged_TAX.txt",
-        # TAX_MERGED_TABLES + "TAX_collation.log"
         PWY_MERGED_TABLES + "merged_Counts+allTiers_json.biom",
         TAX_MERGED_TABLES + "merged_Counts+Lineage_json.biom",
         ])
 
 if len(samples) > 1:
     pipeline_output.extend([
-        # PWY_DIVERSITY_PLOTS + "PWY_Profile_Heatmap_top35PWYs.pdf",
-        # PWY_DIVERSITY_PLOTS + "PWY_BetaDiv_nMDS.pdf",
-        # PWY_DIVERSITY_PLOTS + "PWY_BetaDiv_PCoA.pdf",
-        # TAX_DIVERSITY_PLOTS + "TAX_AlphaDiv_mapping.txt",
-        # TAX_DIVERSITY_PLOTS + "TAX_AlphaDiv.pdf",
-        # TAX_DIVERSITY_PLOTS + "TAX_BetaDiv_PCoA.pdf",
-        # TAX_DIVERSITY_PLOTS + "TAX_BetaDiv_nMDS.pdf",
-        # TAX_DIVERSITY_PLOTS + "TAX_Profile_Heatmap.pdf",
-        # TAX_DIVERSITY_PLOTS + "TAX_RareficaitonCurve.pdf",
-        # TAX_DIVERSITY_PLOTS + "TAX_RankAbundanceCurve.pdf"
-        PWY_DIVERSITY_PLOTS + "PWY_diversity_plots.done",
-        TAX_DIVERSITY_PLOTS + "TAX_diversity_plots.done"
+        PWY_DIVERSITY_PLOTS + "PWY_diversity_plotsR.log.txt",
+        TAX_DIVERSITY_PLOTS + "TAX_diversity_plotsR.log.txt"
     ])
 
 onstart:
@@ -180,15 +158,15 @@ onstart:
     cat {config[minpath_script]} | grep version | head -n1
     verse -v | head -n2 | tail -n1
     kraken2 --version | head -n1
-    # amrfinder --version | awk '{{print "AMRFinder version", $1}}'
-    rgi -h |grep "Resistance Gene Identifier - " | sed 's/ - / version /g'
+    conda list rgi -n rgi | tail -n1 | awk '{{print $1, $2}}'
+    # rgi -h |grep "Resistance Gene Identifier - " | sed 's/ - / version /g'
     emapper.py --version | tail -n1 | awk '{{print $1}}'
     R --version | head -n1
-    ##sortmerna --version | head -n6 | tail -n1
     ribodetector_cpu --version | awk '{{print "ribodetector version", $2}}'
     Trinity --version | head -n1
     snakemake --version | awk '{{print "Snakemake version", $1}}'
     """)
+
 
 rule all:
     input:
@@ -200,8 +178,8 @@ rule run_fastp:
         unpack(get_fastq_gz)
     threads: threads_per_job
     output:
-        f=temp(TED_READS + "{sample}_R1_te.fastq.gz"),
-        r=temp(TED_READS + "{sample}_R2_te.fastq.gz"),
+        f=temp(TED_READS_FQS + "{sample}_R1_te.fastq.gz"),
+        r=temp(TED_READS_FQS + "{sample}_R2_te.fastq.gz"),
         s_l_html=TED_READS + "{sample}_fastplog.html",
         s_l_json=temp(TED_READS + "{sample}_fastp.json"),
     params:
@@ -218,42 +196,42 @@ rule run_kraken2_decontaminate:
         r=rules.run_fastp.output.r
     threads: threads_per_job
     params:
-        # Can not put this in output because it will cause missing files. kraken2 requires to have the symbol # for output.
-        out=TED_READS + "{sample}_R#_ted.fastq",
+        # Cannot put this in output because it will cause missing files. kraken2 requires to have the symbol # for output.
+        out=TED_READS_FQS + "{sample}_R#_ted.fastq",
         decontaminate=config["decontaminate"],
-        confidence_host=config["kr2confidence_host"],
+        kr2confd_host=config["kr2confidence_host"],
     output:
-        unclassified_out1=temp(TED_READS + "{sample}_R_1_ted.fastq"),
-        unclassified_out2=temp(TED_READS + "{sample}_R_2_ted.fastq"),
-        out=temp(TED_READS + "{sample}_kr2outLOG.txt"),
-        report=TED_READS + "{sample}_kr2_decontamREPORT.txt",
-        outlog=TED_READS + "{sample}_kr2_decontamLOG.txt"
+        unclassified_out1=temp(TED_READS_FQS + "{sample}_R_1_ted.fastq"),
+        unclassified_out2=temp(TED_READS_FQS + "{sample}_R_2_ted.fastq"),
+        # out=temp(TED_READS + "{sample}_kr2outLOG.txt"), ## ommits saving and deleting large file
+        report=TED_READS + "{sample}_kr2_contamREPORT.txt",
+        outlog=TED_READS + "{sample}_kr2_contamLOG.txt"
     shell:
         "kraken2 --use-names --gzip-compressed --threads {threads} "
-        "--confidence {params.kr2confidence_host} --db {params.decontaminate} "
+        "--confidence {params.kr2confd_host} --db {params.decontaminate} "
         "--paired {input.f} {input.r} "
         "--unclassified-out {params.out} "
-        "--output {output.out} "
-        "--report {output.report} 2>> {output.outlog}"
+        "--output -  --report {output.report} 2>> {output.outlog}"
 
-rule compress_kraken2_decontaminate:                                     
+rule zip_decontaminated:                                     
     input:
         f=rules.run_kraken2_decontaminate.output.unclassified_out1,
         r=rules.run_kraken2_decontaminate.output.unclassified_out2
     output:
-        f=TED_TMP + "{sample}_R1_ted.fastq.gz",
-        r=TED_TMP + "{sample}_R2_ted.fastq.gz"
+        f=TED_READS_FQS + "{sample}_R1_ted.fastq.gz",
+        r=TED_READS_FQS + "{sample}_R2_ted.fastq.gz"
     shell:
         "pigz -c {input.f} > {output.f} &&"
         "pigz -c {input.r} > {output.r}"
+
 
 rule remove_rRNA:
     input:
         f=rules.run_kraken2_decontaminate.output.unclassified_out1,
         r=rules.run_kraken2_decontaminate.output.unclassified_out2,
     output:
-        fread_gz=TED_TMP + "{sample}_R1_ted_mtx.fastq.gz",
-        rread_gz=TED_TMP + "{sample}_R2_ted_mtx.fastq.gz",
+        fread_gz=TED_READS_FQS + "{sample}_R1_ted_mtx.fastq.gz",
+        rread_gz=TED_READS_FQS + "{sample}_R2_ted_mtx.fastq.gz",
     threads: threads_per_job
     params:
         ali_log = TED_READS  + "{sample}_rna_aliLOG.txt",
@@ -276,22 +254,20 @@ rule run_kraken2_classification:
     resources:
         mem_gb=config["total_mem_gb"]
     input:
-        f=lambda wildcards: rules.remove_rRNA.output.fread_gz if config["denovo_mtx"] else rules.compress_kraken2_decontaminate.output.f,
-        r=lambda wildcards: rules.remove_rRNA.output.rread_gz if config["denovo_mtx"] else rules.compress_kraken2_decontaminate.output.r
+        f=lambda wildcards: rules.remove_rRNA.output.fread_gz if config["denovo_mtx"] else rules.zip_decontaminated.output.f,
+        r=lambda wildcards: rules.remove_rRNA.output.rread_gz if config["denovo_mtx"] else rules.zip_decontaminated.output.r
     threads: threads_per_job
     params:
-        classification_db=config["classification_db"]
-        confidence_taxon=config["kr2confidence_taxonomic"]
+        classification_db=config["classification_db"],
+        kr2confd_taxon=config["kr2confidence_taxonomic"],
     output:
-        out=temp(TED_READS_TAX_KLOGS + "{sample}_klog.txt"),
+        #out=temp(TED_READS_TAX_KLOGS + "{sample}_klog.txt"), ## omitting
         report=TED_READS_TAX + "reports/{sample}_taxREPORT.txt",
         outlog=TED_READS_TAX_KLOGS + "{sample}_classLOG.txt",
     shell:
         "kraken2 --use-names --gzip-compressed --threads {threads} "
-        "--confidence {params.confidence_taxon} --db {params.classification_db} --memory-mapping "
-        "--paired {input.f} {input.r} "
-        "--output {output.out} "
-        "--report {output.report} 2>> {output.outlog}"
+        "--confidence {params.kr2confd_taxon} --db {params.classification_db} --memory-mapping "
+        "--paired {input.f} {input.r}  --output - --report {output.report} 2>> {output.outlog}"
 
 rule kreport2krona_per_sample:
     input:
@@ -323,69 +299,82 @@ rule kreport2krona_import_text:
         "ktImportText {input} -o {output}"
 
 # Step 4 starts
-rule norm_readDepth:
-    input:
-        Freads = lambda wildcards: rules.remove_rRNA.output.fread_gz if config["denovo_mtx"] else rules.compress_kraken2_decontaminate.output.f,
-        Rreads = lambda wildcards: rules.remove_rRNA.output.rread_gz if config["denovo_mtx"] else rules.compress_kraken2_decontaminate.output.r,
-    params:
-        maxCov=config["readCoverage"],
-        logfile=TED_READS + "{sample}_normLog.txt",
-    output:
-        normFread = temp(TED_TMP + "{sampName}_ted_norm_R1.fastq.gz"),
-        normRread = temp(TED_TMP + "{sampName}_ted_norm_R2.fastq.gz"),
-    threads: threads_per_job
-    shell:
-        """
-        bbnorm.sh target={params.maxCov}  in={input.Freads} in2={input.Rreads} ecc=f prefilter=f \
-                         out={output.normFread} out2={output.normRread}  threads={threads} &> {params.logfile}
-        """
+if config["read_norm"]:
+    rule norm_readDepth:
+        input:
+            Freads = lambda wildcards: rules.remove_rRNA.output.fread_gz if config["denovo_mtx"] else rules.zip_decontaminated.output.f,
+            Rreads = lambda wildcards: rules.remove_rRNA.output.rread_gz if config["denovo_mtx"] else rules.zip_decontaminated.output.r,
+        params:
+            maxCov=config["readCoverage"],
+            logfile=TED_READS + "{sample}_normLog.txt",
+        output:
+            normFread = temp(TED_READS_FQS + "{sample}_ted_norm_R1.fastq.gz"),
+            normRread = temp(TED_READS_FQS + "{sample}_ted_norm_R2.fastq.gz"),
+        threads: threads_per_job
+        shell:
+            """
+            bbnorm.sh target={params.maxCov}  in={input.Freads} in2={input.Rreads} ecc=f prefilter=f \
+                             out={output.normFread} out2={output.normRread}  threads={threads} &> {params.logfile}
+            """
 
 
 rule run_metaspades:
     input:
-        in1=lambda wc: (rules.norm_readDepth.output.normFread if config["read_norm"] else rules.compress_kraken2_decontaminate.output.f),
-        in2=lambda wc: (rules.norm_readDepth.output.normRread if config["read_norm"] else rules.compress_kraken2_decontaminate.output.r),
+        in1=lambda wildcards: (rules.norm_readDepth.output.normFread if config["read_norm"] else rules.zip_decontaminated.output.f),
+        in2=lambda wildcards: (rules.norm_readDepth.output.normRread if config["read_norm"] else rules.zip_decontaminated.output.r),
     params:
         out=ASMB_MGX_SAMPLE,
         tmp_dir=config["tmp_dir"],
         mem_gb=config["total_mem_gb"],
+        scafout=temp(ASMB_MGX_SAMPLE + "scaffolds.fasta"),
+        contout=temp(ASMB_MGX_SAMPLE + "contigs.fasta"),
+        mspalog=temp(ASMB_MGX_SAMPLE + "spades.log"),
     threads: threads_per_job
     output:
-        temp(ASMB_MGX_SAMPLE + "scaffolds.fasta")
-    shell:
-        "metaspades.py -1 {input.in1} -2 {input.in2} "
-        "--memory {params.mem_gb} --tmp-dir {params.tmp_dir} "
-        "-o {params.out} -t {threads} --only-assembler"
+        finout=ASMB_MGX_SAMPLE + "{sample}_scaffolds.fasta",
+        cntigs=ASMB_MGX_SAMPLE + "{sample}_contigs.fasta",
+        spalog=ASMB_MGX_SAMPLE + "{sample}_spadesLOG.txt",
+    shell:"""
+        metaspades.py -1 {input.in1} -2 {input.in2}  --memory {params.mem_gb} \
+        --tmp-dir {params.tmp_dir} -o {params.out} -t {threads} --only-assembler 
 
+        mv {params.scafout} {output.finout} 
+        mv {params.contout} {output.cntigs} 
+        mv {params.mspalog} {output.spalog}
 
+        ## manual cleanup 
+        rm -rf {params.out}K21/ {params.out}K33/ {params.out}K55/ \
+        {params.out}pipeline_state {params.out}tmp {params.out}misc {params.out}before_rr.fasta \
+        {params.out}dataset.info {params.out}*params* {params.out}*.gfa {params.out}first_pe_contigs.fasta \
+        {params.out}run_spades.sh {params.out}*.yaml {params.out}*.paths {params.out}assembly_graph.fastg 
+        """
 
 rule run_trinity:
     resources:
         mem_gb=lambda wildcards: int(config['total_mem_gb'] // 3)
     input:
-        f=lambda wc: (rules.norm_readDepth.output.normFread if config["read_norm"] else rules.remove_rRNA.output.fread_gz),
-        r=lambda wc: (rules.norm_readDepth.output.normRread if config["read_norm"] else rules.remove_rRNA.output.rread_gz),
+        f=lambda wildcards: (rules.norm_readDepth.output.normFread if config["read_norm"] else rules.remove_rRNA.output.fread_gz),
+        r=lambda wildcards: (rules.norm_readDepth.output.normRread if config["read_norm"] else rules.remove_rRNA.output.rread_gz),
     threads: threads_per_job
     params:
-        outdir=ASMB_MTX_SAMPLE,
         out= ASMB_MTX_SAMPLE + "trinity_{sample}",
-        logfile=ASMB_MTX_SAMPLE + "{sample}_trinity.log",
-        mem=str(config['total_mem_gb'] // 3) + "G",
-        threads=lambda wildcards: int(threads_per_job - 4),
+        fas= ASMB_MTX_SAMPLE + "trinity_{sample}.Trinity.fasta", ## as output temp() takes a while to remove
+        log= ASMB_MTX_SAMPLE + "{sample}_trinityLOG.txt",
+        mem= str(config['total_mem_gb'] // 3) + "G",
+        threads =lambda wildcards: int(threads_per_job - 4),
         bfly_CPU=2,
-        bfly_HeapSpace="20G"
+        bfly_HeapSpace="20G",
     output:
-        temp(ASMB_MTX_SAMPLE + "trinity_{sample}.Trinity.fasta")
-    shell:
-        """
+        finout=ASMB_MTX_SAMPLE + "{sample}_contigs.fasta",
+    shell:"""
         Trinity --seqType fq --left {input.f} --right {input.r} --CPU {params.threads} \
             --output {params.out} --full_cleanup --max_memory {params.mem} \
-            --bflyHeapSpaceMax {params.bfly_HeapSpace} --bflyCPU {params.bfly_CPU} &> {params.logfile}
-
-        rm {output}.gene_trans_map
+            --bflyHeapSpaceMax {params.bfly_HeapSpace} --bflyCPU {params.bfly_CPU} &> {params.log}
+        mv {params.fas} {output.finout}
+        rm {params.fas}.gene_trans_map
         
         line_count=$(wc -l < {output})
-        if grep -q "No butterfly assemblies to report" {params.logfile} || [ "$line_count" -lt 2 ] ; then
+        if grep -q "No butterfly assemblies to report" {params.log} || [ "$line_count" -lt 2 ] ; then
             echo "ERROR: Trinity unable to assemble reads into transcripts for {wildcards.sample}. 
             Confirm that your data are whole-genome sequence reads (not amplicon), 
             and possibly use the Short Read QC pipeline to ensure high-quality reads."
@@ -395,20 +384,17 @@ rule run_trinity:
 
 rule run_bbtools_stats:
     input:
-        lambda wildcards: rules.run_trinity.output if config["denovo_mtx"] else rules.run_metaspades.output
+        finfasta=lambda wildcards: (rules.run_trinity.output.finout if config["denovo_mtx"] else rules.run_metaspades.output.finout),
     params:
         asm=(ASMB_MTX_SAMPLE if config["denovo_mtx"] else ASMB_MGX_SAMPLE)
     output:
-        out1=OUT_FILE + ".fasta",
-        out2=OUT_FILE + "_stats.txt"
+        out1=OUT_FILE + "_asmbFinal.fasta",
+        out2=OUT_FILE + "_asmbStats.txt",
     shell:
-        "sed $'s/_cov_/ cov_/g' {input} > {output.out1} && "
+        "sed $'s/_cov_/ cov_/g' {input.finfasta} > {output.out1} && "
         "stats.sh in={output.out1} out={output.out2} && "
-        "printf \"\\nTEDreads mapping stats:\\n\"  >> {output.out2} && "
-        "rm -rf {params.asm}K21/ {params.asm}K33/ {params.asm}K55/ "
-        "{params.asm}pipeline_state {params.asm}tmp {params.asm}misc {params.asm}before_rr.fasta "
-        "{params.asm}dataset.info {params.asm}*params* {params.asm}*.gfa {params.asm}first_pe_contigs.fasta "
-        "{params.asm}run_spades.sh {params.asm}*.yaml {params.asm}*.paths {params.asm}assembly_graph.fastg"
+        "printf \"\\nTEDreads mapping stats:\\n\"  >> {output.out2}"
+
 
 # Step 5 starts
 rule bowtie2_build:
@@ -419,22 +405,21 @@ rule bowtie2_build:
     threads: threads_per_job
     output:
         # to signal this step is completed
-        temp((ASMB_MTX_SAMPLE if config["denovo_mtx"] else ASMB_MGX_SAMPLE) + "bowtie2_build.done")
+        temp((ASMB_MTX_SAMPLE if config["denovo_mtx"] else ASMB_MGX_SAMPLE) + "_bowtie2_build.done")
     shell:
        "bowtie2-build --quiet --threads {threads} {input} {params.basename} && touch {output}"
 
 rule bowtie2_run:
     input:
-        in1=lambda wildcards: rules.remove_rRNA.output.fread_gz if config["denovo_mtx"] else rules.compress_kraken2_decontaminate.output.f,
-        in2=lambda wildcards: rules.remove_rRNA.output.rread_gz if config["denovo_mtx"] else rules.compress_kraken2_decontaminate.output.r,
-        in3=rules.bowtie2_build.output, # fake input so it can run after bowtie2_build
+        in1=lambda wildcards: rules.remove_rRNA.output.fread_gz if config["denovo_mtx"] else rules.zip_decontaminated.output.f,
+        in2=lambda wildcards: rules.remove_rRNA.output.rread_gz if config["denovo_mtx"] else rules.zip_decontaminated.output.r,
+        require=rules.bowtie2_build.output, # fake input so it can run after bowtie2_build for that sample
     params:
         index=(ASMB_MTX_SAMPLE if config["denovo_mtx"] else ASMB_MGX_SAMPLE) + "{sample}.db",
-        in4=rules.run_bbtools_stats.output.out2 # if in4 is in input, it will cause this step to re-run all the time (due to input changes)
+        in4=ancient(rules.run_bbtools_stats.output.out2), # keep in params; its both input and output
     threads: threads_per_job
     output:
         sam=temp((ASMB_MTX_SAMPLE if config["denovo_mtx"] else ASMB_MGX_SAMPLE) + "{sample}.sam")
-        # sam=(ASMB_MTX_SAMPLE if config["denovo_mtx"] else ASMB_MGX_SAMPLE) + "{sample}.sam"
     shell:
         "bowtie2 --phred33 --sensitive-local --no-unal --seed 4 "
         "-1 {input.in1} -2 {input.in2} "
@@ -447,35 +432,36 @@ rule samtools_to_bam:
         rules.bowtie2_run.output.sam
     params:
         collate_tmp=config["tmp_dir"] + "{sample}_collate",
-        sort_tmp=config["tmp_dir"] + "{sample}_sort",
-        markdup_tmp=config["tmp_dir"] + "{sample}_markdup"
+        srtfixd_tmp=config["tmp_dir"] + "{sample}_srtfixd",
+        markdup_tmp=config["tmp_dir"] + "{sample}_markdup",
     threads: threads_per_job
     output:
-        bam=temp((ASMB_MTX_SAMPLE if config["denovo_mtx"] else ASMB_MGX_SAMPLE) + "{sample}.bam"),
+        bam_initial=temp((ASMB_MTX_SAMPLE if config["denovo_mtx"] else ASMB_MGX_SAMPLE) + "{sample}_initial.bam"),
         bam_colated=temp((ASMB_MTX_SAMPLE if config["denovo_mtx"] else ASMB_MGX_SAMPLE) + "{sample}_colated.bam"),
         bam_fixmate=temp((ASMB_MTX_SAMPLE if config["denovo_mtx"] else ASMB_MGX_SAMPLE) + "{sample}_fixmate.bam"),
-        bam_fixmate_sorted=temp((ASMB_MTX_SAMPLE if config["denovo_mtx"] else ASMB_MGX_SAMPLE) + "{sample}_fixmate_sorted.bam"),
-        tmp_markdup=temp((ASMB_MTX_SAMPLE if config["denovo_mtx"] else ASMB_MGX_SAMPLE) + "{sample}_tmp_markdup.txt"),
-        final_bam=OUT_FILE + ".bam"
+        bam_fixsrtd=temp((ASMB_MTX_SAMPLE if config["denovo_mtx"] else ASMB_MGX_SAMPLE) + "{sample}_fixsrtd.bam"),
+        tmp_markdup=temp((ASMB_MTX_SAMPLE if config["denovo_mtx"] else ASMB_MGX_SAMPLE) + "{sample}_markdup.txt"),
+        final_bam=OUT_FILE + "_asmbFinal.bam",
+        bam_index=OUT_FILE + "_asmbFinal.bam.bai",
     shell:
-        "samtools sort {input} -o {output.bam} -@ {threads} -T {params.sort_tmp} && "
-        "samtools collate {output.bam} -o {output.bam_colated} -@ {threads} {params.collate_tmp} && "
+        "samtools sort {input} -o {output.bam_initial} -@ {threads} -T {params.srtfixd_tmp} && "
+        "samtools collate {output.bam_initial} -o {output.bam_colated} -@ {threads} {params.collate_tmp} && "
         "samtools fixmate -m {output.bam_colated} {output.bam_fixmate} -@ {threads} && "
-        "samtools sort {output.bam_fixmate} -o {output.bam_fixmate_sorted} -@ {threads} -T {params.sort_tmp} && "
-        "samtools markdup -r -s {output.bam_fixmate_sorted} -f {output.tmp_markdup} {output.final_bam} -@ {threads} -T {params.markdup_tmp} && "
+        "samtools sort {output.bam_fixmate} -o {output.bam_fixsrtd} -@ {threads} -T {params.srtfixd_tmp} && "
+        "samtools markdup -r -s {output.bam_fixsrtd} -f {output.tmp_markdup} {output.final_bam} -@ {threads} -T {params.markdup_tmp} && "
         "samtools index -b {output.final_bam} -@ {threads}"
 
 
-rule add_de_replication_stats:
+rule add_derep_stats:
     input:
         in1=rules.run_bbtools_stats.output.out2,
         in2=rules.samtools_to_bam.output.tmp_markdup
     params:
-        stats_file=OUT_FILE + "_stats.txt",
+        stats_file=OUT_FILE + "_asmbStats.txt",
         tmp_out=(ASMB_MTX_SAMPLE if config["denovo_mtx"] else ASMB_MGX_SAMPLE) + "{sample}_tmp_file.txt"
     output:
         # to signal this step is completed
-        (ASMB_MTX_SAMPLE if config["denovo_mtx"] else ASMB_MGX_SAMPLE) + "add_de_replication_stats.done"
+        (ASMB_MTX_SAMPLE if config["denovo_mtx"] else ASMB_MGX_SAMPLE) + "_added_derep_stats.done"
     shell:
         "cat {input.in1} <(printf \"\\nRead alignment de-replication stats:\\n\") {input.in2} > {params.tmp_out} && "
         "mv {params.tmp_out} {params.stats_file} && touch {output}"
@@ -484,35 +470,36 @@ rule scaffold_and_read_counts:
     input:
         final_bam=rules.samtools_to_bam.output.final_bam
     output:
-        tmp_scaffcov=temp((ASMB_MTX_SAMPLE if config["denovo_mtx"] else ASMB_MGX_SAMPLE) + "tmp_scaffcov.txt"),
+        tmp_scafcov=temp((ASMB_MTX_SAMPLE if config["denovo_mtx"] else ASMB_MGX_SAMPLE) + "tmp_scafcov.txt"),
         tmp_basecov=temp((ASMB_MTX_SAMPLE if config["denovo_mtx"] else ASMB_MGX_SAMPLE) + "tmp_basecov.txt"),
         tmp_idx=temp((ASMB_MTX_SAMPLE if config["denovo_mtx"] else ASMB_MGX_SAMPLE) + "tmp_idx.txt"),
         tmp_readcount=temp((ASMB_MTX_SAMPLE if config["denovo_mtx"] else ASMB_MGX_SAMPLE) + "tmp_readcount.txt"),
-        depths=OUT_FILE + "_depths.txt",
-        tmp_scaffcov1=temp((ASMB_MTX_SAMPLE if config["denovo_mtx"] else ASMB_MGX_SAMPLE) + "tmp_scaffcov1.txt"),
-        scaffCoverage=OUT_FILE + "_scaffCoverage.txt",
+        depths=OUT_FILE + "_asmbDepths.txt",
+        tmp_scafcov1=temp((ASMB_MTX_SAMPLE if config["denovo_mtx"] else ASMB_MGX_SAMPLE) + "tmp_scafcov1.txt"),
+        scafCoverage=OUT_FILE + "_asmbCovr.txt",
     shell:
-        "pileup.sh {input.final_bam} out={output.tmp_scaffcov} overwrite=true && "
-        "sort -o {output.tmp_scaffcov} {output.tmp_scaffcov} && "
+        "pileup.sh {input.final_bam} out={output.tmp_scafcov} overwrite=true && "
+        "sort -o {output.tmp_scafcov} {output.tmp_scafcov} && "
         "jgi_summarize_bam_contig_depths {input.final_bam} --outputDepth {output.depths} && "
         "sort {output.depths} | sed '1 s/^/#/' | cut -f 1-3 > {output.tmp_basecov} && "
         "samtools idxstats {input.final_bam} > {output.tmp_idx} && "
         "cut -f 1-3 {output.tmp_idx} | sed -e '1s/^/#contigName\\tLength\\tReadsCount\\n/' | sort | grep -v \"*\" > {output.tmp_readcount} && "
-        "paste {output.tmp_readcount} {output.tmp_scaffcov} {output.tmp_basecov} | cut -f 1,2,3,8-14,17 -d $'\\t' > {output.tmp_scaffcov1} && "
-        "awk 'BEGIN{{FS=OFS=\"\\t\"}} NR>1 {{if ($2>0 && $3>0) $12=sprintf(\"%0.2f\", $3*1e3/$2); else $12=0; print}}'  {output.tmp_scaffcov1} | "
-        "sed -e '1s/^/#NODE\\tlen\\tReads\\t\%ScaffCovered\\t\%bpCovered\\tplusReads\\tminusReads\\t\%GC\\tMedFold\\tstDev\\tAveDepth\\tRPK\\n/' > {output.scaffCoverage}"
+        "paste {output.tmp_readcount} {output.tmp_scafcov} {output.tmp_basecov} | cut -f 1,2,3,8-14,17 -d $'\\t' > {output.tmp_scafcov1} && "
+        "awk 'BEGIN{{FS=OFS=\"\\t\"}} NR>1 {{if ($2>0 && $3>0) $12=sprintf(\"%0.2f\", $3*1e3/$2); else $12=0; print}}'  {output.tmp_scafcov1} | "
+        "sed -e '1s/^/#NODE\\tlen\\tReads\\t\%NodeCovered\\t\%bpCovered\\tplusReads\\tminusReads\\t\%GC\\tMedFold\\tstDev\\tAveDepth\\tRPK\\n/' > {output.scafCoverage}"
 
 # Step 6 starts
 rule gene_prediction:
     input:
-        rules.run_bbtools_stats.output.out1
+        finfas=rules.run_bbtools_stats.output.out1,
+        require=expand(rules.scaffold_and_read_counts.output.scafCoverage, sample=samples),
     threads: threads_per_job
     output:
         gff=PREGENES_PREFIX + ".gff",
         faa=PREGENES_PREFIX + ".faa",
         fna=PREGENES_PREFIX + ".fna"
     shell:
-        "prodigal -p meta -i {input} -f gff -o {output.gff} -a {output.faa} -d {output.fna} -q"
+        "prodigal -p meta -i {input.finfas} -f gff -o {output.gff} -a {output.faa} -d {output.fna} -q"
 
 rule gff_to_gtf:
     input:
@@ -576,7 +563,7 @@ if config["tax_genes"]:
             classification_db=config["classification_db"],
             confidence_taxon=config["kr2confidence_taxonomic"],
         output:
-            klog=temp(GENETAX_PREFIX + "_klog.txt"),
+            klog=temp(GENETAX_PREFIX + "_klog.txt"), ## needed for genes
             report=GENETAX_PREFIX + "_taxREPORT.txt",
             outlog=GENETAX_PREFIX + "_classLOG.txt"
             # classified_out=GENETAX_PREFIX + "_classified.fna",
@@ -595,39 +582,40 @@ if config["tax_genes"]:
             ABUNtab=rules.tpm_normalization.output.ABUNtab
         output:
             tmptax=temp(GENETAX_PREFIX + "_tmptax.txt"),
-            ABUNtax=GENETAX_PREFIX + "_ABUNtab+tax.txt"
+            ABUNtax=GENETAX_PREFIX + "_ABUNtab_wTAX.txt"
         shell:
-            "cut -f2-3 {input.klog} | sed -e 's/ (taxid /\\t/g' | sed -e 's/)$//g' | sort | sed '1s/^/#contigName\\tTAXname\\tTAXid\\n/' > {output.tmptax} &&"
+            "cut -f2-3 {input.klog} | sed -e 's/ (taxid /\\t/g' | sed -e 's/)$//g' | sort | "
+            "sed '1s/^/#contigName\\tTAXname\\tTAXid\\n/' > {output.tmptax} &&"
             "paste {input.ABUNtab} <(cut -f2-3 {output.tmptax}) > {output.ABUNtax} "
 
-    if DBNAME == "mgbcDB":
-        rule omit_krona:
-            output:
-                done=temp(GENETAX_PREFIX + "omittingKrona.done")
-            shell:
-                """
-                print("---> krona plots omitted for selected classification DB")
-                touch {output.done}
-                """
-    else:
-        rule tax_genes_4krona:
-            input:
-                ABUNtax=rules.tax_genes_ABUNtabtax.output.ABUNtax
-            output:
-                out_4krona=GENETAX + "bin/{sample}_4krona.txt"
-            shell:
-                "cut -f6-8 {input.ABUNtax} | awk -F'\\t' 'NR>1{{k = $3; sum[k]+= $1; name[k]=$2}} END {{ print; for (k in sum) print sum[k], name[k], k}}' OFS=\"\t\" |"
-                "sed -e '1 s/^/#iTPM\\tTAXname\\tTAXid\\n/' > {output.out_4krona}"
+    # if DBNAME == "mgbcDB":
+    #     rule omit_krona:
+    #         output:
+    #             done=temp(GENETAX_PREFIX + "_omittingKrona.done")
+    #         shell:
+    #             """
+    #             print("---> krona plots omitted for selected classification DB")
+    #             touch {output.done}
+    #             """
+    # else:
+    rule tax_genes_4krona:
+        input:
+            ABUNtax=rules.tax_genes_ABUNtabtax.output.ABUNtax
+        output:
+            out_4krona=GENETAX + "bin/{sample}_4krona.txt"
+        shell:
+            "cut -f6-8 {input.ABUNtax} | awk -F'\\t' 'NR>1{{k = $3; sum[k]+= $1; name[k]=$2}} END {{ print; for (k in sum) print sum[k], name[k], k}}' OFS=\"\t\" |"
+            "sed -e '1 s/^/#iTPM\\tTAXname\\tTAXid\\n/' > {output.out_4krona}"
 
-        rule kt_tax_html:
-            input:
-                expand(rules.tax_genes_4krona.output.out_4krona, sample=samples)
-            params:
-                krona_tax_db=config["krona_tax_db"]
-            output:
-                GENETAX + "TAXplots_genesTAX_" + DBNAME + ".html"
-            shell:
-                "ktImportTaxonomy {input} -m 1 -q 2 -t 3 -d 10 -tax {params.krona_tax_db} -o {output}"
+    rule kt_genetax_html:
+        input:
+            expand(rules.tax_genes_4krona.output.out_4krona, sample=samples)
+        params:
+            krona_tax_db=config["krona_tax_db"]
+        output:
+            GENETAX + "TAXplots_genesTAX_" + DBNAME + ".html"
+        shell:
+            "ktImportTaxonomy {input} -m 1 -q 2 -t 3 -d 10 -tax {params.krona_tax_db} -o {output}"
 
 
 # Step 6B starts
@@ -636,32 +624,53 @@ if config["tax_scaffolds"]:
         resources:
             mem_gb=config["total_mem_gb"]
         input:
-            rules.run_bbtools_stats.output.out1
+            finfas=rules.run_bbtools_stats.output.out1,
+            require=expand(rules.scaffold_and_read_counts.output.scafCoverage, sample=samples), ##processing organization
         threads: threads_per_job
         params:
             classification_db=config["classification_db"],
             confidence_taxon=config["kr2confidence_taxonomic"],
         output:
-            klog=temp(SCAFFTAX_PREFIX + "_klog.txt"),
-            report=SCAFFTAX_PREFIX + "_taxREPORT.txt",
-            outlog=SCAFFTAX_PREFIX + "classLOG.txt"
+            klog=temp(SCAFTAX_PREFIX + "_klog.txt"),
+            report=SCAFTAX_PREFIX + "_taxREPORT.txt",
+            outlog=SCAFTAX_PREFIX + "_classLOG.txt"
         shell:
             "kraken2 --use-names --db {params.classification_db} --confidence {params.confidence_taxon} --memory-mapping "
-            "--threads {threads} {input} "
-            "--output {output.klog} "
-            "--report {output.report} 2>> {output.outlog}"
+            "--threads {threads} {input.finfas} --output {output.klog} --report {output.report} 2>> {output.outlog}"
 
-    rule generate_scafftax:
+    rule generate_scaftax:
         input:
             klog=rules.tax_classification_scaffolds.output.klog,
-            scov=rules.scaffold_and_read_counts.output.scaffCoverage
+            scov=rules.scaffold_and_read_counts.output.scafCoverage
         output:
-            scovtax=SCAFFTAX_PREFIX + "_scaffCovr+tax.txt",
-            tmp=temp(SCAFFTAX_PREFIX + "tmp_tax.txt")
+            scovtax=SCAFTAX_PREFIX + "_asmbCovr_wTAX.txt",
+            tmp=temp(SCAFTAX_PREFIX + "_tmp_tax.txt")
         shell:
             "cut -f2-3 {input.klog} | sed -e 's/ (taxid /\\t/g' | sed -e 's/)$//g' | sort | "
             "sed '1s/^/#contigName\\tTAXname\\tTAXid\\n/' > {output.tmp} && "
             "paste {input.scov} <(cut -f2-3 {output.tmp}) > {output.scovtax}"
+
+
+    rule tax_scafs_4krona:
+        input:
+            scovtax=rules.generate_scaftax.output.scovtax
+        output:
+            out_4krona=SCAFTAX + "bin/{sample}_4krona.txt"
+        shell:
+            "cut -f12,13,14 {input.scovtax} | "
+            "awk -F'\\t' 'NR>1{{k = $3; sum[k]+= $1; name[k]=$2}} END {{ print; for (k in sum) print sum[k], name[k], k}}' OFS=\"\t\" |"
+            "sed -e '1 s/^/#RPK\\tTAXname\\tTAXid\\n/' > {output.out_4krona}"
+
+    rule kt_scaftax_html:
+        input:
+            expand(rules.tax_scafs_4krona.output.out_4krona, sample=samples)
+        params:
+            krona_tax_db=config["krona_tax_db"]
+        output:
+            SCAFTAX + "TAXplots_scaffTAX_" + DBNAME + ".html" ## approximate bundnaces
+        shell:
+            "ktImportTaxonomy {input} -m 1 -q 2 -t 3 -d 10 -tax {params.krona_tax_db} -o {output}"
+
 
 
 # Step 6C starts
@@ -674,7 +683,7 @@ if config["mag"]:
         params:
             basename=MAG + "mag"
         output:
-            temp(MAG + "metabat2_run.done")
+            temp(MAG + "_metabat2_run.done")
         shell:
             "metabat2 -i {input.fasta} -o {params.basename} -m 1500 --maxEdges 250 "
             "--unbinned  -t {threads} -a {input.depths} && touch {output}"
@@ -717,8 +726,8 @@ if config["mag"]:
     rule checkm_coverage:
         input:
             bam=rules.samtools_to_bam.output.final_bam,
-            fake=rules.metabat2_run.output, # We do not use the actual output here but need files from metabat2_run step
-            fake2=rules.checkm_lineage_wf.output # we do not input in command but file is needed
+            require=rules.metabat2_run.output, # required files
+            require2=rules.checkm_lineage_wf.output # requlred file
         params:
             ftype="fa",
             mag=MAG
@@ -769,7 +778,7 @@ if config["mag"]:
             out=QC_PLOTS
         output:
             # Something to signal this rule is completed
-            QC_PLOTS + "checkm_plots.done"
+            QC_PLOTS + "_checkm_plots.done"
         conda:
             "checkm"
         shell:
@@ -793,7 +802,7 @@ if config["mag"]:
         input:
             expand(rules.taxbin_krona_txt.output, sample=samples)
         output:
-            TAXBIN + "TAXplots_MAGx.html"
+            TAXBIN + "TAXplots_MAGs.html"
         shell:
             "ktImportText {input} -o {output}"
 
@@ -804,7 +813,7 @@ if config["mag"]:
         params:
             map_file=config["map_file"],
             TAXCOL = "Taxonomy (contained)",
-            PROFCOL = lambda wildcards: "{sample}_assembly: mapped reads", ##AA
+            PROFCOL = lambda wildcards: "{sample}_asmbFinal: mapped reads",
         output:
             BIOM_FILE_6C
         message: """rule {rule}
@@ -817,7 +826,7 @@ if config["mag"]:
         run:
             make_biom_file(str(rules.checkm_profile.output),
                        str(rules.checkm_qa.output.tax),
-                       samples.keys(), ## AA may have to rm .keys() but should be ok
+                       samples.keys(),
                        params.map_file,
                        str(output), params.TAXCOL, str(params.PROFCOL))
 
@@ -842,20 +851,22 @@ if config["find_args"]:
             rules.gene_prediction.output.faa,
         threads: threads_per_job    
         params:
-            outDIR  = GENES + "RGI/",  
+            outDIR  = RGI_DIR,  
             ftype   ='protein',
             inFAA   ="_tmpPREDgenes.faa",
             inFAAm  ="_tmpPREDgenes_noStar.faa",   ## removed "*" or begnign fake "ERROR" message can confuse
             prefix  ="_tmpRGIraw", 
             hmphdrs ="_tmpHeaders.txt",
-            carddb  =config["CARD_DB"],
+            carddb  =config["args_db_path"],
             colsAA  ="1,9,11,15,16,17,28",
             sedhdr  ='s/ # .*;gc_cont=0....//g',
-            rgi_raw ="RGI_raw.txt",
-            rgi_main="RGI_main.txt",
-            rgi_faas="RGI_seqs.faa",
-        output: ## outputs never used as workdir is changed for RGI. use corresponding paramsVars
-            rgi_raw =RGI_DIR + "RGI_raw.txt",
+            rgi_raw ="RGI_raw.txt", ## used in rule
+            rgi_main="RGI_main.txt",## used in rule
+            rgi_faas="RGI_seqs.faa",## used in rule
+        conda: 
+            "rgi"
+        output: ## output vars not used in rule but produced thorugh corresponding paramsVars
+            rgi_raw =RGI_DIR + "RGI_raw.txt", 
             rgi_main=RGI_DIR + "RGI_main.txt",
             rgi_faas=RGI_DIR + "RGI_seqs.faa",
 
@@ -869,8 +880,8 @@ if config["find_args"]:
             echo "-------- Running RGI -------"
             cp -r {params.carddb} {params.outDIR}/cardDB/
             cd {params.outDIR}  && rgi load --local -i cardDB/card.json
-            rgi main --input_type {params.ftype} -i {params.inFAAm} \
-                     -o {params.prefix} --clean --local --data wgs --num_threads {threads}
+            rgi main --input_type {params.ftype} -i {params.inFAAm} --clean --local \
+                     -o {params.prefix} --data wgs --num_threads {threads}
             
 
             cut -f '{params.colsAA}' {params.prefix}.txt |sed -E '{params.sedhdr}' >  {params.rgi_main} 
@@ -884,7 +895,8 @@ if config["find_args"]:
     rule merge_ARGtabs:
         threads: threads_per_job
         input:
-            args=expand(rules.run_RGI.output.rgi_main, sample=samples)
+            args=expand(rules.run_RGI.output.rgi_main, sample=samples),
+            require=expand(rules.tpm_normalization.output.ABUNtab, sample=samples), #requires completion
         params:
             argMRGscript=config["argSCR_rgi"],
             asmb_all=lambda wildcards: ASMB_MTX if config["denovo_mtx"] else ASMB_MGX 
@@ -1031,6 +1043,7 @@ rule run_min_path:
         annotations_map=config["annotations_map"],
         minpath_log=PATHWAYS_PREFIX + ".minpath.log.txt",
         mps_file=PATHWAYS_PREFIX + ".mps",
+        minpath_mpt=PATHWAYS_PREFIX + "missing_pathways.txt" ## where is this outputting?
     output:
         tmp_report=temp(PATHWAYS + "tmp_report.txt"),
         details=PATHWAYS_PREFIX + ".details.txt"
@@ -1039,6 +1052,7 @@ rule run_min_path:
         if [ -s {input} ]; then
             python3 {params.minpath_script} -any {input} -map {params.annotations_map} -mps {params.mps_file} \
                 -report {output.tmp_report} -details {output.details} >> {params.minpath_log}
+            # rm {params.minpath_mpt}
         else
             echo "The input file {input} is empty, so run_min_path will not run. All output file(s) from this step are empty."
             touch {output.tmp_report} {output.details} {params.minpath_log}
@@ -1113,17 +1127,18 @@ if len(samples) > 1:
             out_dir=TAX_MERGED_TABLES
         output:
             scclist=temp(TED_READS_TAX + "SccList.txt"),
-            out1=TAX_MERGED_TABLES + "merged_Counts+TAX+Lineage.txt",
+            ## out1=TAX_MERGED_TABLES + "merged_Counts+TAX+Lineage.txt",
             out2=TAX_MERGED_TABLES + "merged_Counts+TAX.txt",
-            out3=TAX_MERGED_TABLES + "merged_Lineage.txt",
+            ## out3=TAX_MERGED_TABLES + "merged_Lineage.txt",
             out4=TAX_MERGED_TABLES + "merged_Counts+Lineage.txt",
-            out5=TAX_MERGED_TABLES + "merged_Counts.txt",
-            out6=TAX_MERGED_TABLES + "merged_TAX.txt",
-            logR=TAX_MERGED_TABLES + "TAX_collationR.log"
+            ## out5=TAX_MERGED_TABLES + "merged_Counts.txt",
+            ## out6=TAX_MERGED_TABLES + "merged_TAX.txt",
+            logR=TAX_MERGED_TABLES + "TAX_collationR.log.txt"
         shell:
             "find {params.bin_dir}/*_4krona.txt -type f -empty -delete && "
             "ls -1 {params.bin_dir} | xargs basename -a -s {params.string} > {output.scclist} && "
-            "Rscript {params.tax_table_merging_script} --binDIR {params.bin_dir} --sccList {output.scclist} --outdir {params.out_dir} --genesDIR {params.gen_dir} 2>&1 >{output.logR}"
+            "Rscript {params.tax_table_merging_script} --binDIR {params.bin_dir} --sccList {output.scclist} --outdir {params.out_dir} \
+                    --genesDIR {params.gen_dir} 2>&1 >{output.logR}"
 
     rule PWY_collation:
         input:
@@ -1140,19 +1155,20 @@ if len(samples) > 1:
             out_dir=PWY_MERGED_TABLES
         output:
             scclist=temp(PWYDIR + "SccList.txt"),
-            out1=PWY_MERGED_TABLES + "merged_Counts+PWY+allTiers.txt",
+            ## out1=PWY_MERGED_TABLES + "merged_Counts+PWY+allTiers.txt",
             out2=PWY_MERGED_TABLES + "merged_Counts+PWY.txt",
-            out3=PWY_MERGED_TABLES + "merged_allTiers.txt",
+            ## out3=PWY_MERGED_TABLES + "merged_allTiers.txt",
             out4=PWY_MERGED_TABLES + "merged_Counts+allTiers.txt",
-            out5=PWY_MERGED_TABLES + "merged_Counts.txt",
-            out6=PWY_MERGED_TABLES + "merged_PWY.txt",
+            ## out5=PWY_MERGED_TABLES + "merged_Counts.txt",
+            ## out6=PWY_MERGED_TABLES + "merged_PWY.txt",
             out7=PWY_MERGED_TABLES + "merged_geneTPMtable.txt",
-            logR=PWY_MERGED_TABLES + "PWY_collation.log"
+            logR=PWY_MERGED_TABLES + "PWY_collationR.log.txt"
         shell:
             "find {params.bin_dir}/*.txt -type f -empty -delete && "
             "find {params.gen_dir}/*.txt -type f -empty -delete && "
             "ls -1 {params.bin_dir} | xargs basename -a -s {params.string} > {output.scclist} && head {output.scclist} &&"
-            "Rscript {params.pwy_table_merging_script} --binDIR {params.bin_dir} --sccList {output.scclist} --outdir {params.out_dir} --genesDIR {params.gen_dir} 2>&1 >{output.logR}"
+            "Rscript {params.pwy_table_merging_script} --binDIR {params.bin_dir} --sccList {output.scclist} --outdir {params.out_dir} \
+                        --genesDIR {params.gen_dir} 2>&1 >{output.logR}"
     
 
 # step 10
@@ -1221,60 +1237,49 @@ if len(samples) > 1:
     rule TAX_diversity_plots:
         input:
             in1=rules.TAX_collation.output.out2,
-            in2=rules.TAX_collation.output.out5,
-            in3=rules.TAX_collation.output.out6,
             mapping_file=config["map_file"]
         params:
             merged_tables_dir=TAX_MERGED_TABLES,
             tax_diversity_plots_script=config["tax_diversity_plots_script"],
             tmp_dir=config["tmp_dir"],
-            out_dir=TAX_DIVERSITY_PLOTS
+            out_dir=TAX_DIVERSITY_PLOTS,
+            tmp_mapping_file=TAX_DIVERSITY_PLOTS + "tmp_mapping_file.txt", ## if output temp() takes forever to remove
         output:
-            # out1=TAX_DIVERSITY_PLOTS + "TAX_AlphaDiv_mapping.txt",
-            # out2=TAX_DIVERSITY_PLOTS + "TAX_AlphaDiv.pdf",
-            # out3=TAX_DIVERSITY_PLOTS + "TAX_BetaDiv_PCoA.pdf",
-            # out4=TAX_DIVERSITY_PLOTS + "TAX_BetaDiv_nMDS.pdf",
-            # out5=TAX_DIVERSITY_PLOTS + "TAX_Profile_Heatmap.pdf",
-            # out6=TAX_DIVERSITY_PLOTS + "TAX_RareficaitonCurve.pdf",
-            # out7=TAX_DIVERSITY_PLOTS + "TAX_RankAbundanceCurve.pdf",
-            tmp_mapping_file=temp(TAX_DIVERSITY_PLOTS + "tmp_mapping_file.txt"),
-            done=TAX_DIVERSITY_PLOTS + "TAX_diversity_plots.done"
-        shell:
-            """
-            sed 's/^#//g' {input.mapping_file} > {output.tmp_mapping_file}
-            Rscript {params.tax_diversity_plots_script} --wdir {params.tmp_dir} --indir {params.merged_tables_dir} --mfile {output.tmp_mapping_file} --outdir {params.out_dir} || echo "ERROR: Failed to generate TAX_diversity_plots"
-            touch {output.done}
+            logR=TAX_DIVERSITY_PLOTS + "TAX_diversity_plotsR.log.txt",
+        shell: """
+            sed '1s/^#//' {input.mapping_file} > {params.tmp_mapping_file}
+            Rscript {params.tax_diversity_plots_script} --wdir {params.tmp_dir} --indir {params.merged_tables_dir} \
+                --mfile {params.tmp_mapping_file} --outdir {params.out_dir}  2>&1 >{output.logR} || \
+             echo "Failed to generate TAX_diversity_plots"  2>&1 >>{output.logR}
+            touch {output.logR} && rm {params.tmp_mapping_file}
             """
   
     rule PWY_diversity_plots:
         input:
             in1=rules.PWY_collation.output.out2,
-            in2=rules.PWY_collation.output.out5,
-            in3=rules.PWY_collation.output.out6,
             mapping_file=config["map_file"]
         params:
             merged_tables_dir=PWY_MERGED_TABLES,
             pwy_diversity_plots_script=config["pwy_diversity_plots_script"],
             tmp_dir=config["tmp_dir"],
-            out_dir=PWY_DIVERSITY_PLOTS
+            out_dir=PWY_DIVERSITY_PLOTS,
+            tmp_mapping_file=PWY_DIVERSITY_PLOTS + "tmp_mapping_file.txt", ## if output temp() takes forever to remove
         output:
-            # out1=PWY_DIVERSITY_PLOTS + "PWY_Profile_Heatmap_top35PWYs.pdf",
-            # out2=PWY_DIVERSITY_PLOTS + "PWY_BetaDiv_nMDS.pdf",
-            # out3=PWY_DIVERSITY_PLOTS + "PWY_BetaDiv_PCoA.pdf",
-            tmp_mapping_file=temp(PWY_DIVERSITY_PLOTS + "tmp_mapping_file.txt"),
-            done=PWY_DIVERSITY_PLOTS + "PWY_diversity_plots.done"
-        shell:
-            """
-            sed 's/^#//g' {input.mapping_file} > {output.tmp_mapping_file}
-            Rscript {params.pwy_diversity_plots_script} --wdir {params.tmp_dir} --indir {params.merged_tables_dir} --mfile {output.tmp_mapping_file} --outdir {params.out_dir} || echo "ERROR: Failed to generate PWY_diversity_plots"
-            touch {output.done}
+            logR=PWY_DIVERSITY_PLOTS + "PWY_diversity_plotsR.log.txt"
+        shell: """
+            sed 's/^#//g' {input.mapping_file} > {params.tmp_mapping_file}
+            Rscript {params.pwy_diversity_plots_script} --wdir {params.tmp_dir} --indir {params.merged_tables_dir} \
+                    --mfile {params.tmp_mapping_file} --outdir {params.out_dir}  2>&1 >{output.logR} || \
+                    echo "Failed to generate PWY_diversity_plots"  2>&1 >>{output.logR}
+            touch {output.logR} && rm {params.tmp_mapping_file}
             """
  
-import subprocess
-onsuccess:
-    shell(clean_output() + handle_TED() + handle_cp_biom() ) 
-    subprocess.run(for_discovir(), shell = True ) ## updates AA Apr 2024
-
-onerror:
-    shell(clean_output() + handle_TED() + handle_cp_biom())
-    subprocess.run(for_discovir(), shell = True ) ## updates AA Apr 2024
+# import subprocess
+# onsuccess:
+#     # shell(clean_output() + handle_TED() + handle_cp_biom() ) 
+#     # subprocess.run(fwd_outputs(), shell = True ) ## for DiscoVIR and MAGs pipeline
+#     #shell("cp {log_path} {outputs_dir}/.snakemake.log")
+# onerror:
+#     # shell(clean_output() + handle_TED() + handle_cp_biom())
+#     # subprocess.run(fwd_outputs(), shell = True ) ## for DiscoVIR and MAGs pipeline
+#     #shell("cp {log_path} {outputs_dir}/.snakemake.log")

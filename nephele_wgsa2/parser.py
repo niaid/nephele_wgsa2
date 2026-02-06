@@ -7,6 +7,7 @@ from nephele_pipeline_utils.types import boolean, path, directory, field, mappin
 from config import pipeline_config
 from enums import ClassificationDbType, AnnotationsType
 
+
 parser = NepheleArgumentParser(data_type=DataType.PE)
 
 
@@ -25,7 +26,7 @@ def parse_args():
     )
     parser.add_argument(
         "--kr2confidence_host",
-        type=field(int, ge=0.0, le=1),
+        type=field(float, ge=0.0, le=1),
         default=0.05,
         required=True,
         help="kraken2 confidence value for identifying host reads",
@@ -39,7 +40,7 @@ def parse_args():
     )
     parser.add_argument(
         "--kr2confidence_taxonomic",
-        type=field(int, ge=0.0, le=1),
+        type=field(float, ge=0.0, le=1),
         default=0.15,
         required=True,
         help="kraken2 confidence value for taxonomic classificaitons",
@@ -86,6 +87,12 @@ def parse_args():
         type=boolean,
         default=False,
         help="Add steps for Antimicrobial Resistance Gene identification",
+    )
+    parser.add_argument(
+        "--args_db_path",
+        type=path("db"),
+        required=False,
+        help="path to your CARD database for Antimicrobial Resistance Gene identification",
     )
     parser.add_argument(
         "--read_norm",

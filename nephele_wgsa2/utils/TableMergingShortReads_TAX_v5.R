@@ -62,8 +62,6 @@ print("------> merging data")
 merged=Reduce(function(x,y)
   merge(x,y, by=c(tiers, "Lineage"), all=T ), data)
 colnames(merged)=c(tiers, "Lineage", names(data))
-# head(merged)
-# row.names(merged)=paste0("TAX", row.names(merged))
 row.names(merged)=paste0("id", merged$TAXid)
 merged = merged %>% relocate("Lineage", .after=last_col()) %>%
   mutate_if(is.numeric, ~replace(. , is.na(.), 0)) %>%
@@ -79,7 +77,7 @@ output$dir<- args$outdir
 dir.create(output$dir)
 print(paste("------> exporting data at:", output$dir))
 
-write.table(merged, file.path(output$dir, "merged_Counts+TAX+Lineage.txt"),
+write.table(merged, file.path(output$dir, ".merged_Counts+TAX+Lineage.txt"), ## invisible file
             sep="\t", col.names=NA, quote = F, na="")
 
 noHier <- setdiff(names(merged), c("Lineage"))
@@ -87,7 +85,7 @@ write.table(merged[,noHier], file.path(output$dir, "merged_Counts+TAX.txt"),
             sep="\t", col.names=NA, quote = F, na="")
 
 Lin <- select(merged, "Lineage")
-write.table(Lin, file.path(output$dir, "merged_Lineage.txt"),
+write.table(Lin, file.path(output$dir, ".merged_Lineage.txt"), ## invisible file
             sep="\t", col.names=NA, quote = F, na="")
 
 noTAX <- setdiff(names(merged), tiers)
@@ -95,11 +93,11 @@ noTAX <- merged[, noTAX] %>% relocate(Lineage, .after=last_col() )
 write.table(noTAX, file.path(output$dir, "merged_Counts+Lineage.txt"),
             sep="\t", col.names=NA, quote = F, na="")
 
-write.table(merged[,names(data)], file.path(output$dir, "merged_Counts.txt"),
+write.table(merged[,names(data)], file.path(output$dir, ".merged_Counts.txt"), ## invisible file
             sep="\t", col.names=NA, quote = F, na="")
 
 noCounts<-setdiff(names(merged), c(names(data), "Lineage") )
-write.table(merged[,noCounts], file.path(output$dir, "merged_TAX.txt") ,
+write.table(merged[,noCounts], file.path(output$dir, ".merged_TAX.txt") , ## invisible file
             sep="\t", col.names=NA, quote = F, na="")
 
 # bim <-biomformat::make_biom(data = merged[,names(data)], observation_metadata = merged[,noCounts], sample_metadata = names(data))
@@ -117,4 +115,7 @@ write.table(merged[,noCounts], file.path(output$dir, "merged_TAX.txt") ,
 
 # rm(noCounts, noHier)
 #save R image
-#save.image(paste0(output$dir, "/TableMerging_v4.RData") )
+save.image(paste0(output$dir, "/.TableMergingShortReads_v5.RData") )
+
+
+
