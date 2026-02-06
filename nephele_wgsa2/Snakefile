@@ -1274,12 +1274,12 @@ if len(samples) > 1:
             touch {output.logR} && rm {params.tmp_mapping_file}
             """
  
-# import subprocess
-# onsuccess:
-#     # shell(clean_output() + handle_TED() + handle_cp_biom() ) 
-#     # subprocess.run(fwd_outputs(), shell = True ) ## for DiscoVIR and MAGs pipeline
-#     #shell("cp {log_path} {outputs_dir}/.snakemake.log")
-# onerror:
-#     # shell(clean_output() + handle_TED() + handle_cp_biom())
-#     # subprocess.run(fwd_outputs(), shell = True ) ## for DiscoVIR and MAGs pipeline
-#     #shell("cp {log_path} {outputs_dir}/.snakemake.log")
+import subprocess
+onsuccess:
+    shell(clean_output() + handle_TED() + handle_cp_biom() ) 
+    subprocess.run(fwd_outputs(), shell = True ) ## for DiscoVIR and MAGs pipeline
+    #shell("cp {log_path} {outputs_dir}/.snakemake.log")
+onerror:
+    shell(clean_output() + handle_TED() + handle_cp_biom())
+    subprocess.run(fwd_outputs(), shell = True ) ## for DiscoVIR and MAGs pipeline
+    #shell("cp {log_path} {outputs_dir}/.snakemake.log")
