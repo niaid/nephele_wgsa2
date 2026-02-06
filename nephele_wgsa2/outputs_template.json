@@ -61,7 +61,7 @@
         "is_regex_path": true
     },
     {
-        "type": "MISCELLANEOUS",
+        "type": "MERGER",
         "path": "PWYprofiles/*PWYs.MP/merged_tables/merged_geneTPMtable.txt",
         "title": "PWY merged gene TPM table",
         "description": "PWY merged gene TPM table",
@@ -85,6 +85,20 @@
         "path": "asmb_files/{sample_id}_assembly.fasta",
         "title": "Assembly fasta file for {sample_id}",
         "description": "Assembly fasta file for a sample to be used by DiscoVir pipeline",
+        "is_regex_path": true
+    },
+    {
+        "type": "MERGER",
+        "path": "TAXprofiles/readsTAX_*/merged_tables/merged_Counts+Lineage.txt",
+        "title": "merged_Counts+Lineage",
+        "description": "",
+        "is_regex_path": true
+    },
+    {
+        "type": "MERGER",
+        "path": "PWYprofiles/*PWYs.MP/merged_tables/merged_Counts+allTiers.txt",
+        "title": "merged_Counts+allTiers",
+        "description": "",
         "is_regex_path": true
     }
 ]
