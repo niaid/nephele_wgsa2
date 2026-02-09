@@ -1,4 +1,4 @@
-minpath_script: /usr/local/src/MinPath/MinPath.py ## Duc chaned it to Poorani's mps-enabled version
+minpath_script: /usr/local/src/MinPath/MinPath.py ## Duc changed it to Poorani's mps-enabled version
 kreport2krona_script: /pipeline/utils/report2krona_wTAXid_last.py
 gff2gtf_script: /pipeline/utils/gff2gtf.sh
 genes2krona_script: /pipeline/utils/genes2KronaTable.py
@@ -10,4 +10,6 @@ awk_geneTPM_script: /pipeline/utils/calc_geneTPM.awk
 awk_joinTPM_script: /pipeline/utils/join2files_f2.awk
 KO_listfile: /pipeline/utils/KO_list.txt
 EC_listfile: /pipeline/utils/EC_list.txt
-amrfinder_db: /opt/conda/share/amrfinderplus/data/latest
+#amrfinder_db: /opt/conda/share/amrfinderplus/data/latest
+CARD_DB: /opt/conda/share/CARD_db/v3.2.9/CARD_db-v3.2.9
+argSCR_rgi: /pipeline/utils/RGI_merger.py

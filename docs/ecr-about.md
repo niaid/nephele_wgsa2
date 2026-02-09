@@ -5,8 +5,10 @@ This Docker image contains the WGSA2+ (Whole Genome Shotgun Assemply 2 Plus) pip
 ## Features
 
 - **Quality Control**: Trimming, error correction, and quality filtering of raw reads
-- **Decontamination**: Removal of host and contaminant sequences
-- **De Novo Assembly**: Sample-level short read assembly using metaSPAdes (or Trinity in mtx mode)
+- **Decontamination**: Removal of host and contaminant sequences from a selection of common host databases
+- **De Novo Assembly** with optional **read normalization**: 
+    - Sample-level short read assembly using metaSPAdes/Trinity (mgx/mtx mode). 
+    - For large samples, user may chose option for coverage normalization of redundant reads, to reduce resource consumption, assembly time and missassemblies
 - **Taxonomic Classification**: Multiple classification approaches:
   - Read-based classification (default; Kraken2)
   - Gene-based classification (optional; Kraken2)
@@ -16,9 +18,8 @@ This Docker image contains the WGSA2+ (Whole Genome Shotgun Assemply 2 Plus) pip
   - eggNOG-mapper for orthology assignment
   - MinPath for pathway inference with selected pathway databases
   - KEGG or MetaCyc pathway databases
-- **Antimicrobial Resistance**: Optional AMRFinderPlus analysis
+- **Antimicrobial Resistance**: Optional Resistance Gene Identification (RGI)
 - **Metagenome-Assembled Genomes (MAGs)**: Optional binning and MAG reconstruction
-- **Transcriptomics Support**: De novo transcriptome assembly with Trinity (optional)
 - **Visualization**: Interactive HTML visualizations including:
   - Krona taxonomic and functional charts
   - Alpha and beta diversity plots
