@@ -25,7 +25,7 @@ def parse_args():
     )
     parser.add_argument(
         "--kr2confidence_host",
-        type=field(int, ge=0.0, le=1),
+        type=field(float, ge=0.0, le=1),
         default=0.05,
         required=True,
         help="kraken2 confidence value for identifying host reads",
@@ -39,7 +39,7 @@ def parse_args():
     )
     parser.add_argument(
         "--kr2confidence_taxonomic",
-        type=field(int, ge=0.0, le=1),
+        type=field(float, ge=0.0, le=1),
         default=0.15,
         required=True,
         help="kraken2 confidence value for taxonomic classificaitons",
