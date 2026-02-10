@@ -75,15 +75,15 @@ def main(args):
             ]
         )
     if args.read_norm:
-            snakemake_config.extend(
+        snakemake_config.extend(
             [
-                  f"readCoverage={args.readCoverage}",
+                f"readCoverage={args.readCoverage}",
             ]
         )
     if args.find_args:
-            snakemake_config.extend(
+        snakemake_config.extend(
             [
-                    f"args_db_path={args.args_db_path}",
+                f"args_db_path={args.args_db_path}",
             ]
         )
 
