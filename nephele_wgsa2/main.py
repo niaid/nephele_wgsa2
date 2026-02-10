@@ -57,7 +57,6 @@ def main(args):
         # f"amrfind={args.amrfind}",
         f"find_args={args.find_args} read_norm={args.read_norm}",
         f"denovo_mtx={args.denovo_mtx}",
-        f"sortmerna_db={args.sortmerna_db_path}",
         f"eggnog_db={args.eggnog_db_path}",
         f"annotations_type={args.annotations_type}",
         f"annotations_map={args.annotations_map_db_path}",
