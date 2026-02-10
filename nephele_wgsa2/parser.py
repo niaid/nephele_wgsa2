@@ -88,6 +88,12 @@ def parse_args():
         help="Add steps for Antimicrobial Resistance Gene identification",
     )
     parser.add_argument(
+        "--args_db_path",
+        type=path("db"),
+        required=False,
+        help="path to your CARD database for Antimicrobial Resistance Gene identification",
+    )
+    parser.add_argument(
         "--read_norm",
         type=boolean,
         default=False,

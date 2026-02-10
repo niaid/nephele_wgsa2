@@ -40,9 +40,9 @@ def main(args):
     log("Starting WGSA pipeline...")
     # log(args)
     base_command = [
-        "snakemake -p --cores --nocolor --use-conda",
-        f"--resources mem_gb={mem_gb}",
-        f"--directory {tmp_dir}",
+        "snakemake -p --cores --nocolor --use-conda --rerun-incomplete",
+        f"--resources mem_gb={mem_gb} --keep-going",
+        f"--directory {tmp_dir} --latency-wait 10 ",
     ]
     snakemake_config = [
         f"--config num_cpus={num_cpus} map_file={args.mapping_file_path}",
@@ -54,8 +54,8 @@ def main(args):
         f"classification_db_name={args.classification_db_name}",
         f"classification_db={args.classification_db_path}",
         f"kr2confidence_taxonomic={args.kr2confidence_taxonomic}",
-        # f"amrfind={args.amrfind}",
-        f"find_args={args.find_args} read_norm={args.read_norm}",
+        f"find_args={args.find_args}",
+        f"read_norm={args.read_norm}",
         f"denovo_mtx={args.denovo_mtx}",
         f"eggnog_db={args.eggnog_db_path}",
         f"annotations_type={args.annotations_type}",
@@ -80,6 +80,13 @@ def main(args):
                 f"readCoverage={args.readCoverage}",
             ]
         )
+    if args.find_args:
+        snakemake_config.extend(
+            [
+                f"args_db_path={args.args_db_path}",
+            ]
+        )
+
     base_command.extend(snakemake_config)
     main_pipeline = " ".join(base_command)
     exec_cmnd(main_pipeline)

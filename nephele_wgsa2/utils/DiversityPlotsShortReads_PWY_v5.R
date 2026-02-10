@@ -24,10 +24,10 @@ args <- docopt(doc);
 print(args)
 ## manual args set:
 # args <- docopt(doc, args = c(
-#    "--wdir"   ,  "/Users/angelovaag/Documents/tests/table_merging_test/merged_tables_v5_ec/",
-#    "--indir"  ,  "/Users/angelovaag/Documents/tests/table_merging_test/merged_tables_v5_ec/merged_tables/",
-#    "--mfile"  ,  "/Users/angelovaag/Documents/tests/table_merging_test/merged_tables_v5_ec/tmp_mapping_file.txt",
-#    "--outdir" ,  "/Users/angelovaag/Documents/tests/table_merging_test/merged_tables_v5_ec/divPlots_pwy/")) #this is if the .sh does not provide arguments
+#    "--wdir"   ,  "dbLinks/merging/table_merging_test/merged_tables_v5_ec/",
+#    "--indir"  ,  "dbLinks/merging/table_merging_test/merged_tables_v5_ec/merged_tables/",
+#    "--mfile"  ,  "dbLinks/merging/table_merging_test/merged_tables_v5_ec/tmp_mapping_file.txt",
+#    "--outdir" ,  "dbLinks/merging/table_merging_test/merged_tables_v5_ec/divPlots_pwy/")) #this is if the .sh does not provide arguments
 #  print(args)
 print("-----------> docopt settings------^^^^")
 
@@ -41,32 +41,23 @@ path=list()
 path$input = paste0(args$wdir)
 path$tables= paste0(args$indir)
 path$outdir= paste0(args$outdir); dir.create(path$outdir); 
+tabFile=paste0(path$tables, "/merged_Counts+PWY.txt")
 
 # #importing metadata objects
 print("-----------> reading in mapping file:")
 tables=NA
-tables$meta <- read.table(paste0(args$mfile), header = T, sep="\t", quote = ""); #, row.names = NULL
-# print(head(tables$meta))
-row.names(tables$meta) = tables$meta$SampleID # tables$meta=tables$meta %>% relocate(SampleID)
+tables$meta <- read.table(paste0(args$mfile), header = T, sep="\t", quote = "")
+row.names(tables$meta) = tables$meta$SampleID
 tables$meta=tables$meta[order(tables$meta$SampleID), ]
 tables$meta; print("-----------> done importing mapping file^^^")
 
 ### Beta diversity with Ampvis2
 #https://madsalbertsen.github.io/ampvis2/articles/ampvis2.html
 print("-----------> prepping AMPVIS2 object")
-    # tables$amp=cbind(tables$counts, tables$tax)# or 
-    # amp <- amp_load(otutable=tables$counts, metadata= tables$meta, taxonomy= tables$tax ) ## or
-tables$amp=read.table(paste0(path$tables, "/merged_Counts+PWY.txt"),  header = T, row.names = 1, sep = "\t", quote = "" )
-tables$amp = tables$amp %>% dplyr::rename(OTU = PWYname,Species = Tier3, Order = Tier2, Phylum = Tier1) %>%
+tables$amp=read.table(tabFile,  header = T, row.names = 1, sep = "\t", quote = "" )
+tables$amp = tables$amp %>% dplyr::rename(OTU = PWYname, Species = Tier3, Order = Tier2, Phylum = Tier1) %>%
   dplyr::select(-c(starts_with("Tier") ) ) #bc AWS::ampvis2.7.17 makes issue with the extra columns from metaCyc DB
 head(tables$amp)
-# tables$amp = tables$amp %>% S4Vectors::rename("Tier4" = "Species", "Tier3" = "Family", "Tier2" = "Class", "Tier1" = "Phylum")
-# try({
-#   print("--------> attempting removal of extra metaCyc columns (existing only for metaCYC pwys)")
-#   # remtiers = paste0(rep("Tier"), seq(5,14,1))
-#   # tables$amp<- dplyr::select(tables$amp, -c(any_of(remtiers) ) ) #bc AWS::ampvis2.7.17 makes issue with the extra columns from metaCyc DB
-#   })
-# library(ampvis2)
 amp=ampvis2::amp_load(tables$amp, tables$meta)
 # print("-----------> checking some AMPVIS2 data")
 # head(amp$abund); tail(amp$abund)
@@ -81,7 +72,7 @@ pcoa_bray <- amp_ordinate(amp, filter_species = 0.01, type = "PCOA", sample_labe
                           detailed_output = TRUE, transform = "none", sample_shape_by = "TreatmentGroup")
 #pcoa_bray$plot= pcoa_bray$plot + scale_shape_manual(values=c(17, 15,13,18, 4,5,6,7,8) )
 pdf(paste0(path$outdir, "/PWY_BetaDiv_PCoA.pdf"), width=12, height=10); plot(pcoa_bray$plot); dev.off()
-png(paste0(path$outdir, "/PWY_BetaDiv_PCoA.png"), width=760, height=640); plot(pcoa_bray$plot); dev.off()
+png(paste0(path$outdir, "/.PWY_BetaDiv_PCoA.png"), width=760, height=640); plot(pcoa_bray$plot); dev.off()
 })
 
 print("-----------> making nMDS plot")
@@ -101,7 +92,7 @@ amp_htmp=amp_heatmap(amp, group_by = "SampleID", facet_by = "TreatmentGroup",
   theme(axis.text.x = element_text(angle = 45, size=10, vjust = 1),
         axis.text.y = element_text(size=8), legend.position="right")
   wratio= 8 + length(unique(amp$metadata$TreatmentGroup)) + round( (1/4)*length(amp$metadata$SampleID), 0) 
-pdf(paste0(path$outdir, "/PWY_Profile_Heatmap_top35PWYs.pdf"), width=wratio, height = 10); plot(amp_htmp); dev.off()
+pdf(paste0(path$outdir, "/PWY_Heatmap_top35PWYs.pdf"), width=wratio, height = 10); plot(amp_htmp); dev.off()
 })
 
 
@@ -111,6 +102,6 @@ rm(amp_htmp, nmds_bray, pcoa_bray)
 })
 
 #save R image
-save.image(paste0(args$outdir, "/DiversityPlots_v3.RData") )
+save.image(paste0(args$outdir, "/.DiversityPlotsShortReads_v5.RData") )
 
 #Attempting DiffAbund: not all dataset will have replicates & groups rich enough for statistical analysis
