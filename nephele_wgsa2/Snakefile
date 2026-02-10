@@ -289,7 +289,7 @@ rule run_kraken2_classification:
         r=lambda wildcards: rules.remove_rRNA.output.rread_gz if config["denovo_mtx"] else rules.compress_kraken2_decontaminate.output.r
     threads: threads_per_job
     params:
-        classification_db=config["classification_db"]
+        classification_db=config["classification_db"],
         confidence_taxon=config["kr2confidence_taxonomic"]
     output:
         out=temp(TED_READS_TAX_KLOGS + "{sample}_klog.txt"),
