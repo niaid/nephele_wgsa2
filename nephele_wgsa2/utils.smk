@@ -133,7 +133,7 @@ def handle_TED():
         """
     else:
         command = f"""
-        rm -rf {TED_TMP}
+        rm -rf {TED_READS_FQS}
         """
     return command
 
