@@ -40,9 +40,9 @@ def main(args):
     log("Starting WGSA pipeline...")
     # log(args)
     base_command = [
-        "snakemake -p --cores --nocolor --use-conda",
-        f"--resources mem_gb={mem_gb}",
-        f"--directory {tmp_dir}",
+        "snakemake -p --cores --nocolor --use-conda --rerun-incomplete",
+        f"--resources mem_gb={mem_gb} --keep-going",
+        f"--directory {tmp_dir} --latency-wait 10 ",
     ]
     snakemake_config = [
         f"--config num_cpus={num_cpus} map_file={args.mapping_file_path}",
@@ -50,11 +50,13 @@ def main(args):
         f"trim_filter={args.trim_filter} include_ted_files={args.include_ted_files} ted_file_name={pipeline_config.ted_file_name}",
         f"biom_file_name={pipeline_config.biom_file_name}",
         f"decontaminate={args.decontaminate_db_path}",
+        f"kr2confidence_host={args.kr2confidence_host}",
         f"classification_db_name={args.classification_db_name}",
         f"classification_db={args.classification_db_path}",
-        f"amrfind={args.amrfind}",
+        f"kr2confidence_taxonomic={args.kr2confidence_taxonomic}",
+        f"find_args={args.find_args}",
+        f"read_norm={args.read_norm}",
         f"denovo_mtx={args.denovo_mtx}",
-        f"sortmerna_db={args.sortmerna_db_path}",
         f"eggnog_db={args.eggnog_db_path}",
         f"annotations_type={args.annotations_type}",
         f"annotations_map={args.annotations_map_db_path}",
@@ -72,6 +74,19 @@ def main(args):
                 f"trim_of_5={args.trim_of_5} trim_of_3={args.trim_of_3}",
             ]
         )
+    if args.read_norm:
+        snakemake_config.extend(
+            [
+                f"readCoverage={args.readCoverage}",
+            ]
+        )
+    if args.find_args:
+        snakemake_config.extend(
+            [
+                f"args_db_path={args.args_db_path}",
+            ]
+        )
+
     base_command.extend(snakemake_config)
     main_pipeline = " ".join(base_command)
     exec_cmnd(main_pipeline)

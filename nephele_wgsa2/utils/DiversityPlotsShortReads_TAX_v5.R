@@ -2,7 +2,7 @@
 ### load packages
 ## info fo fossil/chao1: https://www.rdocumentation.org/packages/fossil/versions/0.4.0/topics/chao1
 library(easypackages) #can also install multiples with packages()
-x<-c("data.table", "fossil", "ggplot2", "vegan", "ampvis2" )
+x<-c("data.table", "fossil", "ggplot2", "vegan", "ampvis2","tidyverse")
 # other packages not needed for this script
 #y=c("ape", "broom","readr", "reshape2", "dplyr", "tidyr", "tidyverse",
 #"Biostrings","devtools","tibble", "stringr", "htmltools")
@@ -23,10 +23,10 @@ args <- docopt(doc);
 print(args)
 ## manual args set:
 # args <- docopt(doc, args = c(
-#    "--wdir"   ,  "/Users/angelovaag/Documents/Nephele_pipelines/WmGS_v2/tests",
-#    "--indir"  ,  "TAXprofiles/merged_tables",
-#    "--mfile"  ,  "mapping.txt",
-#    "--outdir" ,  "TAXprofiles/DiversityPlots")) #this is if the .sh does not provide arguments
+#    "--wdir"   ,  "dbLinks/merging/table_merging_test/tests",
+#    "--indir"  ,  "dbLinks/merging/table_merging_test/merged_tables",
+#    "--mfile"  ,  "dbLinks/merging/table_merging_test/mapping.txt",
+#    "--outdir" ,  "dbLinks/merging/table_merging_test/DiversityPlots")) #this is if the .sh does not provide arguments
 # print(args)
 print("-----------> docopt settings------^^^^-----------")
 
@@ -40,7 +40,8 @@ path=list()
 path$input = paste0(args$wdir)
 path$tables= paste0(args$indir)
 path$outdir=paste0(args$outdir); dir.create(path$outdir); 
-
+tabFile <- paste0(path$tables, "/merged_Counts+TAX.txt")
+tiers=c("Kingdom","Phylum", "Class", "Order", "Family", "Genus", "Species")
 # #------------------------------- alpha and beta diversity -------------------------------------
 # #importing counts, meta and tax objects
 tables=NA
@@ -48,10 +49,17 @@ tables$meta <- read.table(paste0(args$mfile), header = T, sep="\t", quote = "", 
 row.names(tables$meta)= tables$meta$SampleID # tables$meta=tables$meta %>% relocate(SampleID)
 tables$meta=tables$meta[order(tables$meta$SampleID), ]
 tables$meta; print("-----------> read in mapping file^^^")
-tables$counts <- read.table(paste0(path$tables,"/merged_Counts.txt"), header = T, row.names = 1, sep="\t", check.names=F) 
-head(tables$counts); print("-----------> read in Counts file^^^")
-tables$tax <- read.table(paste0(path$tables,"/merged_TAX.txt"), header = T, row.names = 1, sep = "\t", quote = "", check.names=F)
-head(tables$tax); print("-----------> read in TAX file^^^")
+
+# tables$counts <- read.table(paste0(path$tables,"/merged_Counts.txt"), header = T, row.names = 1, sep="\t", check.names=F) 
+# head(tables$counts); print("-----------> read in Counts file^^^")
+# tables$tax <- read.table(paste0(path$tables,"/merged_TAX.txt"), header = T, row.names = 1, sep = "\t", quote = "", check.names=F)
+# head(tables$tax); print("-----------> read in TAX file^^^"
+
+tables$counts <- read.table(tabFile, header = T, row.names = 1, sep = "\t", quote = "",check.names=F ) %>%  select(!any_of(tiers))
+head(tables$counts); print("-----------> read in Counts^^^")
+tables$tax <- read.table(tabFile, header = T, row.names = 1, sep = "\t", quote = "",check.names=F ) %>% select(any_of(tiers))
+head(tables$tax); print("-----------> read in TAX^^^")
+
 
 print("-----------> Calculating alpha diversity indexes")
 library(vegan)
@@ -98,7 +106,7 @@ sst=NULL;
 #https://madsalbertsen.github.io/ampvis2/articles/ampvis2.html
 print("-----------> prepping AMPVIS2 object")
 #tables$amp=cbind(tables$counts, tables$tax)# or 
-tables$amp=read.table(paste0(path$tables, "/merged_Counts+TAX.txt"),  header = T, row.names = 1, sep = "\t", quote = "",  check.names = F )
+tables$amp=read.table(tabFile,  header = T, row.names = 1, sep = "\t", quote = "",check.names=F )
 amp=amp_load(tables$amp, tables$meta)
 print("-----------> checking some AMPVIS2 data")
 head(amp$abund); amp$tax[1:4, ]
@@ -114,7 +122,7 @@ pcoa_bray <- amp_ordinate(amp, filter_species = 0.01, type = "PCoA", sample_labe
  pcoa_bray$plot= pcoa_bray$plot + guides(color = guide_legend(ncol = 3), shape = guide_legend(ncol = 2)) +
     theme(legend.position = "right") + ggtitle(title) + scale_shape_manual(values=c(17, 15,13,18, 4,5,6,7,8) )
   pdf(paste0(path$outdir, "/TAX_BetaDiv_PCoA.pdf"), width=14, height=10); plot(pcoa_bray$plot); dev.off()
-  png(paste0(path$outdir, "/TAX_BetaDiv_PCoA.png"), width=780, height=640); plot(pcoa_bray$plot); dev.off()
+  png(paste0(path$outdir, "/.TAX_BetaDiv_PCoA.png"), width=780, height=640); plot(pcoa_bray$plot); dev.off()
 })
 
 print("-----------> making nMDS plot")
@@ -135,7 +143,7 @@ amp_htmp=amp_heatmap(amp, group_by = "SampleID", facet_by = "TreatmentGroup",
               plot_values_size = 3, showRemainingTaxa = T, tax_add = "Class") +
         theme(axis.text.x = element_text(angle = 45, size=10, vjust = 1),
               axis.text.y = element_text(size=8), legend.position="right")
-pdf(paste0(path$outdir, "/TAX_Profile_Heatmap.pdf"), width=14, height = 10); plot(amp_htmp); dev.off()
+pdf(paste0(path$outdir, "/TAX_Heatmap.pdf"), width=14, height = 10); plot(amp_htmp); dev.off()
 })
 
 print("-----------> making rarecurve graph")
@@ -161,7 +169,7 @@ pdf(paste0(path$outdir, "/TAX_RankAbundanceCurve.pdf")); plot(rab); dev.off()
 rm(amp_htmp, amp2, nmds_bray, p1, pcoa_bray, sst, rrc, rab)
 
 #save R image
-#save.image(paste0(args$outdir, "/DiversityPlots_v3.RData") )
+save.image(paste0(args$outdir, "/.DiversityPlotsShortReads_v5.RData") )
 
 #Attempting DiffAbund
-#Need replicates
+#Need guaranteed replicates, balanced metadata, and model would depend on metadata & question

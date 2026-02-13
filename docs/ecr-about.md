@@ -1,24 +1,25 @@
 # About Nephele WGSA2+
 
-This Docker image contains the WGSA2+ (Whole Genome Shotgun Assemply 2 Plus) pipeline for the Nephele microbiome analysis platform. WGSA2+ is a comprehensive metagenomics/metatranscriptomics pipeline that processes paired-end shotgun sequencing data to produce de novo assemblies, taxonomic classifications, and functional annotations for microbial communities.
+This Docker image contains the WGSA2+ (Whole Genome Shotgun Assembly 2 Plus) pipeline for the Nephele microbiome analysis platform. WGSA2+ is a comprehensive metagenomics/metatranscriptomics pipeline that processes paired-end shotgun sequencing reads to produce taxonomic classifications, _de novo_ assemblies, and functional annotations for microbial communities.
 
 ## Features
 
 - **Quality Control**: Trimming, error correction, and quality filtering of raw reads
-- **Decontamination**: Removal of host and contaminant sequences
-- **De Novo Assembly**: Sample-level short read assembly using metaSPAdes (or Trinity in mtx mode)
+- **Decontamination**: Removal of host and contaminant sequences from a selection of common host databases
+- **De Novo Assembly** with optional **read normalization**: 
+    - Sample-level short read assembly using metaSPAdes/Trinity (mgx/mtx mode). 
+    - Option for coverage normalization (recommended for large samples), to reduce read redundancy, resource consumption especially during assembly, and thus run time and assembly mistakes
 - **Taxonomic Classification**: Multiple classification approaches:
   - Read-based classification (default; Kraken2)
   - Gene-based classification (optional; Kraken2)
   - Scaffold-based classification (optional; Kraken2)
-  - MAG-based classification (optional; METABAT, CheckM)
+  - MAG-based classification (optional; CheckM)
 - **Functional Annotation**: Gene prediction and annotation using:
-  - eggNOG-mapper for orthology assignment
-  - MinPath for pathway inference with selected pathway databases
-  - KEGG or MetaCyc pathway databases
-- **Antimicrobial Resistance**: Optional AMRFinderPlus analysis
+  - gene orthology assignment (eggNOG-mapper2)
+  - pathway inference based on gene annotations (MinPath)
+  - user elected pathway databases (KEGG or MetaCyc)
+- **Antimicrobial Resistance**: Optional Resistance Gene Identification (RGI)
 - **Metagenome-Assembled Genomes (MAGs)**: Optional binning and MAG reconstruction
-- **Transcriptomics Support**: De novo transcriptome assembly with Trinity (optional)
 - **Visualization**: Interactive HTML visualizations including:
   - Krona taxonomic and functional charts
   - Alpha and beta diversity plots
@@ -58,16 +59,17 @@ This Docker image contains the WGSA2+ (Whole Genome Shotgun Assemply 2 Plus) pip
 
 1. **Read Processing**: Quality trimming and error correction
 2. **Host decontamination**: Host sequence removal
-3. **Taxonomic annotation**: Taxonomic classification of cleaned reads (TEDreads)
-4. **Assembly**: De novo metagenomic assembly per sample
-5. **Gene Prediction**: Genomic features prediction from assembled contigs
-6. **Functional Annotation**: Orthology assignment of gene annotations and pathway inference
-7. **Abundance Quantification**: Read mapping and TPM calculation for genes and pathway abundance estimations
-8. **Taxonomic annotation 2** (optional): Classification of genes, scaffolds and/or MAGs
-9. **Metagenome-predited genomes** (optional): prediction of metagenome assembled genomes (MAGs) and quality control
-10. **Antimicrobial gene finding** (optional): scanning predicted features for antimicrobial resistance genes
-11. **Diversity Analysis**: Alpha and beta diversity metrics across full dataset
-12. **Visualization**: Interactive charts and dataset summary plots
+3. **Taxonomic annotation of clean reads**: Taxonomic classification of cleaned reads (TEDreads)
+4. **Read normalization** (optional): normalize read coverage in preparation for assembly 
+5. **Assembly**: De novo metagenomic or metatranscriptomics assembly per sample
+6. **Gene Prediction**: Genomic features prediction from assembled contigs
+7. **Functional Annotation**: Orthology assignment of gene annotations and pathway inference
+8. **Abundance Quantification**: Read mapping and TPM calculation for genes and pathway abundance estimations
+9. **Taxonomic annotation of assembled features** (optional): Classification of genes, scaffolds and/or MAGs
+10. **Metagenome-predicted genomes** (optional): prediction of metagenome assembled genomes (MAGs) and quality control
+11. **Antimicrobial gene mining** (optional): scanning predicted features for antimicrobial resistance genes
+12. **Diversity Analysis**: Alpha and beta diversity metrics across full dataset
+13. **Visualization**: Interactive charts and dataset summary plots
 
 ## Output Organization
 
@@ -75,23 +77,31 @@ The pipeline produces organized outputs including:
 
 - **TEDreads**: per-sample reports and logs produced from host decontamination step
 - **TAXprofiles**: Dataset-wide taxonomic abundance matrices and visualizations
-  - **readsTAX_{tax_db_name}**: taxonomic annotations of reads per sample for dataset
+  - **readsTAX_{taxDBname}**: taxonomic annotations of reads per sample for dataset
       - **merged_tables**: dataset-wide community metrics tables 
       - **DivPlots**: dataset-wide summary plots of taxonomic diversity metrics 
-  - **geneTAX_{tax_db_name}/MAGsTAX** (conditional): taxonomic annotations of genes, scaffolds or MAGs for dataset
-- **PWYprofiles/{pwy_db_name}**: Dataset-wide functional pathway profiles and gene abundance tables
+  - **geneTAX_{taxDBname}** (conditional): taxonomic annotations of genes for dataset
+  - **scafTAX_{taxDBname}** (conditional): taxonomic annotations of scaffolds/transcripts for dataset
+  - **magsTAX_checkM** (conditional): MAG-based information for dataset
+- **PWYprofiles/{pwyDBname}**: Dataset-wide functional pathway profiles and gene abundance tables
     - **merged_tables/**: dataset-wide functional diversity metrics
     - **DiversityPlots/**: dataset-wide summary plots of functional diversity metrics
-- **asmb{assembler}/{SampleName}**:Per-sample assembly results, assembly stats and detailed downstream processing files, including
-  - **[gene/scaff]TAX_{tax_db_name}/** (conditional): taxonomic annotations of genes or scaffolds based on election
-  - **MAGs/** (conditional): produced MAGs within sample
-  - **genes/**: taxonomic gene prediction and annotation details within sample
-- **asmb_files**: Assembly FASTA and BAM files for downstream analysis
+- **asmb{MGX,MTX}/{Samp}_asmb/**:Per-sample assembly results, assembly stats and assembled features processing, including
+  - **taxonomic**:
+    - **geneTAX_{taxDBname}/** (conditional): taxonomic annotations of genes (user electable)
+    - **scafTAX_{taxDBname}/** (conditional): taxonomic annotations of scaffolds (user electable)
+    - **magsTAX_checkM/** (conditional): produced MAGs within sample
+  - **functional**:
+    - **genes/**: gene prediction and details within sample
+    - **annotations/**: gene annotations and details within samples
+    - **pathways/**: pathways predicted based on genes & user-elected pwyDB
+- **asmb_files**: Assembly FASTA and BAM files, shortcuts or external analyses (e.g. Nephele DiscoVir pipeline)
 - **BIOM files**: Standardized format for integration with other tools
+
 
 ## Use Cases
 
-- **Microbiome Profiling**: Comprehensive taxonomic and functional characterization of short read shotgun metagenomic data
+- **Microbiome Profiling**: Comprehensive taxonomic and functional characterization of short read shotgun metagenomic and metatranscriptomic data
 - **Human Gut Studies**: Optimized databases and workflows for human microbiome research
 - **Environmental Metagenomics**: Flexible database options for diverse environments
 - **Pathogen Detection**: Support for viral, fungal, and eukaryotic pathogen identification

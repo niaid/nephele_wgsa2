@@ -11,31 +11,33 @@ The following datafiles are needed to run the pipeline
 - eggnog
 - annotations
 - krona
-- sortmerna
 
 ## Pipeline's parameters
 
 ```
-decontaminate_db_path: str - path to the decontamination database, inclusive of the host organism of your dataset
-classification_db_name: str {plusPFV | MGBCdb | UHGGdb | EuPATHdb}
-classification_db_path: str - path to the taxonomic classification DB that best suits your dataset
-eggnog_db_path: str - path to your eggnog datafile
-annotations_type: str {ko | ec}
-annotations_map_db_path: str - path to your annotations map file
-annotations_hrr_db_path: str - path to your annotations hrr file
-krona_tax_db_path: str - path to your krona tax datafile
-denovo_mtx: bool (default=false) - Run pipeline in metagenomics or metatranscriptomics mode
-sortmerna_db_path: str - path to sortmerna database files
-amrfind: bool (default=false) - Add Antimicrobial Resistance genes & peptide finding
-tax_genes: bool (default=false) - Add taxonomic annotation to be produced from genes per sample
-tax_scaffolds: bool (default=false) - Add taxonomic annotation to be produced from scaffolds per sample
-mag: bool (default=false) - Add metagenome assembled genomes (MAGs) & MAG-based taxonomic profiles to be produced from scaffolds per sample (Note: time consuming & functional only for prokaryotic organisms)
-include_ted_files: bool (default=false) - The Trimmed, Error-corrected and Decontaminated (TED) fastq files are large and therefore omitted in default results output! Elect this option for pipeline to produce the file
 trim_filter: bool (default=false) - Allows for additional trimming and filtering of reads, post-QA processing (if needed)
 average_read_quality: int (default=10) - Filter reads with this read-wide average quality threshold. Come into effect when trim_filter=true
 min_read_length: int (default=60) - Filter out reads below this read length. Come into effect when trim_filter=true
 trim_of_5: int (default=20) - Quality threshold for 5'-end trimming. Come into effect when trim_filter=true
 trim_of_3: int (default=15) - Quality threshold of 3'-end trimming. Come into effect when trim_filter=true
+decontaminate_db_path: str - path to the decontamination database, inclusive of the host organism of your dataset
+kr2confidence_host: float (default=0.05) - kraken2 confidence value for identifying host reads
+classification_db_name: str {plusPFV | MGBCdb | UHGGdb | EuPATHdb}
+classification_db_path: str - path to the taxonomic classification DB that best suits your dataset
+krona_tax_db_path: str - path to your krona tax datafile
+kr2confidence_taxonomic: float (default=0.15) -kraken2 confidence value for taxonomic classifications
+read_norm: bool (default=False) - Run read normalization
+readCoverage: int (default=50) - Normalize reads to this coverage
+denovo_mtx: bool (default=false) - Run pipeline in metagenomics or metatranscriptomics mode
+tax_scaffolds: bool (default=false) - Add taxonomic annotation to be produced from scaffolds per sample
+tax_genes: bool (default=false) - Add taxonomic annotation to be produced from genes per sample
+eggnog_db_path: str - path to your eggnog datafile
+annotations_type: str {ko | ec}
+annotations_map_db_path: str - path to your annotations map file
+annotations_hrr_db_path: str - path to your annotations hrr file
+find_args: bool (default=false) - Add Antimicrobial Resistance genes identification
+mag: bool (default=false) - Add metagenome assembled genomes (MAGs) & MAG-based taxonomic profiles to be produced from scaffolds per sample (Note: time consuming & functional only for prokaryotic organisms)
+include_ted_files: bool (default=false) - The Trimmed, Error-corrected and Decontaminated (TED) fastq files are large and therefore omitted in default results output! Elect this option for pipeline to produce the file
 ```
 
 
