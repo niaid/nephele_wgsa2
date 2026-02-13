@@ -1,7 +1,7 @@
 [
     {
         "type": "BIOM",
-        "path": "for_analyze_with_microbiomedb.biom",
+        "path": "for_microbiomedb.biom",
         "title": "BIOM file",
         "description": "BIOM file that can be used at the MicrobiomeDB platform for further analysis."
     },
