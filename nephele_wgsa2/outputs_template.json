@@ -7,23 +7,16 @@
     },
     {
         "type": "IMAGE",
-        "path": "TAXprofiles/readsTAX_*/DivPlots/TAX_BetaDiv_PCoA.png",
+        "path": "TAXprofiles/readsTAX_*/DivPlots/.TAX_BetaDiv_PCoA.png",
         "title": " TAX PCoA plot",
         "description": "A PCoA plot representation of the taxonomic Beta Diversity between samples of the dataset.",
-        "is_regex_path": true
-    },
-    {
-        "type": "IMAGE",
-        "path": "PWYprofiles/*PWYs.MP/DivPlots/PWY_BetaDiv_PCoA.png",
-        "title": "PWY PCoA plot",
-        "description": "A PCoA plot representation of the metabolic Beta Diversity between samples of the dataset.",
         "is_regex_path": true
     },
     {
         "type": "HTML",
         "path": "TAXprofiles/readsTAX_*/TAXplots_readsTAX_*.html",
         "title": "TAX-profiles (TED-based; interactive)",
-        "description": "An interactive HTML report of the TED-based TAX profile of each sample",
+        "description": "An interactive HTML report of the cleaned reads-based (TEDreads) TAX profile of each sample",
         "is_regex_path": true
     },
     {
@@ -35,9 +28,23 @@
     },
     {
         "type": "HTML",
-        "path": "TAXprofiles/MAGs_TAX/TAXplots_MAGx.html",
+        "path": "TAXprofiles/magsTAX_checkM/TAXplots_MAGs.html",
         "title": "TAX-profiles (MAGs-based; interactive)",
         "description": "An interactive HTML report of the MAGs-based TAX profile of each sample"
+    },
+    {
+        "type": "MISCELLANEOUS",
+        "path": "TAXprofiles/readsTAX_*/merged_tables/merged_Counts+TAX.txt",
+        "title": "TAX-profiles (TED-based) abundance table (TXT)",
+        "description": "The TED-based TAX abundance table of the entire dataset.",
+        "is_regex_path": true
+    },
+    {
+        "type": "IMAGE",
+        "path": "PWYprofiles/*PWYs.MP/DivPlots/.PWY_BetaDiv_PCoA.png",
+        "title": "PWY PCoA plot",
+        "description": "A PCoA plot representation of the metabolic Beta Diversity between samples of the dataset.",
+        "is_regex_path": true
     },
     {
         "type": "HTML",
@@ -48,16 +55,16 @@
     },
     {
         "type": "MISCELLANEOUS",
-        "path": "TAXprofiles/readsTAX_*/merged_tables/merged_Counts+TAX.txt",
-        "title": "TAX-profiles (TED-based) abundance table (TXT)",
-        "description": "The TED-based TAX abundance table of the entire dataset.",
+        "path": "PWYprofiles/*PWYs.MP/merged_tables/merged_Counts+PWY.txt",
+        "title": "PWY table TXT",
+        "description": "The PWY abundance table of the entire dataset (TXT format).",
         "is_regex_path": true
     },
     {
         "type": "MISCELLANEOUS",
-        "path": "PWYprofiles/*PWYs.MP/merged_tables/merged_Counts+PWY+allTiers.txt",
-        "title": "PWY table TXT",
-        "description": "The PWY abundance table of the entire dataset (TXT format).",
+        "path": "PWYprofiles/*PWYs.MP/merged_tables/merged_argsTPMtable.txt",
+        "title": "ARGs table TXT",
+        "description": "The ARGs abundance table of the entire dataset (TXT format).",
         "is_regex_path": true
     },
     {
@@ -69,22 +76,36 @@
     },
     {
         "type": "MISCELLANEOUS",
-        "path": "TED.tar",
-        "title": "TED files",
-        "description": "TED files"
+        "path": "TEDfastq.tar",
+        "title": "TEDread fastq files",
+        "description": "the fastq files for the TED reads"
     },
     {
         "type": "BAM",
-        "path": "asmb_files/{sample_id}_assembly.bam",
+        "path": "asmb_files/{sample_id}_asmbFinal.bam",
         "title": "Assembly bam file for {sample_id}",
         "description": "Assembly bam file for a sample to be used by DiscoVir pipeline",
         "is_regex_path": true
     },
     {
+        "type": "BAI",
+        "path": "asmb_files/{sample_id}_asmbFinal.bam.bai",
+        "title": "Assembly bam index file for {sample_id}",
+        "description": "Assembly bam index file for a sample to be used by MAGs pipeline",
+        "is_regex_path": true
+    },
+    {
         "type": "FASTA",
-        "path": "asmb_files/{sample_id}_assembly.fasta",
+        "path": "asmb_files/{sample_id}_asmbFinal.fasta",
         "title": "Assembly fasta file for {sample_id}",
         "description": "Assembly fasta file for a sample to be used by DiscoVir pipeline",
         "is_regex_path": true
-    }
+    },
+    {
+        "type": "MISCELLANEOUS",
+        "path": "asmb_files/{sample_id}_asmbDepths.txt",
+        "title": "Assembly depths info file for {sample_id}",
+        "description": "Assembly depths info file for a sample to be used by MAGs pipeline",
+        "is_regex_path": true
+    },
 ]
