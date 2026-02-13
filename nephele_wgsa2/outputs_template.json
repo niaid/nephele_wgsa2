@@ -68,7 +68,7 @@
         "is_regex_path": true
     },
     {
-        "type": "MISCELLANEOUS",
+        "type": "MERGER",
         "path": "PWYprofiles/*PWYs.MP/merged_tables/merged_geneTPMtable.txt",
         "title": "PWY merged gene TPM table",
         "description": "PWY merged gene TPM table",
@@ -101,11 +101,25 @@
         "description": "Assembly fasta file for a sample to be used by DiscoVir pipeline",
         "is_regex_path": true
     },
-    {
+     {
         "type": "MISCELLANEOUS",
         "path": "asmb_files/{sample_id}_asmbDepths.txt",
         "title": "Assembly depths info file for {sample_id}",
         "description": "Assembly depths info file for a sample to be used by MAGs pipeline",
         "is_regex_path": true
     },
+    {
+        "type": "MERGER",
+        "path": "TAXprofiles/readsTAX_*/merged_tables/merged_Counts+Lineage.txt",
+        "title": "Merged taxonomic abundance table",
+        "description": "Taxonomic abundance table from merger jobs",
+        "is_regex_path": true
+    },
+    {
+        "type": "MERGER",
+        "path": "PWYprofiles/*PWYs.MP/merged_tables/merged_Counts+allTiers.txt",
+        "title": "Merged pathway abundance table",
+        "description": "Pathway abundance table from merger jobs",
+        "is_regex_path": true
+    }
 ]
