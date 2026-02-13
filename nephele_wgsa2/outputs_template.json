@@ -101,7 +101,7 @@
         "description": "Assembly fasta file for a sample to be used by DiscoVir pipeline",
         "is_regex_path": true
     },
-     {
+    {
         "type": "MISCELLANEOUS",
         "path": "asmb_files/{sample_id}_asmbDepths.txt",
         "title": "Assembly depths info file for {sample_id}",
