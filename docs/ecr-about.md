@@ -2,6 +2,8 @@
 
 This Docker image contains the WGSA2+ (Whole Genome Shotgun Assembly 2 Plus) pipeline for the Nephele microbiome analysis platform. WGSA2+ is a comprehensive metagenomics/metatranscriptomics pipeline that processes paired-end shotgun sequencing reads to produce taxonomic classifications, _de novo_ assemblies, and functional annotations for microbial communities.
 
+If you use this image for your work, please cite Nephele and the appropriate tools. See our [Citing Nephele](https://nephele.niaid.nih.gov/about/citing-nephele) page.
+
 ## Features
 
 - **Quality Control**: Trimming, error correction, and quality filtering of raw reads
