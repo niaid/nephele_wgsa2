@@ -112,14 +112,14 @@
         "type": "MERGER",
         "path": "TAXprofiles/readsTAX_*/merged_tables/merged_Counts+Lineage.txt",
         "title": "Merged taxonomic abundance table",
-        "description": "Taxonomic abundance table from merger jobs",
+        "description": "Taxonomic abundance table for merger jobs",
         "is_regex_path": true
     },
     {
         "type": "MERGER",
         "path": "PWYprofiles/*PWYs.MP/merged_tables/merged_Counts+allTiers.txt",
         "title": "Merged pathway abundance table",
-        "description": "Pathway abundance table from merger jobs",
+        "description": "Pathway abundance table for merger jobs",
         "is_regex_path": true
     }
 ]
