@@ -234,13 +234,15 @@ rule remove_rRNA:
         rread_gz=TED_READS_FQS + "{sample}_R2_ted_mtx.fastq.gz",
     threads: threads_per_job
     params:
-        ali_log = TED_READS  + "{sample}_rna_aliLOG.txt",
+        ali_log = TED_READS  + "{sample}_rna_filter_LOG.txt",
     shell:"""
         ribodetector_cpu -t {threads} -l 100 --chunk_size 3200 -e norrna \
         -i {input.f} {input.r}  --log {params.ali_log} \
         -o {output.fread_gz} {output.rread_gz} 
 
-        line_count=$(pigz -dc -p {threads} {output.fread_gz} |wc -l)
+        sed -e 's/\x1b\[[0-9;]*m//g' {params.ali_log}
+
+        line_count=$(pigz -dc -p {threads} {output.fread_gz} | wc -l )
         if [ "$line_count" -lt 400 ]; then
             echo "ERROR: Fewer than 100 reads remain after rRNA filtering for {wildcards.sample}, and reads are unlikely to assemble. 
             If this dataset is 16S rRNA amplicon reads, consider using our DADA2 or QIIME pipelines."
