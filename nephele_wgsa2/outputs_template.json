@@ -88,7 +88,7 @@
         "is_regex_path": true
     },
     {
-        "type": "MISCELLANEOUS",
+        "type": "BAI",
         "path": "asmb_files/{sample_id}_asmbFinal.bam.bai",
         "title": "Assembly bam index file for {sample_id}",
         "description": "Assembly bam index file for a sample to be used by MAGs pipeline",
