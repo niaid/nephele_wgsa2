@@ -338,8 +338,12 @@ rule run_metaspades:
         metaspades.py -1 {input.in1} -2 {input.in2}  --memory {params.mem_gb} \
         --tmp-dir {params.tmp_dir} -o {params.out} -t {threads} --only-assembler 
 
-        mv {params.scafout} {output.finout} 
-        mv {params.contout} {output.cntigs} 
+        mv {params.mspalog} {output.spalog}
+        if [[ -f {params.scafout} ]]; then  mv {params.scafout} {output.finout}
+        else touch {output.finout} && echo "ERROR in sample {wildcards.sample}: metaSPAdes unable to assemble reads into contigs" && exit 1
+        fi
+
+        if [[ -f {params.contout} ]]; then   mv {params.contout} {output.cntigs};  fi
         mv {params.mspalog} {output.spalog}
 
         ## manual cleanup 
@@ -375,9 +379,7 @@ rule run_trinity:
         
         line_count=$(wc -l < {output})
         if grep -q "No butterfly assemblies to report" {params.log} || [ "$line_count" -lt 2 ] ; then
-            echo "ERROR: Trinity unable to assemble reads into transcripts for {wildcards.sample}. 
-            Confirm that your data are whole-genome sequence reads (not amplicon), 
-            and possibly use the Short Read QC pipeline to ensure high-quality reads."
+            echo "ERROR in sample {wildcards.sample}: Trinity unable to assemble reads into transcripts."
             exit 1
         fi
         """
