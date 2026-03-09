@@ -1,4 +1,4 @@
-## WGSA2+ Pipeline output details (version 0.2.4, Feb 2026)
+## WGSA2+ Pipeline output details (version 0.2.7, March 2026)
 
 ### Global Files
 
