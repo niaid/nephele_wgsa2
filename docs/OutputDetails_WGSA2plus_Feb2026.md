@@ -1,8 +1,8 @@
-## WGSA2+ Pipeline output details (version 0.2.4, Feb 2026)
+## WGSA2+ Pipeline output details (version 0.2.7, March 2026)
 
 ### Global Files
 
-- `WGSA2plus_Output_Details_$Date.pdf`: This file with useful summary ouf outputted files
+- `WGSA2plus_Output_Details_$Date.pdf`: This file with useful summary of outputted files
 - `logfile.txt`: The pipeline log. If the pipeline fails or receives an error, this is where the information will be logged for tracing it.
 - `for_analyze_with_microbiomedb.biom`: BIOM file with the TAX community abundance matrix of the dataset, which can be [uploaded to MicrobiomeDB](https://nephele.niaid.nih.gov/user-guide/tutorials#microbiomeDb).
 - `mapping_file.txt`: a copy of the mapping file submitted with the pipeline.
@@ -70,7 +70,7 @@ This folder contain log files tracking the stats of each samples through the TED
 
 - `$SampleName_fastplog.[html,txt]`: log file with filtering, trimming and error-correction stats, in HTML and TXT format.
 - `$SampleName_contam[REPORT,LOG].txt`: files reporting abundance and classification details of the host reads removed from the dataset.
-- `$SampleName_rna_aliLOG.txt` (if **mtx** mode): raw log files about RNA content and removal steps provided by ribodetector.
+- `$SampleName_rna_filter_LOG.txt` (if **mtx** mode): raw log files about rRNA content and removal steps provided by RiboDetector.
 - `$SampleName_normLog.txt` (if **read_normalization** elected): raw log files provided by bbnorm with read normalization stats.
 
 
