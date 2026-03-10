@@ -339,13 +339,13 @@ rule run_metaspades:
     shell:"""
         metaspades.py -1 {input.in1} -2 {input.in2}  --memory {params.mem_gb} \
         --tmp-dir {params.tmp_dir} -o {params.out} -t {threads} --only-assembler 
-
-        if [[ -f {params.mspalog} ]]; then  cp {params.mspalog} {output.spalog};  fi
+        
+        cp {params.mspalog} {output.spalog}
         if [[ -f {params.scafout} ]]; then  cp {params.scafout} {output.finout};  fi
         if [[ -f {params.contout} ]]; then  cp {params.contout} {output.cntigs};  fi
     
         ## manual cleanup 
-        rm -rf {params.out}K21/ {params.out}K33/ {params.out}K55/ {params.contout} {params.scafout} {params.mspalog} \
+        rm -rf {params.out}K21/ {params.out}K33/ {params.out}K55/ \
         {params.out}pipeline_state {params.out}tmp {params.out}misc {params.out}before_rr.fasta \
         {params.out}dataset.info {params.out}*params* {params.out}*.gfa {params.out}first_pe_contigs.fasta \
         {params.out}run_spades.sh {params.out}*.yaml {params.out}*.paths {params.out}assembly_graph.fastg 
