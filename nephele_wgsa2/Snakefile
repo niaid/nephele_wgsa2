@@ -330,7 +330,7 @@ rule run_metaspades:
         mem_gb=config["total_mem_gb"],
         scafout=temp(ASMB_MGX_SAMPLE + "scaffolds.fasta"),
         contout=temp(ASMB_MGX_SAMPLE + "contigs.fasta"),
-        mspalog=temp(ASMB_MGX_SAMPLE + "spades.log"),
+        mspalog=(ASMB_MGX_SAMPLE + "spades.log"),
     threads: threads_per_job
     output:
         finout=ASMB_MGX_SAMPLE + "{sample}_scaffolds.fasta",
