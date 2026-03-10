@@ -330,7 +330,7 @@ rule run_metaspades:
         mem_gb=config["total_mem_gb"],
         scafout=temp(ASMB_MGX_SAMPLE + "scaffolds.fasta"),
         contout=temp(ASMB_MGX_SAMPLE + "contigs.fasta"),
-        mspalog=temp(ASMB_MGX_SAMPLE + "spades.log"),
+        mspalog=(ASMB_MGX_SAMPLE + "spades.log"),
     threads: threads_per_job
     output:
         finout=ASMB_MGX_SAMPLE + "{sample}_scaffolds.fasta",
@@ -339,11 +339,6 @@ rule run_metaspades:
     shell:"""
         metaspades.py -1 {input.in1} -2 {input.in2}  --memory {params.mem_gb} \
         --tmp-dir {params.tmp_dir} -o {params.out} -t {threads} --only-assembler 
-
-        if grep -q "metaSPAdes unable to assemble reads into contigs" {params.mspalog} ; then
-        echo "ERROR in sample {wildcards.sample}: metaSPAdes unable to assemble reads into contigs."
-        exit 1
-        fi
         
         cp {params.mspalog} {output.spalog}
         if [[ -f {params.scafout} ]]; then  cp {params.scafout} {output.finout};  fi
@@ -351,7 +346,7 @@ rule run_metaspades:
     
 
         ## manual cleanup 
-        rm -rf {params.out}K21/ {params.out}K33/ {params.out}K55/ {params.contout} {params.scafout} {params.mspalog} \
+        rm -rf {params.out}K21/ {params.out}K33/ {params.out}K55/ \
         {params.out}pipeline_state {params.out}tmp {params.out}misc {params.out}before_rr.fasta \
         {params.out}dataset.info {params.out}*params* {params.out}*.gfa {params.out}first_pe_contigs.fasta \
         {params.out}run_spades.sh {params.out}*.yaml {params.out}*.paths {params.out}assembly_graph.fastg 
