@@ -240,7 +240,7 @@ rule remove_rRNA:
         -i {input.f} {input.r}  --log {params.ali_log} \
         -o {output.fread_gz} {output.rread_gz} 
 
-        sed -e 's/\x1b\[[0-9;]*m//g' {params.ali_log}
+        sed -i 's/\\\x1b\[[0-9;]*m//g' {params.ali_log}
 
         line_count=$(pigz -dc -p {threads} {output.fread_gz} | wc -l )
         if [ "$line_count" -lt 400 ]; then
