@@ -300,58 +300,29 @@ rule kreport2krona_import_text:
     shell:
         "ktImportText {input} -o {output}"
 
+
+
 # Step 4 starts
 if config["read_norm"]:
     rule norm_readDepth:
         resources:
-            mem_gb = lambda wildcards: int(config['total_mem_gb'] // 2)
+            mem_gb = lambda wildcards: int(config['total_mem_gb'] // 4)
         input:
-            Freads = lambda wildcards: rules.remove_rRNA.output.fread_gz if config["denovo_mtx"] else rules.zip_decontaminated.output.f,
-            Rreads = lambda wildcards: rules.remove_rRNA.output.rread_gz if config["denovo_mtx"] else rules.zip_decontaminated.output.r,
+            Freads = lambda wildcards: (rules.remove_rRNA.output.fread_gz if config["denovo_mtx"] else rules.zip_decontaminated.output.f),
+            Rreads = lambda wildcards: (rules.remove_rRNA.output.rread_gz if config["denovo_mtx"] else rules.zip_decontaminated.output.r),
         params:
             maxCov=config["readCoverage"],
             logfile=TED_READS + "{sample}_normLog.txt",
-            mem_gb = "-Xmx" + str(int(config['total_mem_gb'] // 2)) + "g"
+            mem_gb = "-Xmx" + str(int(config['total_mem_gb'] // 4)) + "g"
         output:
             normFread = temp(TED_READS_FQS + "{sample}_ted_norm_R1.fastq.gz"),
             normRread = temp(TED_READS_FQS + "{sample}_ted_norm_R2.fastq.gz"),
         threads: threads_per_job
         shell:"""
             bbnorm.sh {params.mem_gb} target={params.maxCov}  in={input.Freads} in2={input.Rreads} ecc=f prefilter=f \
-                             out={output.normFread} out2={output.normRread}  threads={threads} &> {params.logfile}
-            """
+                    out={output.normFread} out2={output.normRread}  threads={threads} &> {params.logfile}
+            """ 
 
-
-rule run_metaspades:
-    input:
-        in1=lambda wildcards: (rules.norm_readDepth.output.normFread if config["read_norm"] else rules.zip_decontaminated.output.f),
-        in2=lambda wildcards: (rules.norm_readDepth.output.normRread if config["read_norm"] else rules.zip_decontaminated.output.r),
-    params:
-        out=ASMB_MGX_SAMPLE,
-        tmp_dir=config["tmp_dir"],
-        mem_gb=config["total_mem_gb"],
-        scafout=temp(ASMB_MGX_SAMPLE + "scaffolds.fasta"),
-        contout=temp(ASMB_MGX_SAMPLE + "contigs.fasta"),
-        mspalog=(ASMB_MGX_SAMPLE + "spades.log"),
-    threads: threads_per_job
-    output:
-        finout=ASMB_MGX_SAMPLE + "{sample}_scaffolds.fasta",
-        cntigs=ASMB_MGX_SAMPLE + "{sample}_contigs.fasta",
-        spalog=ASMB_MGX_SAMPLE + "{sample}_spadesLOG.txt",
-    shell:"""
-        metaspades.py -1 {input.in1} -2 {input.in2}  --memory {params.mem_gb} \
-        --tmp-dir {params.tmp_dir} -o {params.out} -t {threads} --only-assembler 
-        
-        cp {params.mspalog} {output.spalog}
-        if [[ -f {params.scafout} ]]; then  cp {params.scafout} {output.finout};  fi
-        if [[ -f {params.contout} ]]; then  cp {params.contout} {output.cntigs};  fi
-    
-        ## manual cleanup 
-        rm -rf {params.out}K21/ {params.out}K33/ {params.out}K55/ \
-        {params.out}pipeline_state {params.out}tmp {params.out}misc {params.out}before_rr.fasta \
-        {params.out}dataset.info {params.out}*params* {params.out}*.gfa {params.out}first_pe_contigs.fasta \
-        {params.out}run_spades.sh {params.out}*.yaml {params.out}*.paths {params.out}assembly_graph.fastg 
-        """
 
 rule run_trinity:
     resources:
@@ -363,40 +334,88 @@ rule run_trinity:
     params:
         out= ASMB_MTX_SAMPLE + "trinity_{sample}",
         fas= ASMB_MTX_SAMPLE + "trinity_{sample}.Trinity.fasta", ## as output temp() takes a while to remove
-        log= ASMB_MTX_SAMPLE + "{sample}_trinityLOG.txt",
         mem= str(config['total_mem_gb'] // 3) + "G",
         threads =lambda wildcards: int(threads_per_job - 4),
         bfly_CPU=2,
         bfly_HeapSpace="20G",
-    output:
         finout=ASMB_MTX_SAMPLE + "{sample}_contigs.fasta",
+        message='------- no assembly was achieved for sample',
+    output:
+        log= ASMB_MTX_SAMPLE + "{sample}_trinityLOG.txt",
     shell:"""
         Trinity --seqType fq --left {input.f} --right {input.r} --CPU {params.threads} \
             --output {params.out} --full_cleanup --max_memory {params.mem} \
-            --bflyHeapSpaceMax {params.bfly_HeapSpace} --bflyCPU {params.bfly_CPU} &> {params.log}
-        mv {params.fas} {output.finout}
+            --bflyHeapSpaceMax {params.bfly_HeapSpace} --bflyCPU {params.bfly_CPU} &> {output.log}
+        mv {params.fas} {params.finout}
         rm {params.fas}.gene_trans_map
         
-        line_count=$(wc -l < {output})
-        if grep -q "No butterfly assemblies to report" {params.log} || [ "$line_count" -lt 2 ] ; then
-            echo "ERROR in sample {wildcards.sample}: Trinity unable to assemble reads into transcripts."
-            exit 1
+        line_count=$(wc -l < {params.finout})
+        if grep -q "No butterfly assemblies to report" {output.log} || [ "$line_count" -lt 2 ] ; then
+            echo "{params.message}" >> {output.log}
+        exit 0
         fi
+        """
+
+rule run_metaspades:
+    input:
+        in1=lambda wildcards: (rules.norm_readDepth.output.normFread if config["read_norm"] else rules.zip_decontaminated.output.f),
+        in2=lambda wildcards: (rules.norm_readDepth.output.normRread if config["read_norm"] else rules.zip_decontaminated.output.r),
+    params:
+        out=ASMB_MGX_SAMPLE,
+        tmp_dir=config["tmp_dir"],
+        mem_gb=config["total_mem_gb"],
+        message='-------- no assembly was achieved for sample',
+        scafout=temp(ASMB_MGX_SAMPLE + "scaffolds.fasta"),
+        contout=temp(ASMB_MGX_SAMPLE + "contigs.fasta"),  
+        ## real outputs needed in params, for unASMB sample handling 
+        finout=ASMB_MGX_SAMPLE + "{sample}_scaffolds.fasta",
+        cntigs=ASMB_MGX_SAMPLE + "{sample}_contigs.fasta",
+    threads: threads_per_job
+    output: 
+        ## only temp log allowed here, for unASMB-sample handling
+        mspalog=temp(ASMB_MGX_SAMPLE + "spades.log"),
+        spalog=ASMB_MGX_SAMPLE + "{sample}_spadesLOG.txt",   
+    shell:"""
+        metaspades.py -1 {input.in1} -2 {input.in2}  --memory {params.mem_gb} \
+        --tmp-dir {params.tmp_dir} -o {params.out} -t {threads} --only-assembler 
+        
+        cp {output.mspalog} {output.spalog}
+        if   [[ -e {params.scafout} ]]; then  cp {params.scafout} {params.finout}
+        else echo "{params.message}" >> {output.spalog} ;  fi
+        if   [[ -e {params.contout} ]]; then  cp {params.contout} {params.cntigs}
+        else echo "{params.message}" >> {output.spalog} ;  fi
+    
+        ## manual cleanup 
+        rm -rf {params.out}K21/ {params.out}K33/ {params.out}K55/ \
+        {params.out}pipeline_state {params.out}tmp {params.out}misc {params.out}before_rr.fasta \
+        {params.out}dataset.info {params.out}*params* {params.out}*.gfa {params.out}first_pe_contigs.fasta \
+        {params.out}run_spades.sh {params.out}*.yaml {params.out}*.paths {params.out}assembly_graph.fastg 
         """
 
 rule run_bbtools_stats:
     input:
-        finfasta=lambda wildcards: (rules.run_trinity.output.finout if config["denovo_mtx"] else rules.run_metaspades.output.finout),
+        asmbdone=lambda wildcards: (rules.run_trinity.output.log if config["denovo_mtx"] else rules.run_metaspades.output.spalog),
     params:
-        asm=(ASMB_MTX_SAMPLE if config["denovo_mtx"] else ASMB_MGX_SAMPLE)
+        finfasta=lambda wildcards: (rules.run_trinity.params.finout.format(sample=wildcards.sample) if config["denovo_mtx"] \
+                            else rules.run_metaspades.params.finout.format(sample=wildcards.sample)), ## force formatting of wildcard required 
+        asm=(ASMB_MTX_SAMPLE if config["denovo_mtx"] else ASMB_MGX_SAMPLE),
+        message='> ------ no assembly was achieved for {sample} -----------',
+        asmbFail=ASMB_MGX_SAMPLE + "asmbFail.done",
     output:
         out1=OUT_FILE + "_asmbFinal.fasta",
         out2=OUT_FILE + "_asmbStats.txt",
-    shell:
-        "sed $'s/_cov_/ cov_/g' {input.finfasta} > {output.out1} && "
-        "stats.sh in={output.out1} out={output.out2} && "
-        "printf \"\\nTEDreads mapping stats:\\n\"  >> {output.out2}"
-
+    shell:"""
+        if [ -e {params.finfasta} ]; then
+             sed $'s/_cov_/ cov_/g' {params.finfasta} > {output.out1} &&  \
+             stats.sh in={output.out1} out={output.out2} && \
+             printf \"\\nTEDreads mapping stats:\\n\"  >> {output.out2} 
+        else 
+            echo "{params.message}" > {output.out1} && \
+            echo "{params.message}" > {output.out2} && \
+            echo "{wildcards.sample}" > {params.asmbFail} && \
+            echo "{params.message}" && exit 0
+        fi
+        """ ## should not error out if exit 0, but also no output. pipeline continues
 
 # Step 5 starts
 rule bowtie2_build:
@@ -498,14 +517,16 @@ rule scaffold_and_read_counts:
 rule gene_prediction:
     input:
         finfas=rules.run_bbtools_stats.output.out1,
-        require=expand(rules.scaffold_and_read_counts.output.scafCoverage, sample=samples),
+        # require=expand(rules.scaffold_and_read_counts.output.scafCoverage, sample=samples),
     threads: threads_per_job
     output:
         gff=PREGENES_PREFIX + ".gff",
         faa=PREGENES_PREFIX + ".faa",
         fna=PREGENES_PREFIX + ".fna"
     shell:
-        "prodigal -p meta -i {input.finfas} -f gff -o {output.gff} -a {output.faa} -d {output.fna} -q"
+        "prodigal -p meta -i {input.finfas} -f gff -o {output.gff} -a {output.faa} -d {output.fna} -q ||" 
+        "echo '>----- no genes to find for sample {wildcards.sample}' | tee {output.gff} {output.faa} {output.fna}"
+        
 
 rule gff_to_gtf:
     input:
@@ -631,7 +652,7 @@ if config["tax_scaffolds"]:
             mem_gb=config["total_mem_gb"]
         input:
             finfas=rules.run_bbtools_stats.output.out1,
-            require=expand(rules.scaffold_and_read_counts.output.scafCoverage, sample=samples), ##processing organization
+            # require=expand(rules.scaffold_and_read_counts.output.scafCoverage, sample=samples), ##processing organization
         threads: threads_per_job
         params:
             classification_db=config["classification_db"],
@@ -901,8 +922,8 @@ if config["find_args"]:
     rule merge_ARGtabs:
         threads: threads_per_job
         input:
-            args=expand(rules.run_RGI.output.rgi_main, sample=samples),
-            require=expand(rules.tpm_normalization.output.ABUNtab, sample=samples), #requires completion
+            args=expand(rules.run_RGI.output.rgi_main, sample=glob_wildcards(PREGENES_PREFIX + ".faa").sample),## sample=samples),
+            # require=expand(rules.tpm_normalization.output.ABUNtab, sample=samples), #requires completion
         params:
             argMRGscript=config["argSCR_rgi"],
             asmb_all=lambda wildcards: ASMB_MTX if config["denovo_mtx"] else ASMB_MGX 
@@ -1009,21 +1030,19 @@ rule gene_annot_geneTPMs:
 
 rule cp_geneTPM_files:
     input: 
-        kos=expand(rules.gene_annot_geneTPMs.output.TPMko, sample=samples),
-        ecs=expand(rules.gene_annot_geneTPMs.output.TPMec, sample=samples)
+        kos=expand(rules.gene_annot_geneTPMs.output.TPMko, sample=glob_wildcards(rules.gene_annotation.output.emapper_annotations).sample), ##sample=samples), ## 
+        ecs=expand(rules.gene_annot_geneTPMs.output.TPMec, sample=glob_wildcards(rules.gene_annotation.output.emapper_annotations).sample), ##sample=samples), ## 
     output:
         expand(GENEBIN + "{sample}_geneTPMtab." + ANNO_TYPE + ".txt", sample=samples)
-        # if config["annotations_type"] == "ko":
-        #     expand(GENEBIN + "{sample}_geneTPMtab.ko.txt", sample=samples)
-        # else:
-        #     expand(GENEBIN + "{sample}_geneTPMtab.ec.txt", sample=samples) 
     params:
-        out_dir=GENEBIN
+        out_dir=GENEBIN,
+        kos = lambda wildcards: GENEBIN + "{sample}_geneTPMtab.ko.txt",
+        ecs = lambda wildcards: GENEBIN + "{sample}_geneTPMtab.ec.txt",
     run:
         if config["annotations_type"] == "ko":
-            shell("cp {input.kos} {params.out_dir}")
+            shell(" cp {input.kos} {params.out_dir} || touch {params.kos}")
         else:
-            shell("cp {input.ecs} {params.out_dir}")
+            shell(" cp {input.ecs} {params.out_dir} || touch {params.ecs}" )
 
 
 # Step 8 starts
@@ -1037,9 +1056,9 @@ rule copy_annotation_file:
         tmp_TPM=temp(PATHWAYS + "tmp_TPM.txt")
     run:
         if config["annotations_type"] == "ko":
-            shell("cp {input.ko} {output.tmp_annots} && cut -f 1,5 {input.ABUNtab} > {output.tmp_TPM}")
+            shell("cp {input.ko} {output.tmp_annots} && cut -f 1,5 {input.ABUNtab} > {output.tmp_TPM} || exit 0")
         else:
-            shell("cp {input.ec} {output.tmp_annots} && cut -f 1,5 {input.ABUNtab} > {output.tmp_TPM}")
+            shell("cp {input.ec} {output.tmp_annots} && cut -f 1,5 {input.ABUNtab} > {output.tmp_TPM} || exit 0")
 
 rule run_min_path:
     input:
@@ -1053,8 +1072,7 @@ rule run_min_path:
     output:
         tmp_report=temp(PATHWAYS + "tmp_report.txt"),
         details=PATHWAYS_PREFIX + ".details.txt"
-    shell:
-        """
+    shell: """
         if [ -s {input} ]; then
             python3 {params.minpath_script} -any {input} -map {params.annotations_map} -mps {params.mps_file} \
                 -report {output.tmp_report} -details {output.details} >> {params.minpath_log}
@@ -1096,8 +1114,7 @@ rule run_genes2krona:
         tmp_4kr=temp(PATHWAYS + "tmp_4kr.txt"),
         krona_out=PATHWAYS + "{sample}_4krona.txt",
         krona_out_clone=PWYBIN + "{sample}_4krona.txt"
-    shell:
-        """
+    shell:"""
         if [ -s {input.tmp_annots} -a -s {input.tmp_TPM} -a -s {input.report} ]; then
             python3 {params.krona_script} -i {input.tmp_annots}\
             -m {params.annotations_map} -H {params.annotations_hrr} -n {wildcards.sample} -c {input.tmp_TPM}\
@@ -1112,7 +1129,7 @@ rule run_genes2krona:
 
 rule krona_import_text:
     input:
-        expand(rules.run_genes2krona.output.krona_out, sample=samples)
+        expand(rules.run_genes2krona.output.krona_out, sample=glob_wildcards(rules.gene_annotation.output.emapper_annotations).sample), ##sample=samples)
     output:
         PWYPLOTS
     shell:
@@ -1148,13 +1165,11 @@ if len(samples) > 1:
 
     rule PWY_collation:
         input:
-            pwyfiles=expand(rules.run_genes2krona.output.krona_out_clone, sample=samples),
-            # gnefiles=expand(GENEBIN + "{sample}_geneTPMtab." + ANNO_TYPE + ".txt", sample=samples),
-            gnefiles=expand(rules.cp_geneTPM_files.output, sample=samples)
+            pwyfiles=expand(rules.run_genes2krona.output.krona_out_clone, sample=samples), #sample=glob_wildcards(rules.gene_annotation.output.emapper_annotations).sample), ##
+            gnefiles=expand(rules.cp_geneTPM_files.output, sample=samples), #sample=glob_wildcards(rules.gene_annotation.output.emapper_annotations).sample), ## 
         params:
             bin_dir=PWYBIN,
             gen_dir=GENEBIN,
-            # string="_" + PWYLABEL,
             string="_4krona.txt", 
             pwy_table_merging_script=config["pwy_table_merging_script"],
             tmp_dir=config["tmp_dir"],
