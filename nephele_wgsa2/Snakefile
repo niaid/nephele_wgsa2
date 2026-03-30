@@ -1304,3 +1304,4 @@ onerror:
     shell(clean_output() + handle_TED() + handle_cp_biom())
     subprocess.run(fwd_outputs(), shell = True ) ## for DiscoVIR and MAGs pipeline
     #shell("cp {log_path} {outputs_dir}/.snakemake.log")
+ 
