@@ -304,14 +304,14 @@ rule kreport2krona_import_text:
 if config["read_norm"]:
     rule norm_readDepth:
         resources:
-            mem_gb = lambda wildcards: int(config['total_mem_gb'] // 2)
+            mem_gb = lambda wildcards: int(config['total_mem_gb'] // 4)
         input:
             Freads = lambda wildcards: rules.remove_rRNA.output.fread_gz if config["denovo_mtx"] else rules.zip_decontaminated.output.f,
             Rreads = lambda wildcards: rules.remove_rRNA.output.rread_gz if config["denovo_mtx"] else rules.zip_decontaminated.output.r,
         params:
             maxCov=config["readCoverage"],
             logfile=TED_READS + "{sample}_normLog.txt",
-            mem_gb = "-Xmx" + str(int(config['total_mem_gb'] // 2)) + "g"
+            mem_gb = "-Xmx" + str(int(config['total_mem_gb'] // 4)) + "g"
         output:
             normFread = temp(TED_READS_FQS + "{sample}_ted_norm_R1.fastq.gz"),
             normRread = temp(TED_READS_FQS + "{sample}_ted_norm_R2.fastq.gz"),
