@@ -15,5 +15,5 @@ config = dict(
             pn.DATASET_MERGER.value
         },
     },
-    output_blacklisted_files=["TED.tar"],
+    output_blacklisted_files=["TEDfastq.tar"],
 )
