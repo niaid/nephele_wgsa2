@@ -1,0 +1,12 @@
+name: Update ECR Documentation
+
+on:
+  workflow_dispatch:
+
+jobs:
+  update-ecr-metadata:
+    uses: niaid/nephele_gh_actions/.github/workflows/update-ecr-metadata.yaml@main
+    with:
+      pipeline: nephele_wgsa2
+      description: "WGSA2+ pipeline for Nephele - metagenomics analysis platform for processing whole genome shotgun amplicon sequencing data"
+      region: us-east-1
