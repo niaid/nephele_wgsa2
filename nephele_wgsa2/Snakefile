@@ -265,7 +265,7 @@ rule run_kraken2_classification:
     output:
         #out=temp(TED_READS_TAX_KLOGS + "{sample}_klog.txt"), ## omitting
         report=TED_READS_TAX + "reports/{sample}_taxREPORT.txt",
-        outlog=TED_READS_TAX_KLOGS + "{sample}_classLOG.txt",
+        outlog=TED_READS_TAX + "reports/{sample}_classLOG.txt",
     shell:
         "kraken2 --use-names --gzip-compressed --threads {threads} "
         "--confidence {params.kr2confd_taxon} --db {params.classification_db} --memory-mapping "
