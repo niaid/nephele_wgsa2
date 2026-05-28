@@ -7,7 +7,17 @@ RUN apt install -y unzip pigz
 # Install dependencies
 # Note: eggnog-mapper=2.1.6 Expected eggNOG DB version: 5.0.2 (http://eggnog5.embl.de/download/emapperdb-5.0.2/)
 # The latest update of PuLP 2.8.0 removed deprecated API calls still used by snakemake
-RUN mamba install -y -c conda-forge -c bioconda samtools=1.21 bbmap=39.15 fastp=0.24.0 spades=4.0.0 bowtie2=2.5.4 metabat2=2.17 prodigal=2.6.3 krona=2.8.1 metaprokka=1.15.0 verse=0.1.5 pulp=2.7.0 snakemake=7.32.4 kraken2=2.1.3 ncbi-amrfinderplus=3.12.8 eggnog-mapper=2.1.6 seqtk=1.4 sortmerna=4.3.6-0 trinity=2.15.1 salmon=1.10.3 r-base=4.3.3 r-ragg=1.3.3 sh=2.2.1 biom-format=2.1.16 ribodetector=0.3.2 awscli
+RUN mamba install -y -c conda-forge -c bioconda -c r samtools=1.21 bbmap=39.15 fastp=0.24.0 spades=4.0.0 bowtie2=2.5.4 metabat2=2.17 prodigal=2.6.3 krona=2.8.1 metaprokka=1.15.0 verse=0.1.5 pulp=2.7.0 snakemake=7.32.4 kraken2=2.1.3 ncbi-amrfinderplus=3.12.8 eggnog-mapper=2.1.6 seqtk=1.4 sortmerna=4.3.6-0 trinity=2.15.1 salmon=1.10.3 sh=2.2.1 biom-format=2.1.16 ribodetector=0.3.2 awscli  \
+    r-base=4.3.3 r-ragg=1.3.3  \
+    r-lattice==0.22_7 \
+    r-matrix==1.6_5 r-mass==7.3_60.0.1  \
+    r-broom==1.0.12 r-tibble==3.3.1 r-docopt==0.7.2 r-reshape2==1.4.5 r-fossil==0.4.0 r-ggplot2==4.0.1 r-remotes==2.5.0 r-biocmanager==1.30.27 r-foreach==1.5.2 \
+    bioconductor-biomformat==1.30.0 \
+    r-ampvis2==2.8.11 \
+    bioconductor-s4vectors==0.40.2 \
+    r-easypackages==0.1.0
+    #   r-tidyverse==2.0.0 r-data.table==1.18.2.1 r-vegan==2.7.2
+
 RUN export CONDA_PREFIX=/opt/conda && amrfinder -u
 # MinPath
 RUN wget https://github.com/doandm/MinPath/archive/refs/heads/master.zip \
