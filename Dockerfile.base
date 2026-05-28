@@ -21,4 +21,4 @@ RUN mamba create -n rgi -y -c conda-forge -c bioconda python=3.9 rgi=6.0.5
 
 # Install R packages
 ADD dependencies.R /tmp/dependencies.R
-RUN --mount=type=secret,id=GITHUB_PAT GITHUB_PAT=$(cat /run/secrets/GITHUB_PAT) Rscript /tmp/dependencies.R
+RUN Rscript /tmp/dependencies.R
