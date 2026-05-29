@@ -6,7 +6,7 @@
 ## MASS >=7.3-60.2 (requires R >=4.4.0) is not compatible with our version of R (~=4.3.2)
 # install.packages('https://cran.r-project.org/src/contrib/Archive/MASS/MASS_7.3-60.0.1.tar.gz', repos=NULL, type='source')
 # install.packages(c("broom", "tibble", "docopt", "reshape2", "data.table", "biomformat", "fossil", "ggplot2", "vegan", "remotes", "BiocManager", "foreach"), repos="http://cran.us.r-project.org")
-remotes.install_version("data.table", version="1.18.2.1", repos="http://cran.us.r-project.org")
+remotes::install_version("data.table", version="1.18.2.1", repos="http://cran.us.r-project.org")
 # BiocManager::install("biomformat")
 # remotes::install_github("kasperskytte/ampvis2")
 # BiocManager::install("S4Vectors")
