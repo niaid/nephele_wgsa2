@@ -12,4 +12,4 @@ remotes::install_version("data.table", version="1.18.2.1", repos="http://cran.us
 # BiocManager::install("S4Vectors")
 # install.packages("easypackages", repos="http://cran.us.r-project.org")
 # install.packages("tidyverse", repos="http://cran.us.r-project.org")
-remote.install_version("tidyverse", version="2.0.0", repos="http://cran.us.r-project.org")
+remotes::install_version("tidyverse", version="2.0.0", repos="http://cran.us.r-project.org")
