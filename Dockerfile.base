@@ -15,8 +15,9 @@ RUN mamba install -y -c conda-forge -c bioconda -c r samtools=1.21 bbmap=39.15 f
     bioconductor-biomformat==1.30.0 \
     r-ampvis2==2.8.9 \
     bioconductor-s4vectors==0.40.2 \
-    r-easypackages==0.1.0
-    #  r-ampvis2==2.8.11 r-broom==1.0.12 r-tibble==3.3.1 r-reshape2==1.4.5 r-data.table==1.18.2.1 r-biocmanager==1.30.27 r-ggplot2==4.0.1 r-vegan==2.7.2 r-tidyverse==2.0.0
+    r-easypackages==0.1.0 \
+    r-tidyverse==2.0.0
+    #  r-ampvis2==2.8.11 r-broom==1.0.12 r-tibble==3.3.1 r-reshape2==1.4.5 r-data.table==1.18.2.1 r-biocmanager==1.30.27 r-ggplot2==4.0.1 r-vegan==2.7.2
 
 RUN export CONDA_PREFIX=/opt/conda && amrfinder -u
 # MinPath
