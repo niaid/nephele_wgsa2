@@ -105,7 +105,12 @@ Decontamination of MGX/MTX datasets is a required step for WGSA2 in order to red
      * [Content information and download](https://zenodo.org/records/17873185)
      * [detailed content report](==🔴add file for link download==)
 
-9. **Plants Decontamination DB**
+9. **Cattle Decontamination DB**
+     * Description: genomes of 6 common cattle host organisms (+human)
+     * [Content information and download](https://zenodo.org/records/21361240)
+     * [detailed content report](==🔴add file for link download==)
+
+10. **Plants Decontamination DB**
      * Description: reference genomes of ~111 plant species from NCBI (no human) collected in 2023
      * [Content information and download](https://ftp.ncbi.nlm.nih.gov/genomes/refseq/plant/)
      * [Content report](==🔴add file for link download==)
