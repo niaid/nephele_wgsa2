@@ -240,7 +240,7 @@ rule remove_rRNA:
         -i {input.f} {input.r}  --log {params.ali_log} \
         -o {output.fread_gz} {output.rread_gz} 
 
-        sed -e 's/\x1b\[[0-9;]*m//g' {params.ali_log}
+        sed -i 's/\\\x1b\[[0-9;]*m//g' {params.ali_log}
 
         line_count=$(pigz -dc -p {threads} {output.fread_gz} | wc -l )
         if [ "$line_count" -lt 400 ]; then
@@ -265,7 +265,7 @@ rule run_kraken2_classification:
     output:
         #out=temp(TED_READS_TAX_KLOGS + "{sample}_klog.txt"), ## omitting
         report=TED_READS_TAX + "reports/{sample}_taxREPORT.txt",
-        outlog=TED_READS_TAX_KLOGS + "{sample}_classLOG.txt",
+        outlog=TED_READS_TAX + "taxlogs/{sample}_classLOG.txt",
     shell:
         "kraken2 --use-names --gzip-compressed --threads {threads} "
         "--confidence {params.kr2confd_taxon} --db {params.classification_db} --memory-mapping "
@@ -303,19 +303,21 @@ rule kreport2krona_import_text:
 # Step 4 starts
 if config["read_norm"]:
     rule norm_readDepth:
+        resources:
+            mem_gb = lambda wildcards: int(config['total_mem_gb'] // 4)
         input:
             Freads = lambda wildcards: rules.remove_rRNA.output.fread_gz if config["denovo_mtx"] else rules.zip_decontaminated.output.f,
             Rreads = lambda wildcards: rules.remove_rRNA.output.rread_gz if config["denovo_mtx"] else rules.zip_decontaminated.output.r,
         params:
             maxCov=config["readCoverage"],
             logfile=TED_READS + "{sample}_normLog.txt",
+            mem_gb = "-Xmx" + str(int(config['total_mem_gb'] // 4)) + "g"
         output:
             normFread = temp(TED_READS_FQS + "{sample}_ted_norm_R1.fastq.gz"),
             normRread = temp(TED_READS_FQS + "{sample}_ted_norm_R2.fastq.gz"),
         threads: threads_per_job
-        shell:
-            """
-            bbnorm.sh target={params.maxCov}  in={input.Freads} in2={input.Rreads} ecc=f prefilter=f \
+        shell:"""
+            bbnorm.sh {params.mem_gb} target={params.maxCov}  in={input.Freads} in2={input.Rreads} ecc=f prefilter=f \
                              out={output.normFread} out2={output.normRread}  threads={threads} &> {params.logfile}
             """
 
@@ -330,7 +332,7 @@ rule run_metaspades:
         mem_gb=config["total_mem_gb"],
         scafout=temp(ASMB_MGX_SAMPLE + "scaffolds.fasta"),
         contout=temp(ASMB_MGX_SAMPLE + "contigs.fasta"),
-        mspalog=temp(ASMB_MGX_SAMPLE + "spades.log"),
+        mspalog=(ASMB_MGX_SAMPLE + "spades.log"),
     threads: threads_per_job
     output:
         finout=ASMB_MGX_SAMPLE + "{sample}_scaffolds.fasta",
@@ -339,11 +341,10 @@ rule run_metaspades:
     shell:"""
         metaspades.py -1 {input.in1} -2 {input.in2}  --memory {params.mem_gb} \
         --tmp-dir {params.tmp_dir} -o {params.out} -t {threads} --only-assembler 
-        
+
         if [[ -f {params.mspalog} ]]; then  cp {params.mspalog} {output.spalog};  fi
         if [[ -f {params.scafout} ]]; then  cp {params.scafout} {output.finout};  fi
         if [[ -f {params.contout} ]]; then  cp {params.contout} {output.cntigs};  fi
-    
 
         ## manual cleanup 
         rm -rf {params.out}K21/ {params.out}K33/ {params.out}K55/ {params.contout} {params.scafout} {params.mspalog} \
@@ -472,8 +473,12 @@ rule add_derep_stats:
         "mv {params.tmp_out} {params.stats_file} && touch {output}"
 
 rule scaffold_and_read_counts:
+    resources:
+        mem_gb=lambda wildcards: int(config['total_mem_gb'] // 4)
     input:
         final_bam=rules.samtools_to_bam.output.final_bam
+    params:
+        mem_gb = "-Xmx" + str(int(config['total_mem_gb'] // 4)) + "g"
     output:
         tmp_scafcov=temp((ASMB_MTX_SAMPLE if config["denovo_mtx"] else ASMB_MGX_SAMPLE) + "tmp_scafcov.txt"),
         tmp_basecov=temp((ASMB_MTX_SAMPLE if config["denovo_mtx"] else ASMB_MGX_SAMPLE) + "tmp_basecov.txt"),
@@ -483,7 +488,7 @@ rule scaffold_and_read_counts:
         tmp_scafcov1=temp((ASMB_MTX_SAMPLE if config["denovo_mtx"] else ASMB_MGX_SAMPLE) + "tmp_scafcov1.txt"),
         scafCoverage=OUT_FILE + "_asmbCovr.txt",
     shell:
-        "pileup.sh {input.final_bam} out={output.tmp_scafcov} overwrite=true && "
+        "pileup.sh {params.mem_gb} {input.final_bam} out={output.tmp_scafcov} overwrite=true && "
         "sort -o {output.tmp_scafcov} {output.tmp_scafcov} && "
         "jgi_summarize_bam_contig_depths {input.final_bam} --outputDepth {output.depths} && "
         "sort {output.depths} | sed '1 s/^/#/' | cut -f 1-3 > {output.tmp_basecov} && "
