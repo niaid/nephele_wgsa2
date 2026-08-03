@@ -5,7 +5,7 @@ from functools import reduce
 import biom
 from biom.cli.util import write_biom_table
 import os
-
+from snakemake.io import glob_wildcards
 
 # def read_mapping_file():
 #     samples = {}
@@ -47,6 +47,17 @@ def run_fastp_cmd():
     trim_filter = f"--average_qual {average_qual} --length_required {length_required} --cut_front \
                     --cut_front_mean_quality {cut_front_mean_quality} --cut_tail  --cut_tail_mean_quality {cut_tail_mean_quality}"
     return base_cmd + " " + trim_filter + " 2>> {params.s_l_text}"        ### moved to params for log-capture <--##
+
+
+# def asmb_passed(wildcards):
+#     a = set(glob_wildcards(ASMB_OUT_SAMPLE_FILE + "_asmb.done").sample)
+#     return sorted(a)
+
+# def passed_samples(wildcards):
+#     a = set(glob_wildcards(ASMB_OUT_SAMPLE_FILE + "_asmb.done").sample)
+#     # b = set(glob_wildcards("results/{sample}/fileB.txt").sample)
+#     # c = set(glob_wildcards("results/{sample}/fileC.txt").sample)
+#     return sorted(a)# & b & c)
 
 
 def make_biom_file(profiles, taxfiles, samples, map_file, biom_file_name, tax_col, prof_col):
@@ -106,8 +117,8 @@ def make_biom_file(profiles, taxfiles, samples, map_file, biom_file_name, tax_co
 
 def clean_output():
     # asm_bai=" ".join(expand(ASM + "*.bai", sample=samples)) ## do not remove
-    asm_bt2=" ".join(expand((ASMB_MTX_SAMPLE if config["denovo_mtx"] else ASMB_MGX_SAMPLE) + "*.bt2", sample=samples))
-    asm_done=" ".join(expand((ASMB_MTX_SAMPLE if config["denovo_mtx"] else ASMB_MGX_SAMPLE) + "*.done", sample=samples))
+    asm_bt2 =" ".join(expand(TMP_SAMPLE_DIR + "*.bt2" , sample=samples))
+    asm_done=" ".join(expand(ASMB_OUT_SAMPLE_DIR + "*.done", sample=samples))
     qc_plots_done=" ".join(expand(QC_PLOTS + "*.done", sample=samples))
     kraken2_clf_klogs=TED_READS_TAX_KLOGS
 
@@ -155,10 +166,10 @@ def handle_cp_biom():
 
 
 def fwd_outputs():
-    asm_bam=" ".join(expand(OUT_FILE + "_asmbFinal.bam"    , sample=samples))
-    asm_bai=" ".join(expand(OUT_FILE + "_asmbFinal.bam.bai", sample=samples))
-    asm_fas=" ".join(expand(OUT_FILE + "_asmbFinal.fasta"  , sample=samples))
-    asm_dep=" ".join(expand(OUT_FILE + "_asmbDepths.txt"   , sample=samples))
+    asm_bam=" ".join(expand(ASMB_OUT_SAMPLE_FILE + "_asmbFinal.bam"    , sample=samples))
+    asm_bai=" ".join(expand(ASMB_OUT_SAMPLE_FILE + "_asmbFinal.bam.bai", sample=samples))
+    asm_fas=" ".join(expand(ASMB_OUT_SAMPLE_FILE + "_asmbFinal.fasta"  , sample=samples))
+    asm_dep=" ".join(expand(ASMB_OUT_SAMPLE_FILE + "_asmbDepths.txt"   , sample=samples))
     asmbDIR = config["output_dir"] + ("/asmbMTX/" if config["denovo_mtx"] else "/asmbMGX/")
     FWD_DIR = config["output_dir"] + "/asmb_files/"
 
@@ -174,8 +185,8 @@ def fwd_outputs():
 
     for i in ${{list}}; do
     echo "---> links to create ${{i}}"
-        ln -rs {FWD_DIR}/${{i}}_asmbFinal.bam      {asmbDIR}/${{i}}_asmb/${{i}}_asmbFinal.bam
-        ln -rs {FWD_DIR}/${{i}}_asmbFinal.bam.bai  {asmbDIR}/${{i}}_asmb/${{i}}_asmbFinal.bam.bai
+        ln -rs {FWD_DIR}/${{i}}_asmbFinal.bam        {asmbDIR}/${{i}}_asmb/${{i}}_asmbFinal.bam
+        ln -rs {FWD_DIR}/${{i}}_asmbFinal.bam.bai    {asmbDIR}/${{i}}_asmb/${{i}}_asmbFinal.bam.bai
         # ln -rs {FWD_DIR}/${{i}}_asmbFinal.fasta    {asmbDIR}/${{i}}_asmb/${{i}}_asmbFinal.fasta
         # ln -rs {FWD_DIR}/${{i}}_asmbDepths.txt     {asmbDIR}/${{i}}_asmb/${{i}}_asmbDepths.txt
     done

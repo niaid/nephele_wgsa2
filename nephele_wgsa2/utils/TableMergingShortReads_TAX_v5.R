@@ -45,7 +45,7 @@ tiers=c("Kingdom","Phylum", "Class", "Order", "Family", "Genus", "Species", "TAX
 data=lapply(input$files, function(x){
   y<-read.table(x, header=F, check.names = F, sep=c("\t"), na.strings =c("NA",""," "),
                 fill=T, quote = "", col.names = c("Counts",tiers) ) %>%
-    remove_rownames() %>%  group_by(across(tiers)) %>% mutate(Species=coalesce(Species, Genus, Family, Order, Class, Phylum, Kingdom)) %>%
+    remove_rownames() %>%  group_by(across(all_of(tiers))) %>% mutate(Species=coalesce(Species, Genus, Family, Order, Class, Phylum, Kingdom)) %>%
     summarize(across(everything(), sum)) %>%  relocate("Counts") %>% mutate(Species=gsub("_sp._", "_", Species)) %>%
     mutate(Species=gsub("\\[|\\]|Candidatus_", "", Species)) %>%
     mutate(Species=gsub("(.*)", "\\1_sp", Species)) %>% mutate(Species=gsub("(.*_.*)_sp", "\\1", Species)) %>%

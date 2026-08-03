@@ -8,6 +8,7 @@ include: "/pipeline/utils.smk"
 log_path = snakemake.logger.logfile
 outputs_dir = Path(config["output_dir"])
 
+TMP_SAMPLE_DIR = config["tmp_dir"] + "/{sample}"
 TED_READS = config["output_dir"] + ("/TEDreads_mtx/" if config["denovo_mtx"] else "/TEDreads_mgx/")
 TAX_PROFILES = config["output_dir"] + "/TAXprofiles/"
 DBNAME = config["classification_db_name"]
@@ -16,11 +17,10 @@ TED_READS_FQS_NAME = "TEDreads_fqs/"
 TED_READS_FQS = config["output_dir"] + "/" + TED_READS_FQS_NAME
 ASMB_MGX = config["output_dir"] + "/asmbMGX/"
 ASMB_MTX = config["output_dir"] + "/asmbMTX/"
-ASMB_MGX_SAMPLE = ASMB_MGX + "{sample}_asmb/"
-ASMB_MTX_SAMPLE = ASMB_MTX + "{sample}_asmb/"
-OUT_FILE = (ASMB_MTX_SAMPLE if config["denovo_mtx"] else ASMB_MGX_SAMPLE) + "{sample}"
-FUNC_DIR = (ASMB_MTX_SAMPLE if config["denovo_mtx"] else ASMB_MGX_SAMPLE) + "functional/"
-TAXN_DIR = (ASMB_MTX_SAMPLE if config["denovo_mtx"] else ASMB_MGX_SAMPLE) + "taxonomic/"
+ASMB_OUT_SAMPLE_DIR = (ASMB_MTX if config["denovo_mtx"] else ASMB_MGX) + "{sample}_asmb/"
+ASMB_OUT_SAMPLE_FILE = ASMB_OUT_SAMPLE_DIR + "{sample}"
+FUNC_DIR = ASMB_OUT_SAMPLE_DIR + "functional/"
+TAXN_DIR = ASMB_OUT_SAMPLE_DIR + "taxonomic/"
 RGI_DIR = FUNC_DIR + "RGI/"
 GENES = FUNC_DIR + "genes/"
 PREGENES_PREFIX = GENES + "PREDgenes"
@@ -69,8 +69,8 @@ threads_per_job = get_num_threads_per_job(len(samples))
 
 pipeline_output = [
     TED_READS_TAX + "TAXplots_readsTAX_" + DBNAME +".html",
-    expand(OUT_FILE + "_asmbDepths.txt",sample=samples),
-    expand(OUT_FILE + "_asmbCovr.txt",sample=samples),
+    expand(ASMB_OUT_SAMPLE_FILE + "_asmbDepths.txt"  ,sample=samples),
+    expand(ASMB_OUT_SAMPLE_FILE + "_asmbCovr.txt"    ,sample=samples),
     expand(PREGENES_PREFIX + "_stats.txt", sample=samples),
     PWYPLOTS,
     expand(PWYBIOM + "{sample}_json.biom", sample=samples),
@@ -120,12 +120,12 @@ if config["mag"]:
 
 if config["denovo_mtx"]:
     pipeline_output.extend([
-        expand(ASMB_MTX_SAMPLE + "_added_derep_stats.done", sample=samples),
+        expand(ASMB_OUT_SAMPLE_DIR + "_added_derep_stats.done", sample=samples),
         expand(TED_READS_FQS + "{sample}_R1_ted_mtx.fastq.gz", sample=samples)
     ])
 else:
     pipeline_output.extend([
-        expand(ASMB_MGX_SAMPLE + "_added_derep_stats.done", sample=samples)
+        expand(ASMB_OUT_SAMPLE_DIR + "_added_derep_stats.done", sample=samples)
     ])
 
 # Merging binned files from all samples into 1 collated table only run when users provide at least 2 samples
@@ -277,7 +277,7 @@ rule kreport2krona_per_sample:
     params:
         kreport2krona_script=config["kreport2krona_script"],
         sedRNK='s_\\tR[12]\\t(.*)(Viruses|Bacteria|Eukaryota|Archaea)_\\tD\\t\\1\\2_g',
-        sedSTR=':a; 2s/\\t\\t/\\tUnclassified\\t/; ta', ## loops over empty TSV fields on line 2 (taxid0)
+        sedSTR='s/\\tUnclassified\\t\\t\\t\\t\\t\\t\\t0/\\tUnclassified\\tUnclassified\\tUnclassified\\tUnclassified\\tUnclassified\\tUnclassified\\tUnclassified\\t0/g' # more explicit
     output:
         tmpfile=temp(TED_READS_TAX_KLOGS + "reports/tmp_{sample}.txt"),
         binfile=TED_READS_TAX + "bin/{sample}_wTAXid_4krona.txt"
@@ -289,6 +289,8 @@ rule kreport2krona_per_sample:
  ##--> kreport2krona_script is edited to disable table merging, since it overprints the bin/files (required output)
  ##--> removed the mod_kreport2krona_output rule cuz mods are above and no output 
  ##--> last SED old: 's/\\tUnclassified\\t\\t\\t\\t\\t\\t\\t0/\\tUnclassified\\tUnclassified\\tUnclassified\\tUnclassified\\tUnclassified\\tUnclassified\\tUnclassified\\t0/g'
+ ##--> last SED loop: ':a; 2s/\\t\\t/\\tUnclassified\\t/; ta', ## loops over empty TSV fields on line 2 (expected Unclassified taxid 0), 
+ ##--> --> but if line 2 is bacteria\t\t\... it also captures that and acauses error. Leaving to more explicit version
  ##--> last SED "fixes" the Unclassified row to contain string in all lineage columns <--## 
 
 
@@ -313,8 +315,8 @@ if config["read_norm"]:
             logfile=TED_READS + "{sample}_normLog.txt",
             mem_gb = "-Xmx" + str(int(config['total_mem_gb'] // 4)) + "g"
         output:
-            normFread = temp(TED_READS_FQS + "{sample}_ted_norm_R1.fastq.gz"),
-            normRread = temp(TED_READS_FQS + "{sample}_ted_norm_R2.fastq.gz"),
+            normFread = (TED_READS_FQS + "{sample}_ted_norm_R1.fastq.gz"),
+            normRread = (TED_READS_FQS + "{sample}_ted_norm_R2.fastq.gz"),
         threads: threads_per_job
         shell:"""
             bbnorm.sh {params.mem_gb} target={params.maxCov}  in={input.Freads} in2={input.Rreads} ecc=f prefilter=f \
@@ -326,36 +328,48 @@ rule run_metaspades:
     input:
         in1=lambda wildcards: (rules.norm_readDepth.output.normFread if config["read_norm"] else rules.zip_decontaminated.output.f),
         in2=lambda wildcards: (rules.norm_readDepth.output.normRread if config["read_norm"] else rules.zip_decontaminated.output.r),
+    resources:
+        mem_gb=int(config['total_mem_gb'])
     params:
-        out=ASMB_MGX_SAMPLE,
-        tmp_dir=config["tmp_dir"],
-        mem_gb=config["total_mem_gb"],
-        scafout=temp(ASMB_MGX_SAMPLE + "scaffolds.fasta"),
-        contout=temp(ASMB_MGX_SAMPLE + "contigs.fasta"),
-        mspalog=(ASMB_MGX_SAMPLE + "spades.log"),
-    threads: threads_per_job
+        mem_gb=int(config['total_mem_gb']),
+        out=ASMB_OUT_SAMPLE_DIR,
+        ## temp asmb files
+        tmp_dir=temp(TMP_SAMPLE_DIR + "_asmb/"),
+        scafout=temp(TMP_SAMPLE_DIR + "_asmb/" + "scaffolds.fasta"),
+        contout=temp(TMP_SAMPLE_DIR + "_asmb/" + "contigs.fasta"),
+        grafout=temp(TMP_SAMPLE_DIR + "_asmb/" + "assembly_graph_with_scaffolds.gfa"),
+        mspalog=temp(TMP_SAMPLE_DIR + "_asmb/" + "spades.log"),
+        ## final files
+        grfout=ASMB_OUT_SAMPLE_FILE + "_asmbFinal.gfa",
+        scfout=ASMB_OUT_SAMPLE_FILE + "_scaffolds.fasta",
+        cntout=ASMB_OUT_SAMPLE_FILE + "_contigs.fasta",
+        logout=ASMB_OUT_SAMPLE_FILE + "_spadesLOG.txt",
+    threads: config["num_cpus"] ##threads_per_job
     output:
-        finout=ASMB_MGX_SAMPLE + "{sample}_scaffolds.fasta",
-        cntigs=ASMB_MGX_SAMPLE + "{sample}_contigs.fasta",
-        spalog=ASMB_MGX_SAMPLE + "{sample}_spadesLOG.txt",
+        doneout=ASMB_OUT_SAMPLE_FILE + "_asmb.done",
+        asmbout=temp(ASMB_OUT_SAMPLE_FILE + "tmp_finAsmb.tmp.txt"),
     shell:"""
-        metaspades.py -1 {input.in1} -2 {input.in2}  --memory {params.mem_gb} \
-        --tmp-dir {params.tmp_dir} -o {params.out} -t {threads} --only-assembler 
-
-        if [[ -f {params.mspalog} ]]; then  cp {params.mspalog} {output.spalog};  fi
-        if [[ -f {params.scafout} ]]; then  cp {params.scafout} {output.finout};  fi
-        if [[ -f {params.contout} ]]; then  cp {params.contout} {output.cntigs};  fi
-
+        time metaspades.py -1 {input.in1} -2 {input.in2}  --memory {params.mem_gb} \
+        --tmp-dir {params.tmp_dir} -o {params.tmp_dir} -t {threads} \
+        --only-assembler  > {params.logout} 2>&1 && \
+        echo "---- asmb pass" > {output.doneout}
+        
+        if [[ -s {params.scafout} ]]; then  
+                    cp {params.grafout} {params.grfout} && \
+                    cp {params.contout} {params.cntout} && \
+                    cp {params.scafout} {params.scfout} && \
+                    cp {params.scafout} {output.asmbout}   
+        elif [[ -s {params.contout} ]]; then
+                    cp {params.contout} {params.cntout} && \
+                    cp {params.contout} {output.asmbout}
+        else 
+                    echo ">no_assembly produced" > {output.asmbout} && \
+                    echo "---- asmb fail" >> {params.logout}           
+            fi
+        
         ## manual cleanup 
-        rm -rf {params.out}K21/ {params.out}K33/ {params.out}K55/ {params.contout} {params.scafout} {params.mspalog} \
-        {params.out}pipeline_state {params.out}tmp {params.out}misc {params.out}before_rr.fasta \
-        {params.out}dataset.info {params.out}*params* {params.out}*.gfa {params.out}first_pe_contigs.fasta \
-        {params.out}run_spades.sh {params.out}*.yaml {params.out}*.paths {params.out}assembly_graph.fastg 
+        ## rm -rf {params.tmp_dir}
         """
-        # if grep -q "metaSPAdes unable to assemble reads into contigs" {params.spalog} ; then
-        # echo "ERROR in sample {wildcards.sample}: metaSPAdes unable to assemble reads into contigs."
-        # exit 1
-        # fi
 
 rule run_trinity:
     resources:
@@ -363,41 +377,47 @@ rule run_trinity:
     input:
         f=lambda wildcards: (rules.norm_readDepth.output.normFread if config["read_norm"] else rules.remove_rRNA.output.fread_gz),
         r=lambda wildcards: (rules.norm_readDepth.output.normRread if config["read_norm"] else rules.remove_rRNA.output.rread_gz),
-    threads: threads_per_job
+    threads: config["num_cpus"]  ##threads_per_job
     params:
-        out= ASMB_MTX_SAMPLE + "trinity_{sample}",
-        fas= ASMB_MTX_SAMPLE + "trinity_{sample}.Trinity.fasta", ## as output temp() takes a while to remove
-        log= ASMB_MTX_SAMPLE + "{sample}_trinityLOG.txt",
-        mem= str(config['total_mem_gb'] // 3) + "G",
-        threads =lambda wildcards: int(threads_per_job - 4),
+        tmpDir=temp(TMP_SAMPLE_DIR + "_asmb/"),
+        fasout=temp(TMP_SAMPLE_DIR + "_asmb/") + "/trinity_{sample}.Trinity.fasta",
+        memrGb=str(config['total_mem_gb'] // 3) + "G",
+        threads = lambda wildcards: int(threads_per_job - 4),
         bfly_CPU=2,
         bfly_HeapSpace="20G",
+        cntout=ASMB_OUT_SAMPLE_FILE + "_contigs.fasta",
+        trilog=ASMB_OUT_SAMPLE_FILE + "_trinityLOG.txt",
     output:
-        finout=ASMB_MTX_SAMPLE + "{sample}_contigs.fasta",
+        asmbout=temp(ASMB_OUT_SAMPLE_FILE + "_finAsmb.tmp.txt")
     shell:"""
-        Trinity --seqType fq --left {input.f} --right {input.r} --CPU {params.threads} \
-            --output {params.out} --full_cleanup --max_memory {params.mem} \
-            --bflyHeapSpaceMax {params.bfly_HeapSpace} --bflyCPU {params.bfly_CPU} &> {params.log}
-        mv {params.fas} {output.finout}
-        rm {params.fas}.gene_trans_map
-        
-        line_count=$(wc -l < {output})
-        if grep -q "No butterfly assemblies to report" {params.log} || [ "$line_count" -lt 2 ] ; then
-            echo "ERROR in sample {wildcards.sample}: Trinity unable to assemble reads into transcripts."
-            exit 1
+        time Trinity --seqType fq --left {input.f} --right {input.r} --CPU {params.threads} \
+            --output {params.tmpDir} --full_cleanup --max_memory {params.memrGb} \
+            --bflyHeapSpaceMax {params.bfly_HeapSpace} --bflyCPU {params.bfly_CPU} &> \
+            {params.trilog} 2>&1 && echo "---- asmb pass" >> {params.trilog}
+
+        if [[ -f {params.fasout} ]]; then 
+                    cp {params.fasout} {params.cntout} && \
+                    cp {params.fasout} {output.asmbout} 
+        else 
+                    echo ">no_assembly produced" > {output.asmbout} && \
+                    echo "---- asmb failed" >> {params.trilog}   
         fi
+
+        ## manual cleanup
+        ##rm -rf {params.tmpDir}
         """
 
 rule run_bbtools_stats:
     input:
-        finfasta=lambda wildcards: (rules.run_trinity.output.finout if config["denovo_mtx"] else rules.run_metaspades.output.finout),
+        finp=lambda wildcards: (rules.run_trinity.output.asmbout if config["denovo_mtx"] 
+                        else rules.run_metaspades.output.asmbout),
     params:
-        asm=(ASMB_MTX_SAMPLE if config["denovo_mtx"] else ASMB_MGX_SAMPLE)
+        asm=ASMB_OUT_SAMPLE_DIR,
     output:
-        out1=OUT_FILE + "_asmbFinal.fasta",
-        out2=OUT_FILE + "_asmbStats.txt",
+        out1=ASMB_OUT_SAMPLE_FILE + "_asmbFinal.fasta",
+        out2=ASMB_OUT_SAMPLE_FILE + "_asmbStats.txt",
     shell:
-        "sed $'s/_cov_/ cov_/g' {input.finfasta} > {output.out1} && "
+        "sed $'s/_cov_/ cov_/g' {input.finp} > {output.out1} && "
         "stats.sh in={output.out1} out={output.out2} && "
         "printf \"\\nTEDreads mapping stats:\\n\"  >> {output.out2}"
 
@@ -407,13 +427,23 @@ rule bowtie2_build:
     input:
         rules.run_bbtools_stats.output.out1
     params:
-        basename=(ASMB_MTX_SAMPLE if config["denovo_mtx"] else ASMB_MGX_SAMPLE) + "{sample}.db"
+        basename=TMP_SAMPLE_DIR + ".db"
     threads: threads_per_job
     output:
         # to signal this step is completed
-        temp((ASMB_MTX_SAMPLE if config["denovo_mtx"] else ASMB_MGX_SAMPLE) + "_bowtie2_build.done")
+        temp(ASMB_OUT_SAMPLE_FILE + "_bowtie2_build.done")
     shell:
        "bowtie2-build --quiet --threads {threads} {input} {params.basename} && touch {output}"
+
+# checkpoint assembly:
+#     input:
+#         expand(ASMB_OUT_SAMPLE_FILE + "_bowtie2_build.done", sample=samples)
+#     output:
+#         directory(TMP_SAMPLE_DIR + "asmb_passed/")
+#     shell:"""
+
+#     """
+
 
 rule bowtie2_run:
     input:
@@ -421,53 +451,53 @@ rule bowtie2_run:
         in2=lambda wildcards: rules.remove_rRNA.output.rread_gz if config["denovo_mtx"] else rules.zip_decontaminated.output.r,
         require=rules.bowtie2_build.output, # fake input so it can run after bowtie2_build for that sample
     params:
-        index=(ASMB_MTX_SAMPLE if config["denovo_mtx"] else ASMB_MGX_SAMPLE) + "{sample}.db",
+        index=TMP_SAMPLE_DIR + ".db",
         in4=ancient(rules.run_bbtools_stats.output.out2), # keep in params; its both input and output
     threads: threads_per_job
     output:
-        sam=temp((ASMB_MTX_SAMPLE if config["denovo_mtx"] else ASMB_MGX_SAMPLE) + "{sample}.sam")
+        sam=temp(TMP_SAMPLE_DIR + ".sam")
     shell:
         "bowtie2 --phred33 --sensitive-local --no-unal --seed 4 "
         "-1 {input.in1} -2 {input.in2} "
         "-x {params.index} "
         "-S {output.sam} "
-        "-p {threads} 2>> {params.in4}"
+        "-p {threads} 2>> {params.in4} "
 
 rule samtools_to_bam:
     input:
         rules.bowtie2_run.output.sam
     params:
-        collate_tmp=config["tmp_dir"] + "{sample}_collate",
-        srtfixd_tmp=config["tmp_dir"] + "{sample}_srtfixd",
-        markdup_tmp=config["tmp_dir"] + "{sample}_markdup",
+        collate_tmp=TMP_SAMPLE_DIR + "_collate",
+        srtfixd_tmp=TMP_SAMPLE_DIR + "_srtfixd",
+        markdup_tmp=TMP_SAMPLE_DIR + "_markdup",
+        bam_initial=TMP_SAMPLE_DIR + "_initial.bam",
+        bam_colated=TMP_SAMPLE_DIR + "_colated.bam",
+        bam_fixmate=TMP_SAMPLE_DIR + "_fixmate.bam",
+        bam_fixsrtd=TMP_SAMPLE_DIR + "_fixsrtd.bam",
     threads: threads_per_job
     output:
-        bam_initial=temp((ASMB_MTX_SAMPLE if config["denovo_mtx"] else ASMB_MGX_SAMPLE) + "{sample}_initial.bam"),
-        bam_colated=temp((ASMB_MTX_SAMPLE if config["denovo_mtx"] else ASMB_MGX_SAMPLE) + "{sample}_colated.bam"),
-        bam_fixmate=temp((ASMB_MTX_SAMPLE if config["denovo_mtx"] else ASMB_MGX_SAMPLE) + "{sample}_fixmate.bam"),
-        bam_fixsrtd=temp((ASMB_MTX_SAMPLE if config["denovo_mtx"] else ASMB_MGX_SAMPLE) + "{sample}_fixsrtd.bam"),
-        tmp_markdup=temp((ASMB_MTX_SAMPLE if config["denovo_mtx"] else ASMB_MGX_SAMPLE) + "{sample}_markdup.txt"),
-        final_bam=OUT_FILE + "_asmbFinal.bam",
-        bam_index=OUT_FILE + "_asmbFinal.bam.bai",
+        tmp_mrkdp=TMP_SAMPLE_DIR + "_markdup.txt",
+        final_bam=ASMB_OUT_SAMPLE_FILE + "_asmbFinal.bam",
+        bam_index=ASMB_OUT_SAMPLE_FILE + "_asmbFinal.bam.bai",
     shell:
-        "samtools sort {input} -o {output.bam_initial} -@ {threads} -T {params.srtfixd_tmp} && "
-        "samtools collate {output.bam_initial} -o {output.bam_colated} -@ {threads} {params.collate_tmp} && "
-        "samtools fixmate -m {output.bam_colated} {output.bam_fixmate} -@ {threads} && "
-        "samtools sort {output.bam_fixmate} -o {output.bam_fixsrtd} -@ {threads} -T {params.srtfixd_tmp} && "
-        "samtools markdup -r -s {output.bam_fixsrtd} -f {output.tmp_markdup} {output.final_bam} -@ {threads} -T {params.markdup_tmp} && "
+        "samtools sort {input} -o {params.bam_initial} -@ {threads} -T {params.srtfixd_tmp} && "
+        "samtools collate {params.bam_initial} -o {params.bam_colated} -@ {threads} {params.collate_tmp} && "
+        "samtools fixmate -m {params.bam_colated} {params.bam_fixmate} -@ {threads} && "
+        "samtools sort {params.bam_fixmate} -o {params.bam_fixsrtd} -@ {threads} -T {params.srtfixd_tmp} && "
+        "samtools markdup -r -s {params.bam_fixsrtd} -f {output.tmp_mrkdp} {output.final_bam} -@ {threads} -T {params.markdup_tmp} && "
         "samtools index -b {output.final_bam} -@ {threads}"
 
 
 rule add_derep_stats:
     input:
         in1=rules.run_bbtools_stats.output.out2,
-        in2=rules.samtools_to_bam.output.tmp_markdup
+        in2=rules.samtools_to_bam.output.tmp_mrkdp,
     params:
-        stats_file=OUT_FILE + "_asmbStats.txt",
-        tmp_out=(ASMB_MTX_SAMPLE if config["denovo_mtx"] else ASMB_MGX_SAMPLE) + "{sample}_tmp_file.txt"
+        stats_file=ASMB_OUT_SAMPLE_FILE + "_asmbStats.txt",
+        tmp_out   =ASMB_OUT_SAMPLE_FILE + "_tmp_file.txt"
     output:
         # to signal this step is completed
-        (ASMB_MTX_SAMPLE if config["denovo_mtx"] else ASMB_MGX_SAMPLE) + "_added_derep_stats.done"
+        ASMB_OUT_SAMPLE_DIR + "_added_derep_stats.done"
     shell:
         "cat {input.in1} <(printf \"\\nRead alignment de-replication stats:\\n\") {input.in2} > {params.tmp_out} && "
         "mv {params.tmp_out} {params.stats_file} && touch {output}"
@@ -480,29 +510,29 @@ rule scaffold_and_read_counts:
     params:
         mem_gb = "-Xmx" + str(int(config['total_mem_gb'] // 4)) + "g"
     output:
-        tmp_scafcov=temp((ASMB_MTX_SAMPLE if config["denovo_mtx"] else ASMB_MGX_SAMPLE) + "tmp_scafcov.txt"),
-        tmp_basecov=temp((ASMB_MTX_SAMPLE if config["denovo_mtx"] else ASMB_MGX_SAMPLE) + "tmp_basecov.txt"),
-        tmp_idx=temp((ASMB_MTX_SAMPLE if config["denovo_mtx"] else ASMB_MGX_SAMPLE) + "tmp_idx.txt"),
-        tmp_readcount=temp((ASMB_MTX_SAMPLE if config["denovo_mtx"] else ASMB_MGX_SAMPLE) + "tmp_readcount.txt"),
-        depths=OUT_FILE + "_asmbDepths.txt",
-        tmp_scafcov1=temp((ASMB_MTX_SAMPLE if config["denovo_mtx"] else ASMB_MGX_SAMPLE) + "tmp_scafcov1.txt"),
-        scafCoverage=OUT_FILE + "_asmbCovr.txt",
+        tmp_scafcov=temp(ASMB_OUT_SAMPLE_DIR + "tmp_scafcov.txt"),
+        tmp_basecov=temp(ASMB_OUT_SAMPLE_DIR + "tmp_basecov.txt"),
+        tmp_fileidx=temp(ASMB_OUT_SAMPLE_DIR + "tmp_fileidx"),
+        tmp_readcnt=temp(ASMB_OUT_SAMPLE_DIR + "tmp_readcount.txt"),
+        tmp_scfcov1=temp(ASMB_OUT_SAMPLE_DIR + "tmp_scfcov1.txt"),
+        out_depths = ASMB_OUT_SAMPLE_FILE + "_asmbDepths.txt",
+        out_scfCovr= ASMB_OUT_SAMPLE_FILE + "_asmbCovr.txt",
     shell:
         "pileup.sh {params.mem_gb} {input.final_bam} out={output.tmp_scafcov} overwrite=true && "
         "sort -o {output.tmp_scafcov} {output.tmp_scafcov} && "
-        "jgi_summarize_bam_contig_depths {input.final_bam} --outputDepth {output.depths} && "
-        "sort {output.depths} | sed '1 s/^/#/' | cut -f 1-3 > {output.tmp_basecov} && "
-        "samtools idxstats {input.final_bam} > {output.tmp_idx} && "
-        "cut -f 1-3 {output.tmp_idx} | sed -e '1s/^/#contigName\\tLength\\tReadsCount\\n/' | sort | grep -v \"*\" > {output.tmp_readcount} && "
-        "paste {output.tmp_readcount} {output.tmp_scafcov} {output.tmp_basecov} | cut -f 1,2,3,8-14,17 -d $'\\t' > {output.tmp_scafcov1} && "
-        "awk 'BEGIN{{FS=OFS=\"\\t\"}} NR>1 {{if ($2>0 && $3>0) $12=sprintf(\"%0.2f\", $3*1e3/$2); else $12=0; print}}'  {output.tmp_scafcov1} | "
-        "sed -e '1s/^/#NODE\\tlen\\tReads\\t\%NodeCovered\\t\%bpCovered\\tplusReads\\tminusReads\\t\%GC\\tMedFold\\tstDev\\tAveDepth\\tRPK\\n/' > {output.scafCoverage}"
+        "jgi_summarize_bam_contig_depths {input.final_bam} --outputDepth {output.out_depths} && "
+        "sort {output.out_depths} | sed '1 s/^/#/' | cut -f 1-3 > {output.tmp_basecov} && "
+        "samtools idxstats {input.final_bam} > {output.tmp_fileidx} && "
+        "cut -f 1-3 {output.tmp_fileidx} | sed -e '1s/^/#contigName\\tLength\\tReadsCount\\n/' | sort | grep -v \"*\" > {output.tmp_readcnt} && "
+        "paste {output.tmp_readcnt} {output.tmp_scafcov} {output.tmp_basecov} | cut -f 1,2,3,8-14,17 -d $'\\t' > {output.tmp_scfcov1} && "
+        "awk 'BEGIN{{FS=OFS=\"\\t\"}} NR>1 {{if ($2>0 && $3>0) $12=sprintf(\"%0.2f\", $3*1e3/$2); else $12=0; print}}'  {output.tmp_scfcov1} | "
+        "sed -e '1s/^/#NODE\\tlen\\tReads\\t\%NodeCovered\\t\%bpCovered\\tplusReads\\tminusReads\\t\%GC\\tMedFold\\tstDev\\tAveDepth\\tRPK\\n/' > {output.out_scfCovr}"
 
 # Step 6 starts
 rule gene_prediction:
     input:
         finfas=rules.run_bbtools_stats.output.out1,
-        require=expand(rules.scaffold_and_read_counts.output.scafCoverage, sample=samples),
+        require=expand(rules.scaffold_and_read_counts.output.out_scfCovr, sample=samples),
     threads: threads_per_job
     output:
         gff=PREGENES_PREFIX + ".gff",
