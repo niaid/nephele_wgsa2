@@ -8,7 +8,8 @@ include: "/pipeline/utils.smk"
 log_path = snakemake.logger.logfile
 outputs_dir = Path(config["output_dir"])
 
-TMP_SAMPLE_DIR = config["tmp_dir"] + "/{sample}"
+TMP_DIR=config["tmp_dir"]
+TMP_SAMPLE_DIR = TMP_DIR + "/{sample}"
 TED_READS = config["output_dir"] + ("/TEDreads_mtx/" if config["denovo_mtx"] else "/TEDreads_mgx/")
 TAX_PROFILES = config["output_dir"] + "/TAXprofiles/"
 DBNAME = config["classification_db_name"]
@@ -30,12 +31,13 @@ GENETAX = TAX_PROFILES + "geneTAX_" + DBNAME + "/"
 ANNOTATS = FUNC_DIR + "annotations/"
 
 SCAFTAX_DIR = TAXN_DIR + "scafTAX_" + DBNAME + "/"
-SCAFTAX_PREFIX = SCAFTAX_DIR + "scafTAX"
+SCAFTAX_PREFIX = SCAFTAX_DIR  + "scafTAX" + "/"
 SCAFTAX=TAX_PROFILES + "scafTAX_" + DBNAME + "/"
 MAG = TAXN_DIR + "MAGs/"
 MAG_QA = MAG + "magsQA/"
 QC_PLOTS = MAG_QA + "QCplots/"
 TAXBIN = TAX_PROFILES + "magsTAX_checkM/"
+
 PWY_PROFILES = config["output_dir"] + "/PWYprofiles/"
 
 if config["annotations_type"] == "ko":
@@ -340,14 +342,14 @@ rule run_metaspades:
         grafout=temp(TMP_SAMPLE_DIR + "_asmb/" + "assembly_graph_with_scaffolds.gfa"),
         mspalog=temp(TMP_SAMPLE_DIR + "_asmb/" + "spades.log"),
         ## final files
-        grfout=ASMB_OUT_SAMPLE_FILE + "_asmbFinal.gfa",
-        scfout=ASMB_OUT_SAMPLE_FILE + "_scaffolds.fasta",
-        cntout=ASMB_OUT_SAMPLE_FILE + "_contigs.fasta",
-        logout=ASMB_OUT_SAMPLE_FILE + "_spadesLOG.txt",
+        grfout=      ASMB_OUT_SAMPLE_FILE + "_asmbFinal.gfa",
+        scfout=      ASMB_OUT_SAMPLE_FILE + "_scaffolds.fasta",
+        cntout=      ASMB_OUT_SAMPLE_FILE + "_contigs.fasta",
+        logout=      ASMB_OUT_SAMPLE_FILE + "_spadesLOG.txt",
     threads: config["num_cpus"] ##threads_per_job
     output:
-        doneout=ASMB_OUT_SAMPLE_FILE + "_asmb.done",
-        asmbout=temp(ASMB_OUT_SAMPLE_FILE + "tmp_finAsmb.tmp.txt"),
+        doneout=ASMB_OUT_SAMPLE_FILE + "_MGXasmb.done",
+        asmbout=temp(ASMB_OUT_SAMPLE_FILE + "_tmp_finAsmb.txt"), ## needed for run_bbtools_stats proper unpackaging
     shell:"""
         time metaspades.py -1 {input.in1} -2 {input.in2}  --memory {params.mem_gb} \
         --tmp-dir {params.tmp_dir} -o {params.tmp_dir} -t {threads} \
@@ -364,7 +366,7 @@ rule run_metaspades:
                     cp {params.contout} {output.asmbout}
         else 
                     echo ">no_assembly produced" > {output.asmbout} && \
-                    echo "---- asmb fail" >> {params.logout}           
+                    echo "---- asmb fail" >> {output.doneout}           
             fi
         
         ## manual cleanup 
@@ -386,31 +388,34 @@ rule run_trinity:
         bfly_CPU=2,
         bfly_HeapSpace="20G",
         cntout=ASMB_OUT_SAMPLE_FILE + "_contigs.fasta",
-        trilog=ASMB_OUT_SAMPLE_FILE + "_trinityLOG.txt",
+        logout=ASMB_OUT_SAMPLE_FILE + "_trinityLOG.txt",
     output:
-        asmbout=temp(ASMB_OUT_SAMPLE_FILE + "_finAsmb.tmp.txt")
+        doneout=ASMB_OUT_SAMPLE_FILE + "_MTXasmb.done",
+        asmbout=temp(ASMB_OUT_SAMPLE_FILE + "_finAsmb.tmp.txt") ## needed for run_bbtools_stats proper unpackaging
     shell:"""
         time Trinity --seqType fq --left {input.f} --right {input.r} --CPU {params.threads} \
             --output {params.tmpDir} --full_cleanup --max_memory {params.memrGb} \
             --bflyHeapSpaceMax {params.bfly_HeapSpace} --bflyCPU {params.bfly_CPU} &> \
-            {params.trilog} 2>&1 && echo "---- asmb pass" >> {params.trilog}
+            {params.logout} 2>&1 && echo "---- asmb pass" >> {output.doneout}
 
         if [[ -f {params.fasout} ]]; then 
                     cp {params.fasout} {params.cntout} && \
                     cp {params.fasout} {output.asmbout} 
         else 
                     echo ">no_assembly produced" > {output.asmbout} && \
-                    echo "---- asmb failed" >> {params.trilog}   
+                    echo "---- asmb failed" >> {params.logout}   
         fi
 
         ## manual cleanup
         ##rm -rf {params.tmpDir}
         """
 
-rule run_bbtools_stats:
+rule run_bbtools_stats: ## this rule _needs_ a file to expand
     input:
+        doneout=lambda wildcards: (rules.run_trinity.output.doneout if config["denovo_mtx"] 
+                else rules.run_metaspades.output.doneout),
         finp=lambda wildcards: (rules.run_trinity.output.asmbout if config["denovo_mtx"] 
-                        else rules.run_metaspades.output.asmbout),
+                else rules.run_metaspades.output.asmbout),
     params:
         asm=ASMB_OUT_SAMPLE_DIR,
     output:
@@ -427,21 +432,32 @@ rule bowtie2_build:
     input:
         rules.run_bbtools_stats.output.out1
     params:
-        basename=TMP_SAMPLE_DIR + ".db"
+        basename=TMP_SAMPLE_DIR + ".db",
     threads: threads_per_job
     output:
-        # to signal this step is completed
-        temp(ASMB_OUT_SAMPLE_FILE + "_bowtie2_build.done")
-    shell:
-       "bowtie2-build --quiet --threads {threads} {input} {params.basename} && touch {output}"
+        temp(ASMB_OUT_SAMPLE_DIR + "_bowtie2_build.done") ## signals  completion, needs sampName
+    shell:"""
+        if (( $(stat -c%s {input}) > 25 )); then ## if file > 25 bites
+            bowtie2-build --quiet --threads {threads} {input} {params.basename} && \
+            echo "---- PASS:: Done building bt2 index" >> {output}
+        else 
+            echo "---- FAIL:: Cannot build bt2 index from empty sequence" >> {output} 
+        fi
+    """
 
-# checkpoint assembly:
-#     input:
-#         expand(ASMB_OUT_SAMPLE_FILE + "_bowtie2_build.done", sample=samples)
+# checkpoint passed_assembly:
+#     input: 
+#         expand(rules.bowtie2_build.output, sample = samples),
 #     output:
-#         directory(TMP_SAMPLE_DIR + "asmb_passed/")
+#         directory(TMP_DIR + "/asmb_pass/"),
 #     shell:"""
-
+#         rm -rf {output}; mkdir -p {output}
+#         for f in {input}; do
+#             if grep -q "PASS::" "$f"; then
+#                 s=$(basename -s "_bowtie2_build.done"  "$f" )
+#                 touch "{output}/${{s}}_bowtie2_build.pass"
+#             fi
+#         done
 #     """
 
 
@@ -449,23 +465,28 @@ rule bowtie2_run:
     input:
         in1=lambda wildcards: rules.remove_rRNA.output.fread_gz if config["denovo_mtx"] else rules.zip_decontaminated.output.f,
         in2=lambda wildcards: rules.remove_rRNA.output.rread_gz if config["denovo_mtx"] else rules.zip_decontaminated.output.r,
-        require=rules.bowtie2_build.output, # fake input so it can run after bowtie2_build for that sample
+        req=rules.bowtie2_build.output, # fake input so it can run after bt2_run for only passed samples
+        # req=lambda wildcards: expand(TMP_DIR + "/asmb_pass/{sample}_bowtie2_build.pass", sample=get_passed_assembly(wildcards)), 
     params:
         index=TMP_SAMPLE_DIR + ".db",
         in4=ancient(rules.run_bbtools_stats.output.out2), # keep in params; its both input and output
     threads: threads_per_job
     output:
         sam=temp(TMP_SAMPLE_DIR + ".sam")
-    shell:
-        "bowtie2 --phred33 --sensitive-local --no-unal --seed 4 "
-        "-1 {input.in1} -2 {input.in2} "
-        "-x {params.index} "
-        "-S {output.sam} "
-        "-p {threads} 2>> {params.in4} "
+    shell:"""
+        if grep -q "PASS::" {input.req} ; then
+            bowtie2 --phred33 --sensitive-local --no-unal --seed 4 \
+                -1 {input.in1} -2 {input.in2} -x {params.index} \
+                -S {output.sam} -p {threads} 2>> {params.in4} 2>&1 
+        else touch {output.sam}
+        fi
+        
+    """
+ 
 
 rule samtools_to_bam:
     input:
-        rules.bowtie2_run.output.sam
+        rules.bowtie2_run.output.sam,
     params:
         collate_tmp=TMP_SAMPLE_DIR + "_collate",
         srtfixd_tmp=TMP_SAMPLE_DIR + "_srtfixd",
@@ -957,6 +978,7 @@ rule gene_annotation:
         eggnog_db=config["eggnog_db"],
         out_dir=ANNOTATS,
         tmp_dir=config["tmp_dir"],
+        logfile=ANNOTATS + "emapperLOG.txt"
         blockSize=4,
         idxChunks=2
     output:
@@ -966,7 +988,7 @@ rule gene_annotation:
     shell:
         "emapper.py -i {input} -o annots --output_dir {params.out_dir} --cpu {threads} "
         "--itype proteins --block_size {params.blockSize} --index_chunks {params.idxChunks} --data_dir {params.eggnog_db} "
-        "--override --temp_dir {params.tmp_dir}  --scratch_dir {params.tmp_dir} --dbmem"
+        "--override --temp_dir {params.tmp_dir}  --scratch_dir {params.tmp_dir} --dbmem >> {params.logfile} 2>&1"
 
 rule gene_annotation_grep:
     input:
@@ -1178,13 +1200,12 @@ if len(samples) > 1:
             "find {params.bin_dir}/*_4krona.txt -type f -empty -delete && "
             "ls -1 {params.bin_dir} | xargs basename -a -s {params.string} > {output.scclist} && "
             "Rscript {params.tax_table_merging_script} --binDIR {params.bin_dir} --sccList {output.scclist} --outdir {params.out_dir} \
-                    --genesDIR {params.gen_dir} 2>&1 >{output.logR}"
+                    --genesDIR {params.gen_dir} >{output.logR} 2>&1 "
 
     rule PWY_collation:
         input:
-            pwyfiles=expand(rules.run_genes2krona.output.krona_out_clone, sample=samples),
-            # gnefiles=expand(GENEBIN + "{sample}_geneTPMtab." + ANNO_TYPE + ".txt", sample=samples),
-            gnefiles=expand(rules.cp_geneTPM_files.output, sample=samples)
+            pwyfiles=lambda wildcards: expand(rules.run_genes2krona.output.krona_out_clone, sample=samples), # sample=get_passed_assembly(wildcards) ), #
+            gnefiles=lambda wildcards: expand(rules.cp_geneTPM_files.output, sample=samples) # sample=get_passed_assembly(wildcards) ),
         params:
             bin_dir=PWYBIN,
             gen_dir=GENEBIN,
@@ -1208,7 +1229,7 @@ if len(samples) > 1:
             "find {params.gen_dir}/*.txt -type f -empty -delete && "
             "ls -1 {params.bin_dir} | xargs basename -a -s {params.string} > {output.scclist} && head {output.scclist} &&"
             "Rscript {params.pwy_table_merging_script} --binDIR {params.bin_dir} --sccList {output.scclist} --outdir {params.out_dir} \
-                        --genesDIR {params.gen_dir} 2>&1 >{output.logR}"
+                        --genesDIR {params.gen_dir} >{output.logR} 2>&1 "
     
 
 # step 10
@@ -1281,16 +1302,16 @@ if len(samples) > 1:
         params:
             merged_tables_dir=TAX_MERGED_TABLES,
             tax_diversity_plots_script=config["tax_diversity_plots_script"],
-            tmp_dir=config["tmp_dir"],
+            tmp_dir=TMP_DIR,
             out_dir=TAX_DIVERSITY_PLOTS,
-            tmp_mapping_file=TAX_DIVERSITY_PLOTS + "tmp_mapping_file.txt", ## if output temp() takes forever to remove
+            tmp_mapping_file=TAX_DIVERSITY_PLOTS + "tp_mapping_file.txt", ## if output temp() takes forever to remove
         output:
             logR=TAX_DIVERSITY_PLOTS + "TAX_diversity_plotsR.log.txt",
         shell: """
             sed '1s/^#//' {input.mapping_file} > {params.tmp_mapping_file}
             Rscript {params.tax_diversity_plots_script} --wdir {params.tmp_dir} --indir {params.merged_tables_dir} \
-                --mfile {params.tmp_mapping_file} --outdir {params.out_dir}  2>&1 >{output.logR} || \
-             echo "Failed to generate TAX_diversity_plots"  2>&1 >>{output.logR}
+                --mfile {params.tmp_mapping_file} --outdir {params.out_dir} >{output.logR} 2>&1 || \
+             echo "Failed to generate TAX_diversity_plots" >> {output.logR} 2>&1 
             touch {output.logR} && rm {params.tmp_mapping_file}
             """
   
@@ -1301,7 +1322,7 @@ if len(samples) > 1:
         params:
             merged_tables_dir=PWY_MERGED_TABLES,
             pwy_diversity_plots_script=config["pwy_diversity_plots_script"],
-            tmp_dir=config["tmp_dir"],
+            tmp_dir=TMP_DIR,
             out_dir=PWY_DIVERSITY_PLOTS,
             tmp_mapping_file=PWY_DIVERSITY_PLOTS + "tmp_mapping_file.txt", ## if output temp() takes forever to remove
         output:
@@ -1309,8 +1330,8 @@ if len(samples) > 1:
         shell: """
             sed 's/^#//g' {input.mapping_file} > {params.tmp_mapping_file}
             Rscript {params.pwy_diversity_plots_script} --wdir {params.tmp_dir} --indir {params.merged_tables_dir} \
-                    --mfile {params.tmp_mapping_file} --outdir {params.out_dir}  2>&1 >{output.logR} || \
-                    echo "Failed to generate PWY_diversity_plots"  2>&1 >>{output.logR}
+                    --mfile {params.tmp_mapping_file} --outdir {params.out_dir} >{output.logR}  2>&1 || \
+                    echo "Failed to generate PWY_diversity_plots" >>{output.logR}  2>&1 
             touch {output.logR} && rm {params.tmp_mapping_file}
             """
  
