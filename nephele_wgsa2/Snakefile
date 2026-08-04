@@ -71,9 +71,9 @@ threads_per_job = get_num_threads_per_job(len(samples))
 
 pipeline_output = [
     TED_READS_TAX + "TAXplots_readsTAX_" + DBNAME +".html",
-    expand(ASMB_OUT_SAMPLE_FILE + "_asmbDepths.txt"  ,sample=samples),
-    expand(ASMB_OUT_SAMPLE_FILE + "_asmbCovr.txt"    ,sample=samples),
-    expand(PREGENES_PREFIX + "_stats.txt", sample=samples),
+    expand(ASMB_OUT_SAMPLE_FILE + "_asmbDepths.txt" , sample=samples),
+    expand(ASMB_OUT_SAMPLE_FILE + "_asmbCovr.txt"   , sample=samples),
+    expand(PREGENES_PREFIX      + "_stats.txt"      , sample=samples),
     PWYPLOTS,
     expand(PWYBIOM + "{sample}_json.biom", sample=samples),
     expand(TAXBIOM + "{sample}_json.biom", sample=samples),
@@ -89,7 +89,7 @@ pipeline_output = [
 # Output for step 6D (AMRFinder; optional)
 if config["find_args"]:
     pipeline_output.extend([
-        expand(RGI_DIR + "RGI_main.txt", sample = samples),
+        expand(RGI_DIR + "RGI_main.txt", sample=samples),
         PWY_MERGED_TABLES + "merged_argsTPMtable.txt"
     ])
 
@@ -341,6 +341,9 @@ rule run_metaspades:
         contout=temp(TMP_SAMPLE_DIR + "_asmb/" + "contigs.fasta"),
         grafout=temp(TMP_SAMPLE_DIR + "_asmb/" + "assembly_graph_with_scaffolds.gfa"),
         mspalog=temp(TMP_SAMPLE_DIR + "_asmb/" + "spades.log"),
+        ## marker files
+        passout=    ASMB_OUT_SAMPLE_DIR + "_asmb.pass",
+        failout=    ASMB_OUT_SAMPLE_DIR + "_asmb.fail",
         ## final files
         grfout=      ASMB_OUT_SAMPLE_FILE + "_asmbFinal.gfa",
         scfout=      ASMB_OUT_SAMPLE_FILE + "_scaffolds.fasta",
@@ -348,25 +351,27 @@ rule run_metaspades:
         logout=      ASMB_OUT_SAMPLE_FILE + "_spadesLOG.txt",
     threads: config["num_cpus"] ##threads_per_job
     output:
-        doneout=ASMB_OUT_SAMPLE_FILE + "_MGXasmb.done",
-        asmbout=temp(ASMB_OUT_SAMPLE_FILE + "_tmp_finAsmb.txt"), ## needed for run_bbtools_stats proper unpackaging
+        doneout=     ASMB_OUT_SAMPLE_DIR + "_MGXasmb.done",
+        asmbout=temp(ASMB_OUT_SAMPLE_DIR + "_tmp_finAsmb.txt"), ## needed for run_bbtools_stats proper unpackaging
     shell:"""
         time metaspades.py -1 {input.in1} -2 {input.in2}  --memory {params.mem_gb} \
-        --tmp-dir {params.tmp_dir} -o {params.tmp_dir} -t {threads} \
-        --only-assembler  > {params.logout} 2>&1 && \
-        echo "---- asmb pass" > {output.doneout}
+            --tmp-dir {params.tmp_dir} -o {params.tmp_dir} -t {threads} \
+            --only-assembler  > {params.logout} 2>&1 && \
+        touch {output.doneout} 
         
         if [[ -s {params.scafout} ]]; then  
                     cp {params.grafout} {params.grfout} && \
                     cp {params.contout} {params.cntout} && \
                     cp {params.scafout} {params.scfout} && \
-                    cp {params.scafout} {output.asmbout}   
+                    cp {params.scafout} {output.asmbout} && \
+                    touch {params.passout}  
         elif [[ -s {params.contout} ]]; then
                     cp {params.contout} {params.cntout} && \
-                    cp {params.contout} {output.asmbout}
+                    cp {params.contout} {output.asmbout} &&
+                    touch {params.passout} 
         else 
                     echo ">no_assembly produced" > {output.asmbout} && \
-                    echo "---- asmb fail" >> {output.doneout}           
+                    touch {params.failout}          
             fi
         
         ## manual cleanup 
@@ -387,23 +392,28 @@ rule run_trinity:
         threads = lambda wildcards: int(threads_per_job - 4),
         bfly_CPU=2,
         bfly_HeapSpace="20G",
-        cntout=ASMB_OUT_SAMPLE_FILE + "_contigs.fasta",
-        logout=ASMB_OUT_SAMPLE_FILE + "_trinityLOG.txt",
+        ## marker files
+        passout=     ASMB_OUT_SAMPLE_DIR + "_asmb.pass",
+        failout=     ASMB_OUT_SAMPLE_DIR + "_asmb.fail",
+        ## final files
+        cntout=      ASMB_OUT_SAMPLE_FILE + "_contigs.fasta",
+        logout=      ASMB_OUT_SAMPLE_FILE + "_trinityLOG.txt",
     output:
-        doneout=ASMB_OUT_SAMPLE_FILE + "_MTXasmb.done",
+        doneout=     ASMB_OUT_SAMPLE_DIR + "_MTXasmb.done",
         asmbout=temp(ASMB_OUT_SAMPLE_FILE + "_finAsmb.tmp.txt") ## needed for run_bbtools_stats proper unpackaging
     shell:"""
         time Trinity --seqType fq --left {input.f} --right {input.r} --CPU {params.threads} \
             --output {params.tmpDir} --full_cleanup --max_memory {params.memrGb} \
             --bflyHeapSpaceMax {params.bfly_HeapSpace} --bflyCPU {params.bfly_CPU} &> \
-            {params.logout} 2>&1 && echo "---- asmb pass" >> {output.doneout}
+            {params.logout} 2>&1 && touch {output.doneout}
 
         if [[ -f {params.fasout} ]]; then 
                     cp {params.fasout} {params.cntout} && \
-                    cp {params.fasout} {output.asmbout} 
+                    cp {params.fasout} {output.asmbout} && \
+                    touch {params.passout} ## needs to be empty
         else 
                     echo ">no_assembly produced" > {output.asmbout} && \
-                    echo "---- asmb failed" >> {params.logout}   
+                    touch {output.doneout} && touch {params.failout}
         fi
 
         ## manual cleanup
@@ -412,19 +422,28 @@ rule run_trinity:
 
 rule run_bbtools_stats: ## this rule _needs_ a file to expand
     input:
-        doneout=lambda wildcards: (rules.run_trinity.output.doneout if config["denovo_mtx"] 
-                else rules.run_metaspades.output.doneout),
-        finp=lambda wildcards: (rules.run_trinity.output.asmbout if config["denovo_mtx"] 
-                else rules.run_metaspades.output.asmbout),
+        doneout=lambda wildcards: (rules.run_trinity.output.doneout    if config["denovo_mtx"] 
+                           else rules.run_metaspades.output.doneout),
+        asmbfas=lambda wildcards:    (rules.run_trinity.output.asmbout if config["denovo_mtx"] 
+                           else rules.run_metaspades.output.asmbout),
     params:
-        asm=ASMB_OUT_SAMPLE_DIR,
+        asm     =ASMB_OUT_SAMPLE_DIR,
+        passmark=ASMB_OUT_SAMPLE_DIR  + "_asmb.pass",
+        asmbfas1=ASMB_OUT_SAMPLE_FILE + "_finAsmb.tmp.txt"
     output:
         out1=ASMB_OUT_SAMPLE_FILE + "_asmbFinal.fasta",
         out2=ASMB_OUT_SAMPLE_FILE + "_asmbStats.txt",
-    shell:
-        "sed $'s/_cov_/ cov_/g' {input.finp} > {output.out1} && "
-        "stats.sh in={output.out1} out={output.out2} && "
-        "printf \"\\nTEDreads mapping stats:\\n\"  >> {output.out2}"
+    shell:"""
+        if [[ -e {params.passmark} ]]; then  ## exists
+            sed $'s/_cov_/ cov_/g' {input.asmbfas} > {output.out1} && \
+            stats.sh in={output.out1} out={output.out2} && \
+            printf \"\\nTEDreads mapping stats:\\n\"  >> {output.out2}
+        else
+            echo "---- no assembly produced" >> {output.out2}
+            mv {input.asmbfas} {output.out1}
+        fi
+    """
+
 
 
 # Step 5 starts
@@ -437,13 +456,9 @@ rule bowtie2_build:
     output:
         temp(ASMB_OUT_SAMPLE_DIR + "_bowtie2_build.done") ## signals  completion, needs sampName
     shell:"""
-        if (( $(stat -c%s {input}) > 25 )); then ## if file > 25 bites
-            bowtie2-build --quiet --threads {threads} {input} {params.basename} && \
-            echo "---- PASS:: Done building bt2 index" >> {output}
-        else 
-            echo "---- FAIL:: Cannot build bt2 index from empty sequence" >> {output} 
-        fi
+    bowtie2-build --quiet --threads {threads} {input} {params.basename} && touch {output}
     """
+
 
 # checkpoint passed_assembly:
 #     input: 
@@ -465,8 +480,8 @@ rule bowtie2_run:
     input:
         in1=lambda wildcards: rules.remove_rRNA.output.fread_gz if config["denovo_mtx"] else rules.zip_decontaminated.output.f,
         in2=lambda wildcards: rules.remove_rRNA.output.rread_gz if config["denovo_mtx"] else rules.zip_decontaminated.output.r,
-        req=rules.bowtie2_build.output, # fake input so it can run after bt2_run for only passed samples
-        # req=lambda wildcards: expand(TMP_DIR + "/asmb_pass/{sample}_bowtie2_build.pass", sample=get_passed_assembly(wildcards)), 
+        req1=rules.bowtie2_build.output, # fake input so it can run after bt2_run for only passed samples
+        #req2=lambda wc: expand(TMP_DIR + "/asmb_pass/{sample}_bowtie2_build.pass", sample=asmb_pass(wc)), 
     params:
         index=TMP_SAMPLE_DIR + ".db",
         in4=ancient(rules.run_bbtools_stats.output.out2), # keep in params; its both input and output
@@ -474,14 +489,13 @@ rule bowtie2_run:
     output:
         sam=temp(TMP_SAMPLE_DIR + ".sam")
     shell:"""
-        if grep -q "PASS::" {input.req} ; then
             bowtie2 --phred33 --sensitive-local --no-unal --seed 4 \
-                -1 {input.in1} -2 {input.in2} -x {params.index} \
-                -S {output.sam} -p {threads} 2>> {params.in4} 2>&1 
-        else touch {output.sam}
-        fi
-        
-    """
+            -1 {input.in1} -2 {input.in2} -x {params.index} \
+            -S {output.sam} -p {threads} 2>> {params.in4}
+    """        
+        # if grep -q "PASS::" {input.req} ; then
+        # else touch {output.sam}
+        # fi
  
 
 rule samtools_to_bam:
@@ -531,11 +545,11 @@ rule scaffold_and_read_counts:
     params:
         mem_gb = "-Xmx" + str(int(config['total_mem_gb'] // 4)) + "g"
     output:
-        tmp_scafcov=temp(ASMB_OUT_SAMPLE_DIR + "tmp_scafcov.txt"),
-        tmp_basecov=temp(ASMB_OUT_SAMPLE_DIR + "tmp_basecov.txt"),
-        tmp_fileidx=temp(ASMB_OUT_SAMPLE_DIR + "tmp_fileidx"),
-        tmp_readcnt=temp(ASMB_OUT_SAMPLE_DIR + "tmp_readcount.txt"),
-        tmp_scfcov1=temp(ASMB_OUT_SAMPLE_DIR + "tmp_scfcov1.txt"),
+        tmp_scafcov=temp(ASMB_OUT_SAMPLE_DIR + "_tmp_scafcov.txt"),
+        tmp_basecov=temp(ASMB_OUT_SAMPLE_DIR + "_tmp_basecov.txt"),
+        tmp_fileidx=temp(ASMB_OUT_SAMPLE_DIR + "_tmp_fileidx"),
+        tmp_readcnt=temp(ASMB_OUT_SAMPLE_DIR + "_tmp_readcount.txt"),
+        tmp_scfcov1=temp(ASMB_OUT_SAMPLE_DIR + "_tmp_scfcov1.txt"),
         out_depths = ASMB_OUT_SAMPLE_FILE + "_asmbDepths.txt",
         out_scfCovr= ASMB_OUT_SAMPLE_FILE + "_asmbCovr.txt",
     shell:
@@ -600,16 +614,16 @@ rule tpm_normalization:
         gtf=rules.gff_to_gtf.output,
         verse_cds=rules.run_verse.output.out2
     output:
-        tmp_lengths=temp(GENES + "tmp_lengths.txt"),
-        tmp_counts=temp(GENES + "tmp_counts.txt"),
-        tmp_coverage=temp(GENES + "tmp_coverage.txt"),
-        tmp_rpk=temp(GENES + "tmp_RPK.txt"),
-        ABUNtab=PREGENES_PREFIX + "_ABUNtab.txt"
+        tmp_lens=temp(GENES + "_tmp_lengths.txt"),
+        tmp_cnts=temp(GENES + "_tmp_counts.txt"),
+        tmp_cvrg=temp(GENES + "_tmp_coverage.txt"),
+        tmp_rpk =temp(GENES + "_tmp_RPK.txt"),
+        ABUNtab =PREGENES_PREFIX + "_ABUNtab.txt"
     shell:
-        "cut -f4,5,9 {input.gtf} | sed 's/gene_id //g' | gawk '{{print $3,$2-$1+1}}' | tr ' ' '\\t' | sed '1s/^/gene\\tlength\\n/' > {output.tmp_lengths} && "
-        "join {output.tmp_lengths} {input.verse_cds} -t $'\\t' > {output.tmp_counts} && "
-        "grep \"_\" {output.tmp_counts}   | awk -v OFS=\"\\t\" '{{$4 = sprintf(\"%0.0f\", $3*150/$2)}}1' | sort | sed -e '1s/^/#name\\tlen\\treads\\tcov\\n/' > {output.tmp_coverage} && "
-        "grep \"_\" {output.tmp_coverage} | awk -v OFS=\"\\t\" '{{$5 = sprintf(\"%0.0f\", $3*1e3/$2)}}1' | sort | sed -e '1s/^/#name\\tlen\\treads\\tcov\\tRPK\\n/' > {output.tmp_rpk} && "
+        "cut -f4,5,9 {input.gtf} | sed 's/gene_id //g' | gawk '{{print $3,$2-$1+1}}' | tr ' ' '\\t' | sed '1s/^/gene\\tlength\\n/' > {output.tmp_lens} && "
+        "join {output.tmp_lens} {input.verse_cds} -t $'\\t' > {output.tmp_cnts} && "
+        "grep \"_\" {output.tmp_cnts}   | awk -v OFS=\"\\t\" '{{$4 = sprintf(\"%0.0f\", $3*150/$2)}}1' | sort | sed -e '1s/^/#name\\tlen\\treads\\tcov\\n/' > {output.tmp_cvrg} && "
+        "grep \"_\" {output.tmp_cvrg} | awk -v OFS=\"\\t\" '{{$5 = sprintf(\"%0.0f\", $3*1e3/$2)}}1' | sort | sed -e '1s/^/#name\\tlen\\treads\\tcov\\tRPK\\n/' > {output.tmp_rpk} && "
         "awk -v OFS=\"\\t\" 'NR==FNR{{sum+= $5; next}} FNR==1{{print $0,\"iTPM\"; next}} {{printf(\"%s %0.0f\\n\", $0,$5*1e6/sum)}}'  {output.tmp_rpk} {output.tmp_rpk} |sed -e 's/\\s/\\t/g' > {output.ABUNtab}  "
 
 # Step 6A starts
@@ -978,7 +992,7 @@ rule gene_annotation:
         eggnog_db=config["eggnog_db"],
         out_dir=ANNOTATS,
         tmp_dir=config["tmp_dir"],
-        logfile=ANNOTATS + "emapperLOG.txt"
+        logfile=ANNOTATS + "emapperLOG.txt",
         blockSize=4,
         idxChunks=2
     output:
@@ -986,7 +1000,7 @@ rule gene_annotation:
         emapper_seed_orthologs=ANNOTATS + "annots.emapper.seed_orthologs",
         emapper_annotations=ANNOTATS + "annots.emapper.annotations"
     shell:
-        "emapper.py -i {input} -o annots --output_dir {params.out_dir} --cpu {threads} "
+        "time emapper.py -i {input} -o annots --output_dir {params.out_dir} --cpu {threads} "
         "--itype proteins --block_size {params.blockSize} --index_chunks {params.idxChunks} --data_dir {params.eggnog_db} "
         "--override --temp_dir {params.tmp_dir}  --scratch_dir {params.tmp_dir} --dbmem >> {params.logfile} 2>&1"
 
@@ -1048,9 +1062,9 @@ rule gene_annot_geneTPMs:
         KO_list=config["KO_listfile"],
         EC_list=config["EC_listfile"]
     output:
-        tmpko=temp(ANNOTATS + "tmp_geneTPMtab.ko.txt"),
+        tmpko=temp(ANNOTATS + "_tmp_geneTPMtab.ko.txt"),
         TPMko=ANNOTATS + "{sample}_geneTPMtab.ko.txt",
-        tmpec=temp(ANNOTATS + "tmp_geneTPMtab.ec.txt"),
+        tmpec=temp(ANNOTATS + "_tmp_geneTPMtab.ec.txt"),
         TPMec=ANNOTATS + "{sample}_geneTPMtab.ec.txt"
     shell:
         """
@@ -1089,8 +1103,8 @@ rule copy_annotation_file:
         ec=rules.gene_annotation_grep.output.ec,
         ABUNtab=rules.tpm_normalization.output.ABUNtab
     output:
-        tmp_annots=temp(PATHWAYS + "tmp_annots.txt"),
-        tmp_TPM=temp(PATHWAYS + "tmp_TPM.txt")
+        tmp_annots=temp(PATHWAYS + "_tmp_annots.txt"),
+        tmp_TPM=temp(PATHWAYS + "_tmp_TPM.txt")
     run:
         if config["annotations_type"] == "ko":
             shell("cp {input.ko} {output.tmp_annots} && cut -f 1,5 {input.ABUNtab} > {output.tmp_TPM}")
@@ -1107,7 +1121,7 @@ rule run_min_path:
         mps_file=PATHWAYS_PREFIX + ".mps",
         minpath_mpt=PATHWAYS_PREFIX + "missing_pathways.txt" ## where is this outputting?
     output:
-        tmp_report=temp(PATHWAYS + "tmp_report.txt"),
+        tmp_report=temp(PATHWAYS + "_tmp_report.txt"),
         details=PATHWAYS_PREFIX + ".details.txt"
     shell:
         """
@@ -1149,7 +1163,7 @@ rule run_genes2krona:
         annotations_map=config["annotations_map"],
         annotations_hrr=config["annotations_hrr"]
     output:
-        tmp_4kr=temp(PATHWAYS + "tmp_4kr.txt"),
+        tmp_4kr=temp(PATHWAYS + "_tmp_4kr.txt"),
         krona_out=PATHWAYS + "{sample}_4krona.txt",
         krona_out_clone=PWYBIN + "{sample}_4krona.txt"
     shell:
@@ -1335,12 +1349,12 @@ if len(samples) > 1:
             touch {output.logR} && rm {params.tmp_mapping_file}
             """
  
-import subprocess
-onsuccess:
-    shell(clean_output() + handle_TED() + handle_cp_biom() ) 
-    subprocess.run(fwd_outputs(), shell = True ) ## for DiscoVIR and MAGs pipeline
-    #shell("cp {log_path} {outputs_dir}/.snakemake.log")
-onerror:
-    shell(clean_output() + handle_TED() + handle_cp_biom())
-    subprocess.run(fwd_outputs(), shell = True ) ## for DiscoVIR and MAGs pipeline
-    #shell("cp {log_path} {outputs_dir}/.snakemake.log")
+# import subprocess
+# onsuccess:
+#     shell(clean_output() + handle_TED() + handle_cp_biom() ) 
+#     subprocess.run(fwd_outputs(), shell = True ) ## for DiscoVIR and MAGs pipeline
+#     #shell("cp {log_path} {outputs_dir}/.snakemake.log")
+# onerror:
+#     shell(clean_output() + handle_TED() + handle_cp_biom())
+#     subprocess.run(fwd_outputs(), shell = True ) ## for DiscoVIR and MAGs pipeline
+#     #shell("cp {log_path} {outputs_dir}/.snakemake.log")

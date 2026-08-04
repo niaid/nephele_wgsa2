@@ -49,15 +49,8 @@ def run_fastp_cmd():
     return base_cmd + " " + trim_filter + " 2>> {params.s_l_text}"        ### moved to params for log-capture <--##
 
 
-def get_passed_assembly(wildcards):
-    asmb_markDIR=checkpoints.passed_assembly.get().output[0]
-    return glob_wildcards(os.path.join(asmb_markDIR, "{sample}_bowtie2_build.pass")).sample
-
-# def passed_samples(wildcards):
-#     a = set(glob_wildcards(ASMB_OUT_SAMPLE_FILE + "_asmb.done").sample)
-#     # b = set(glob_wildcards("results/{sample}/fileB.txt").sample)
-#     # c = set(glob_wildcards("results/{sample}/fileC.txt").sample)
-#     return sorted(a)# & b & c)
+def asmb_pass(wc):
+    return glob_wildcards(ASMB_OUT_SAMPLE_DIR + "_asmb.pass").sample
 
 
 def make_biom_file(profiles, taxfiles, samples, map_file, biom_file_name, tax_col, prof_col):
