@@ -431,16 +431,16 @@ rule run_bbtools_stats: ## this rule _needs_ a file to expand
         passmark=ASMB_OUT_SAMPLE_DIR  + "_asmb.pass",
         asmbfas1=ASMB_OUT_SAMPLE_FILE + "_finAsmb.tmp.txt"
     output:
-        out1=ASMB_OUT_SAMPLE_FILE + "_asmbFinal.fasta",
-        out2=ASMB_OUT_SAMPLE_FILE + "_asmbStats.txt",
+        finfasta=ASMB_OUT_SAMPLE_FILE + "_asmbFinal.fasta",
+        finstats=ASMB_OUT_SAMPLE_FILE + "_asmbStats.txt",
     shell:"""
         if [[ -e {params.passmark} ]]; then  ## exists
-            sed $'s/_cov_/ cov_/g' {input.asmbfas} > {output.out1} && \
-            stats.sh in={output.out1} out={output.out2} && \
-            printf \"\\nTEDreads mapping stats:\\n\"  >> {output.out2}
+            sed $'s/_cov_/ cov_/g' {input.asmbfas} > {output.finfasta} && \
+            stats.sh in={output.finfasta} out={output.finstats} && \
+            printf \"\\nTEDreads mapping stats:\\n\"  >> {output.finstats}
         else
-            echo "---- no assembly produced" >> {output.out2}
-            mv {input.asmbfas} {output.out1}
+            echo "---- no assembly produced" >> {output.finstats}
+            mv {input.asmbfas} {output.finfasta}
         fi
     """
 
@@ -449,7 +449,7 @@ rule run_bbtools_stats: ## this rule _needs_ a file to expand
 # Step 5 starts
 rule bowtie2_build:
     input:
-        rules.run_bbtools_stats.output.out1
+        rules.run_bbtools_stats.output.finfasta
     params:
         basename=TMP_SAMPLE_DIR + ".db",
     threads: threads_per_job
@@ -460,22 +460,6 @@ rule bowtie2_build:
     """
 
 
-# checkpoint passed_assembly:
-#     input: 
-#         expand(rules.bowtie2_build.output, sample = samples),
-#     output:
-#         directory(TMP_DIR + "/asmb_pass/"),
-#     shell:"""
-#         rm -rf {output}; mkdir -p {output}
-#         for f in {input}; do
-#             if grep -q "PASS::" "$f"; then
-#                 s=$(basename -s "_bowtie2_build.done"  "$f" )
-#                 touch "{output}/${{s}}_bowtie2_build.pass"
-#             fi
-#         done
-#     """
-
-
 rule bowtie2_run:
     input:
         in1=lambda wildcards: rules.remove_rRNA.output.fread_gz if config["denovo_mtx"] else rules.zip_decontaminated.output.f,
@@ -484,7 +468,7 @@ rule bowtie2_run:
         #req2=lambda wc: expand(TMP_DIR + "/asmb_pass/{sample}_bowtie2_build.pass", sample=asmb_pass(wc)), 
     params:
         index=TMP_SAMPLE_DIR + ".db",
-        in4=ancient(rules.run_bbtools_stats.output.out2), # keep in params; its both input and output
+        in4=ancient(rules.run_bbtools_stats.output.finstats), # keep in params; its both input and output
     threads: threads_per_job
     output:
         sam=temp(TMP_SAMPLE_DIR + ".sam")
@@ -525,7 +509,7 @@ rule samtools_to_bam:
 
 rule add_derep_stats:
     input:
-        in1=rules.run_bbtools_stats.output.out2,
+        in1=rules.run_bbtools_stats.output.finstats,
         in2=rules.samtools_to_bam.output.tmp_mrkdp,
     params:
         stats_file=ASMB_OUT_SAMPLE_FILE + "_asmbStats.txt",
@@ -550,8 +534,8 @@ rule scaffold_and_read_counts:
         tmp_fileidx=temp(ASMB_OUT_SAMPLE_DIR + "_tmp_fileidx"),
         tmp_readcnt=temp(ASMB_OUT_SAMPLE_DIR + "_tmp_readcount.txt"),
         tmp_scfcov1=temp(ASMB_OUT_SAMPLE_DIR + "_tmp_scfcov1.txt"),
-        out_depths = ASMB_OUT_SAMPLE_FILE + "_asmbDepths.txt",
-        out_scfCovr= ASMB_OUT_SAMPLE_FILE + "_asmbCovr.txt",
+        out_depths =    ASMB_OUT_SAMPLE_FILE + "_asmbDepths.txt",
+        out_scfCovr=    ASMB_OUT_SAMPLE_FILE + "_asmbCovr.txt",
     shell:
         "pileup.sh {params.mem_gb} {input.final_bam} out={output.tmp_scafcov} overwrite=true && "
         "sort -o {output.tmp_scafcov} {output.tmp_scafcov} && "
@@ -566,7 +550,7 @@ rule scaffold_and_read_counts:
 # Step 6 starts
 rule gene_prediction:
     input:
-        finfas=rules.run_bbtools_stats.output.out1,
+        finfas=rules.run_bbtools_stats.output.finfasta,
         require=expand(rules.scaffold_and_read_counts.output.out_scfCovr, sample=samples),
     threads: threads_per_job
     output:
@@ -1349,12 +1333,12 @@ if len(samples) > 1:
             touch {output.logR} && rm {params.tmp_mapping_file}
             """
  
-# import subprocess
-# onsuccess:
-#     shell(clean_output() + handle_TED() + handle_cp_biom() ) 
-#     subprocess.run(fwd_outputs(), shell = True ) ## for DiscoVIR and MAGs pipeline
-#     #shell("cp {log_path} {outputs_dir}/.snakemake.log")
-# onerror:
-#     shell(clean_output() + handle_TED() + handle_cp_biom())
-#     subprocess.run(fwd_outputs(), shell = True ) ## for DiscoVIR and MAGs pipeline
-#     #shell("cp {log_path} {outputs_dir}/.snakemake.log")
+import subprocess
+onsuccess:
+    shell(clean_output() + handle_TED() + handle_cp_biom() ) 
+    subprocess.run(fwd_outputs(), shell = True ) ## for DiscoVIR and MAGs pipeline
+    #shell("cp {log_path} {outputs_dir}/.snakemake.log")
+onerror:
+    shell(clean_output() + handle_TED() + handle_cp_biom())
+    subprocess.run(fwd_outputs(), shell = True ) ## for DiscoVIR and MAGs pipeline
+    #shell("cp {log_path} {outputs_dir}/.snakemake.log")
