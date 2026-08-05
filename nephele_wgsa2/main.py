@@ -41,13 +41,14 @@ def main(args):
     # log(args)
     base_command = [
         "snakemake -p --cores --nocolor --use-conda --rerun-incomplete",
-        f"--resources mem_gb={mem_gb} --keep-going ",# --keep-incomplete --notemp",
+        f"--resources mem_gb={mem_gb} --keep-going", # --keep-incomplete --notemp",
         f"--directory {tmp_dir} --latency-wait 10 ",
     ]
     snakemake_config = [
         f"--config num_cpus={num_cpus} map_file={args.mapping_file_path}",
         f"output_dir={outputs_dir_path} total_mem_gb={mem_gb} tmp_dir={tmp_dir}",
-        f"trim_filter={args.trim_filter} include_ted_files={args.include_ted_files} ted_file_name={pipeline_config.ted_file_name}",
+        f"trim_filter={args.trim_filter} include_ted_files={args.include_ted_files}",
+        f"ted_file_name={pipeline_config.ted_file_name}",
         f"biom_file_name={pipeline_config.biom_file_name}",
         f"decontaminate={args.decontaminate_db_path}",
         f"kr2confidence_host={args.kr2confidence_host}",

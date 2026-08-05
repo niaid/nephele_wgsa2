@@ -29,24 +29,33 @@ def get_num_threads_per_job(num_samples):
     default_threads_per_job = 16
     return min(max((num_cpus / num_samples), default_threads_per_job), num_cpus)
 
-def run_fastp_cmd():
-    # cmd = "fastp -i {input.f} -I {input.r} -o {output.f} -O {output.r} -h {output.s_l_html} -j {output.s_l_json} \
-    ## --trim_poly_x --average_qual 10 --length_required 60 --cut_window_size 4 --thread {threads} \
-    ## --low_complexity_filter --correction --cut_front --cut_front_mean_quality 20 --cut_tail  \
-    ## --cut_tail_mean_quality 15"
-    # return cmd
 
+def run_fastp_cmd():
     average_qual, length_required, cut_front_mean_quality, cut_tail_mean_quality = 10, 60, 20, 15
-    base_cmd = "fastp -i {input.f} -I {input.r} -o {output.f} -O {output.r} -h {output.s_l_html} -j {output.s_l_json} \
-                --trim_poly_x --cut_window_size 4 --thread {threads} --low_complexity_filter --correction"
+
+    base_cmd = (
+        "fastp -i {input.f} -I {input.r} "
+        "-o {params.f} -O {params.r} "
+        "-h {output.html} -j {params.json} "
+        "--trim_poly_x --cut_window_size 4 --thread {threads} "
+        "--low_complexity_filter --correction"
+    )
+
     if config["trim_filter"]:
         average_qual = config["average_read_quality"]
         length_required = config["min_read_length"]
         cut_front_mean_quality = config["trim_of_5"]
         cut_tail_mean_quality = config["trim_of_3"]
-    trim_filter = f"--average_qual {average_qual} --length_required {length_required} --cut_front \
-                    --cut_front_mean_quality {cut_front_mean_quality} --cut_tail  --cut_tail_mean_quality {cut_tail_mean_quality}"
-    return base_cmd + " " + trim_filter + " 2>> {params.s_l_text}"        ### moved to params for log-capture <--##
+
+    trim_filter = (
+        f"--average_qual {average_qual} "
+        f"--length_required {length_required} "
+        f"--cut_front --cut_front_mean_quality {cut_front_mean_quality} "
+        f"--cut_tail --cut_tail_mean_quality {cut_tail_mean_quality}"
+    )
+
+    return base_cmd + " " + trim_filter + " 2>> {output.text}"
+
 
 
 def asmb_pass(wc):
@@ -113,12 +122,12 @@ def clean_output():
     asm_bt2 =" ".join(expand(TMP_SAMPLE_DIR + "*.bt2" , sample=samples))
     asm_done=" ".join(expand(ASMB_OUT_SAMPLE_DIR + "*.done", sample=samples))
     qc_plots_done=" ".join(expand(QC_PLOTS + "*.done", sample=samples))
-    kraken2_clf_klogs=TED_READS_TAX_KLOGS
+    
 
     command = f"""
     set +o pipefail
     echo "Cleaning output..."
-    rm -rf {asm_bt2} {asm_done} {qc_plots_done} {kraken2_clf_klogs} 
+    rm -rf {asm_bt2} {asm_done} {qc_plots_done}
     """ 
     return command
 
@@ -185,19 +194,3 @@ def fwd_outputs():
     done
     """
     return command
-
-# def handle_fwdDIR():
-#     if config["tar_asmb_files"]:
-#         FWD_DIR= "asmb_files/"
-#         ASMB_FILE_NAME=config["output_dir"] + "/" + "asmb_files"
-#         TAR_NAME="WGSA2plus_asmbFiles.tar"
-# 
-#         command = f"""
-#         tar -cf {TAR_NAME} -C {FWD_DIR} {ASMB_FILE_NAME}
-#         """
-#     else:
-#         command = f"""
-#         ### rm -rf {ASMB_FILE_NAME}
-#         echo "asmb_files are included in output"
-#         """
-#     return command

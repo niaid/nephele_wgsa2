@@ -8,8 +8,8 @@ include: "/pipeline/utils.smk"
 log_path = snakemake.logger.logfile
 outputs_dir = Path(config["output_dir"])
 
-TMP_DIR=config["tmp_dir"]
-TMP_SAMPLE_DIR = TMP_DIR + "/{sample}"
+TMP_DIR=config["tmp_dir"] + "/"
+TMP_SAMPLE_DIR = TMP_DIR + "{sample}"
 TED_READS = config["output_dir"] + ("/TEDreads_mtx/" if config["denovo_mtx"] else "/TEDreads_mgx/")
 TAX_PROFILES = config["output_dir"] + "/TAXprofiles/"
 DBNAME = config["classification_db_name"]
@@ -63,24 +63,20 @@ BIOM_FILE_MICROBIOMEDB = config["output_dir"] + "/" + config["biom_file_name"]
 BIOM_FILE_6C=TAXBIN + "MAG-based_Counts+TAX.biom"
 PWYBIOM = PWYDIR + "bioms/"
 TAXBIOM = TED_READS_TAX + "bioms/"
-TED_READS_TAX_KLOGS = TED_READS_TAX + "klogs/"
 
 # samples = read_mapping_file()
 samples = config["samples"]
 threads_per_job = get_num_threads_per_job(len(samples))
 
 pipeline_output = [
-    TED_READS_TAX + "TAXplots_readsTAX_" + DBNAME +".html",
+    TAXPLOTS,     PWYPLOTS,
     expand(ASMB_OUT_SAMPLE_FILE + "_asmbDepths.txt" , sample=samples),
     expand(ASMB_OUT_SAMPLE_FILE + "_asmbCovr.txt"   , sample=samples),
     expand(PREGENES_PREFIX      + "_stats.txt"      , sample=samples),
-    PWYPLOTS,
-    expand(PWYBIOM + "{sample}_json.biom", sample=samples),
-    expand(TAXBIOM + "{sample}_json.biom", sample=samples),
-    expand(ANNOTATS + "annots.ko.faa", sample=samples),
-    expand(ANNOTATS + "annots.ko.fna", sample=samples),
-    expand(ANNOTATS + "annots.ec.faa", sample=samples),
-    expand(ANNOTATS + "annots.ec.fna", sample=samples),
+    expand(PWYBIOM  + "{sample}_json.biom", sample=samples),
+    expand(TAXBIOM  + "{sample}_json.biom", sample=samples),
+    expand(ANNOTATS + "{sample}_annots.ko.faa", sample=samples),
+    expand(ANNOTATS + "{sample}_annots.ec.fna", sample=samples),
     expand(ANNOTATS + "{sample}_geneTPMtab.ec.txt", sample=samples),
     expand(ANNOTATS + "{sample}_geneTPMtab.ko.txt", sample=samples),
 ]
@@ -143,6 +139,11 @@ if len(samples) > 1:
         TAX_DIVERSITY_PLOTS + "TAX_diversity_plotsR.log.txt"
     ])
 
+rule all:
+    input:
+        pipeline_output,
+
+
 onstart:
     shell(
     """
@@ -170,67 +171,70 @@ onstart:
     """)
 
 
-rule all:
-    input:
-        pipeline_output,
+
+#### ------------ starting main pipeline -----------------
+
 
 # Step 2 starts
 rule run_fastp:
+    threads: threads_per_job
     input:
         unpack(get_fastq_gz)
-    threads: threads_per_job
-    output:
-        f=temp(TED_READS_FQS + "{sample}_R1_te.fastq.gz"),
-        r=temp(TED_READS_FQS + "{sample}_R2_te.fastq.gz"),
-        s_l_html=TED_READS + "{sample}_fastplog.html",
-        s_l_json=temp(TED_READS + "{sample}_fastp.json"),
     params:
-        s_l_text=TED_READS + "{sample}_fastplog.txt"
+        f=TMP_DIR + "{sample}_R1_te.fastq.gz",
+        r=TMP_DIR + "{sample}_R2_te.fastq.gz",
+        tmpdir=TMP_DIR,
+        json=TMP_DIR   + "{sample}_fastp.json",
+    output:
+        text=TED_READS + "{sample}_fastplog.txt",
+        html=TED_READS + "{sample}_fastplog.html",
     run:
         shell(run_fastp_cmd())
+    # other ways:
+    # shell("mkdir -p {params.tmpdir} && " + run_fastp_cmd())
+    # shell:"""
+    #     mkdir -p {params.tmpdir} && {params.cmd}
+    # or "mkdir -p {params.tmpdir} &&" + run_fastp_cmd() 
 
 
 rule run_kraken2_decontaminate:
     resources:
         mem_gb=config["total_mem_gb"]
     input:
-        f=rules.run_fastp.output.f,
-        r=rules.run_fastp.output.r
+        h=ancient(rules.run_fastp.output.text),
     threads: threads_per_job
     params:
-        # Cannot put this in output because it will cause missing files. kraken2 requires to have the symbol # for output.
-        out=TED_READS_FQS + "{sample}_R#_ted.fastq",
+        f=rules.run_fastp.params.f,
+        r=rules.run_fastp.params.r,
         decontaminate=config["decontaminate"],
         kr2confd_host=config["kr2confidence_host"],
+        out=TMP_DIR + "{sample}_R#_ted.fastq",
+        fte=TMP_DIR + "{sample}_R_1_ted.fastq",
+        rte=TMP_DIR + "{sample}_R_2_ted.fastq",
     output:
-        unclassified_out1=temp(TED_READS_FQS + "{sample}_R_1_ted.fastq"),
-        unclassified_out2=temp(TED_READS_FQS + "{sample}_R_2_ted.fastq"),
-        # out=temp(TED_READS + "{sample}_kr2outLOG.txt"), ## ommits saving and deleting large file
-        report=TED_READS + "{sample}_kr2_contamREPORT.txt",
-        outlog=TED_READS + "{sample}_kr2_contamLOG.txt"
-    shell:
-        "kraken2 --use-names --gzip-compressed --threads {threads} "
-        "--confidence {params.kr2confd_host} --db {params.decontaminate} "
-        "--paired {input.f} {input.r} "
-        "--unclassified-out {params.out} "
-        "--output -  --report {output.report} 2>> {output.outlog}"
+        report=TED_READS     + "{sample}_kr2_contamREPORT.txt",
+        outlog=TED_READS     + "{sample}_kr2_contamLOG.txt",
+        fwdted=TED_READS_FQS + "{sample}_R1_ted.fastq.gz",
+        revted=TED_READS_FQS + "{sample}_R2_ted.fastq.gz"
+    shell:"""
+        ### touch {input.h}
+        kraken2 --use-names --gzip-compressed --threads {threads} \
+        --confidence {params.kr2confd_host} --db {params.decontaminate} \
+        --paired {params.f} {params.r} --unclassified-out {params.out} \
+        --output -  --report {output.report} 2>> {output.outlog}
+        
+        pigz -c {params.fte} -p {threads} > {output.fwdted} && \
+        pigz -c {params.rte} -p {threads} > {output.revted} 
+        """
 
-rule zip_decontaminated:                                     
-    input:
-        f=rules.run_kraken2_decontaminate.output.unclassified_out1,
-        r=rules.run_kraken2_decontaminate.output.unclassified_out2
-    output:
-        f=TED_READS_FQS + "{sample}_R1_ted.fastq.gz",
-        r=TED_READS_FQS + "{sample}_R2_ted.fastq.gz"
-    shell:
-        "pigz -c {input.f} > {output.f} &&"
-        "pigz -c {input.r} > {output.r}"
 
 
 rule remove_rRNA:
     input:
-        f=rules.run_kraken2_decontaminate.output.unclassified_out1,
-        r=rules.run_kraken2_decontaminate.output.unclassified_out2,
+        log=rules.run_kraken2_decontaminate.output.outlog,
+    params:
+        f=rules.run_kraken2_decontaminate.params.fte,
+        r=rules.run_kraken2_decontaminate.params.rte,
     output:
         fread_gz=TED_READS_FQS + "{sample}_R1_ted_mtx.fastq.gz",
         rread_gz=TED_READS_FQS + "{sample}_R2_ted_mtx.fastq.gz",
@@ -239,7 +243,7 @@ rule remove_rRNA:
         ali_log = TED_READS  + "{sample}_rna_filter_LOG.txt",
     shell:"""
         ribodetector_cpu -t {threads} -l 100 --chunk_size 3200 -e norrna \
-        -i {input.f} {input.r}  --log {params.ali_log} \
+        -i {params.f} {params.r}  --log {params.ali_log} \
         -o {output.fread_gz} {output.rread_gz} 
 
         sed -i 's/\\\x1b\[[0-9;]*m//g' {params.ali_log}
@@ -258,14 +262,13 @@ rule run_kraken2_classification:
     resources:
         mem_gb=config["total_mem_gb"]
     input:
-        f=lambda wildcards: rules.remove_rRNA.output.fread_gz if config["denovo_mtx"] else rules.zip_decontaminated.output.f,
-        r=lambda wildcards: rules.remove_rRNA.output.rread_gz if config["denovo_mtx"] else rules.zip_decontaminated.output.r
+        f=lambda wildcards: rules.remove_rRNA.output.fread_gz if config["denovo_mtx"] else rules.run_kraken2_decontaminate.output.fwdted,
+        r=lambda wildcards: rules.remove_rRNA.output.rread_gz if config["denovo_mtx"] else rules.run_kraken2_decontaminate.output.revted,
     threads: threads_per_job
     params:
         classification_db=config["classification_db"],
         kr2confd_taxon=config["kr2confidence_taxonomic"],
     output:
-        #out=temp(TED_READS_TAX_KLOGS + "{sample}_klog.txt"), ## omitting
         report=TED_READS_TAX + "reports/{sample}_taxREPORT.txt",
         outlog=TED_READS_TAX + "taxlogs/{sample}_classLOG.txt",
     shell:
@@ -281,7 +284,7 @@ rule kreport2krona_per_sample:
         sedRNK='s_\\tR[12]\\t(.*)(Viruses|Bacteria|Eukaryota|Archaea)_\\tD\\t\\1\\2_g',
         sedSTR='s/\\tUnclassified\\t\\t\\t\\t\\t\\t\\t0/\\tUnclassified\\tUnclassified\\tUnclassified\\tUnclassified\\tUnclassified\\tUnclassified\\tUnclassified\\t0/g' # more explicit
     output:
-        tmpfile=temp(TED_READS_TAX_KLOGS + "reports/tmp_{sample}.txt"),
+        tmpfile=temp(TED_READS_TAX + "reports/_tmp_{sample}.txt"),
         binfile=TED_READS_TAX + "bin/{sample}_wTAXid_4krona.txt"
     shell:
         "sed -E '{params.sedRNK}' {input.krfile} > {output.tmpfile} &&"
@@ -310,8 +313,8 @@ if config["read_norm"]:
         resources:
             mem_gb = lambda wildcards: int(config['total_mem_gb'] // 4)
         input:
-            Freads = lambda wildcards: rules.remove_rRNA.output.fread_gz if config["denovo_mtx"] else rules.zip_decontaminated.output.f,
-            Rreads = lambda wildcards: rules.remove_rRNA.output.rread_gz if config["denovo_mtx"] else rules.zip_decontaminated.output.r,
+            Freads = lambda wildcards: rules.remove_rRNA.output.fread_gz if config["denovo_mtx"] else rules.run_kraken2_decontaminate.output.fwdted,
+            Rreads = lambda wildcards: rules.remove_rRNA.output.rread_gz if config["denovo_mtx"] else rules.run_kraken2_decontaminate.output.revted,
         params:
             maxCov=config["readCoverage"],
             logfile=TED_READS + "{sample}_normLog.txt",
@@ -328,8 +331,8 @@ if config["read_norm"]:
 
 rule run_metaspades:
     input:
-        in1=lambda wildcards: (rules.norm_readDepth.output.normFread if config["read_norm"] else rules.zip_decontaminated.output.f),
-        in2=lambda wildcards: (rules.norm_readDepth.output.normRread if config["read_norm"] else rules.zip_decontaminated.output.r),
+        in1=lambda wildcards: (rules.norm_readDepth.output.normFread if config["read_norm"] else rules.run_kraken2_decontaminate.output.fwdted),
+        in2=lambda wildcards: (rules.norm_readDepth.output.normRread if config["read_norm"] else rules.run_kraken2_decontaminate.output.revted),
     resources:
         mem_gb=int(config['total_mem_gb'])
     params:
@@ -447,44 +450,33 @@ rule run_bbtools_stats: ## this rule _needs_ a file to expand
 
 
 # Step 5 starts
-rule bowtie2_build:
+rule run_bowtie2:
     input:
-        rules.run_bbtools_stats.output.finfasta
+        oristat=expand(rules.run_bbtools_stats.output.finstats, sample = samples ),
+        in1=lambda wildcards: rules.remove_rRNA.output.fread_gz if config["denovo_mtx"] else rules.run_kraken2_decontaminate.output.fwdted,
+        in2=lambda wildcards: rules.remove_rRNA.output.rread_gz if config["denovo_mtx"] else rules.run_kraken2_decontaminate.output.revted,
     params:
-        basename=TMP_SAMPLE_DIR + ".db",
+        DBname=TMP_SAMPLE_DIR + ".db",
+        finfasta=rules.run_bbtools_stats.output.finfasta,
+        finstats=rules.run_bbtools_stats.output.finstats, #  its both input and output
     threads: threads_per_job
     output:
-        temp(ASMB_OUT_SAMPLE_DIR + "_bowtie2_build.done") ## signals  completion, needs sampName
+        samfile=temp(TMP_SAMPLE_DIR + ".sam"),
+        bt2done=temp(ASMB_OUT_SAMPLE_DIR  + "_bt2run.done"), 
     shell:"""
-    bowtie2-build --quiet --threads {threads} {input} {params.basename} && touch {output}
+    bowtie2-build --quiet --threads {threads} {params.finfasta} {params.DBname}
+
+    bowtie2 --phred33 --sensitive-local --no-unal --seed 4 \
+        -1 {input.in1} -2 {input.in2} -x {params.DBname} \
+        -S {output.samfile} -p {threads} 2>> {params.finstats} && touch {output.bt2done}
     """
 
-
-rule bowtie2_run:
-    input:
-        in1=lambda wildcards: rules.remove_rRNA.output.fread_gz if config["denovo_mtx"] else rules.zip_decontaminated.output.f,
-        in2=lambda wildcards: rules.remove_rRNA.output.rread_gz if config["denovo_mtx"] else rules.zip_decontaminated.output.r,
-        req1=rules.bowtie2_build.output, # fake input so it can run after bt2_run for only passed samples
-        #req2=lambda wc: expand(TMP_DIR + "/asmb_pass/{sample}_bowtie2_build.pass", sample=asmb_pass(wc)), 
-    params:
-        index=TMP_SAMPLE_DIR + ".db",
-        in4=ancient(rules.run_bbtools_stats.output.finstats), # keep in params; its both input and output
-    threads: threads_per_job
-    output:
-        sam=temp(TMP_SAMPLE_DIR + ".sam")
-    shell:"""
-            bowtie2 --phred33 --sensitive-local --no-unal --seed 4 \
-            -1 {input.in1} -2 {input.in2} -x {params.index} \
-            -S {output.sam} -p {threads} 2>> {params.in4}
-    """        
-        # if grep -q "PASS::" {input.req} ; then
-        # else touch {output.sam}
-        # fi
  
 
-rule samtools_to_bam:
+rule sam_to_bam:
     input:
-        rules.bowtie2_run.output.sam,
+        samfile=rules.run_bowtie2.output.samfile,
+        bt2fin =rules.run_bowtie2.output.bt2done,
     params:
         collate_tmp=TMP_SAMPLE_DIR + "_collate",
         srtfixd_tmp=TMP_SAMPLE_DIR + "_srtfixd",
@@ -499,20 +491,19 @@ rule samtools_to_bam:
         final_bam=ASMB_OUT_SAMPLE_FILE + "_asmbFinal.bam",
         bam_index=ASMB_OUT_SAMPLE_FILE + "_asmbFinal.bam.bai",
     shell:
-        "samtools sort {input} -o {params.bam_initial} -@ {threads} -T {params.srtfixd_tmp} && "
+        "samtools sort {input.samfile} -o {params.bam_initial} -@ {threads} -T {params.srtfixd_tmp} && "
         "samtools collate {params.bam_initial} -o {params.bam_colated} -@ {threads} {params.collate_tmp} && "
         "samtools fixmate -m {params.bam_colated} {params.bam_fixmate} -@ {threads} && "
         "samtools sort {params.bam_fixmate} -o {params.bam_fixsrtd} -@ {threads} -T {params.srtfixd_tmp} && "
         "samtools markdup -r -s {params.bam_fixsrtd} -f {output.tmp_mrkdp} {output.final_bam} -@ {threads} -T {params.markdup_tmp} && "
         "samtools index -b {output.final_bam} -@ {threads}"
 
-
 rule add_derep_stats:
     input:
-        in1=rules.run_bbtools_stats.output.finstats,
-        in2=rules.samtools_to_bam.output.tmp_mrkdp,
+        in1=ancient(rules.run_bbtools_stats.output.finstats),
+        in2=rules.sam_to_bam.output.tmp_mrkdp,
     params:
-        stats_file=ASMB_OUT_SAMPLE_FILE + "_asmbStats.txt",
+        stats_file=ancient(ASMB_OUT_SAMPLE_FILE + "_asmbStats.txt"),
         tmp_out   =ASMB_OUT_SAMPLE_FILE + "_tmp_file.txt"
     output:
         # to signal this step is completed
@@ -521,11 +512,12 @@ rule add_derep_stats:
         "cat {input.in1} <(printf \"\\nRead alignment de-replication stats:\\n\") {input.in2} > {params.tmp_out} && "
         "mv {params.tmp_out} {params.stats_file} && touch {output}"
 
+
 rule scaffold_and_read_counts:
     resources:
         mem_gb=lambda wildcards: int(config['total_mem_gb'] // 4)
     input:
-        final_bam=rules.samtools_to_bam.output.final_bam
+        final_bam=rules.sam_to_bam.output.final_bam
     params:
         mem_gb = "-Xmx" + str(int(config['total_mem_gb'] // 4)) + "g"
     output:
@@ -546,6 +538,8 @@ rule scaffold_and_read_counts:
         "paste {output.tmp_readcnt} {output.tmp_scafcov} {output.tmp_basecov} | cut -f 1,2,3,8-14,17 -d $'\\t' > {output.tmp_scfcov1} && "
         "awk 'BEGIN{{FS=OFS=\"\\t\"}} NR>1 {{if ($2>0 && $3>0) $12=sprintf(\"%0.2f\", $3*1e3/$2); else $12=0; print}}'  {output.tmp_scfcov1} | "
         "sed -e '1s/^/#NODE\\tlen\\tReads\\t\%NodeCovered\\t\%bpCovered\\tplusReads\\tminusReads\\t\%GC\\tMedFold\\tstDev\\tAveDepth\\tRPK\\n/' > {output.out_scfCovr}"
+
+
 
 # Step 6 starts
 rule gene_prediction:
@@ -573,25 +567,20 @@ rule gff_to_gtf:
 rule run_verse:
     input:
         gtf=rules.gff_to_gtf.output,
-        final_bam=rules.samtools_to_bam.output.final_bam
+        final_bam=rules.sam_to_bam.output.final_bam
     threads: threads_per_job
     params:
-        basename=GENES + "verse"
+        basename=GENES + "verse",
+        versesum=GENES + "verse.CDS.summary.txt", ## was output.out1
     output:
-        out1=GENES + "verse.CDS.summary.txt",
-        out2=temp(GENES + "verse.CDS.txt")
-    shell:
-        "verse -a {input.gtf} -t 'CDS' -g gene_id -z 0 -s 0 "
-        "-o {params.basename} "
-        "{input.final_bam} -T 4"
+        out2=temp(GENES + "verse.CDS.txt"),
+        out3=PREGENES_PREFIX + "_stats.txt"
+    shell:"""
+        verse -a {input.gtf} -t 'CDS' -g gene_id -z 0 -s 0 \
+        -o {params.basename} {input.final_bam} -T 4
+        mv {params.versesum} {output.out3}
+        """
 
-rule rename_verse_summary:
-    input:
-        rules.run_verse.output.out1
-    output:
-        PREGENES_PREFIX + "_stats.txt"
-    shell:
-        "mv {input} {output}"
 
 rule tpm_normalization:
     input:
@@ -606,9 +595,375 @@ rule tpm_normalization:
     shell:
         "cut -f4,5,9 {input.gtf} | sed 's/gene_id //g' | gawk '{{print $3,$2-$1+1}}' | tr ' ' '\\t' | sed '1s/^/gene\\tlength\\n/' > {output.tmp_lens} && "
         "join {output.tmp_lens} {input.verse_cds} -t $'\\t' > {output.tmp_cnts} && "
-        "grep \"_\" {output.tmp_cnts}   | awk -v OFS=\"\\t\" '{{$4 = sprintf(\"%0.0f\", $3*150/$2)}}1' | sort | sed -e '1s/^/#name\\tlen\\treads\\tcov\\n/' > {output.tmp_cvrg} && "
-        "grep \"_\" {output.tmp_cvrg} | awk -v OFS=\"\\t\" '{{$5 = sprintf(\"%0.0f\", $3*1e3/$2)}}1' | sort | sed -e '1s/^/#name\\tlen\\treads\\tcov\\tRPK\\n/' > {output.tmp_rpk} && "
+        "grep \"_\" {output.tmp_cnts} | awk -v OFS=\"\\t\" '{{$4 = sprintf(\"%0.0f\", $3*150/$2)}}1' | sort | sed -e '1s/^/#name\\tlen\\treads\\tcov\\n/'       > {output.tmp_cvrg} && "
+        "grep \"_\" {output.tmp_cvrg} | awk -v OFS=\"\\t\" '{{$5 = sprintf(\"%0.0f\", $3*1e3/$2)}}1' | sort | sed -e '1s/^/#name\\tlen\\treads\\tcov\\tRPK\\n/' > {output.tmp_rpk}  && "
         "awk -v OFS=\"\\t\" 'NR==FNR{{sum+= $5; next}} FNR==1{{print $0,\"iTPM\"; next}} {{printf(\"%s %0.0f\\n\", $0,$5*1e6/sum)}}'  {output.tmp_rpk} {output.tmp_rpk} |sed -e 's/\\s/\\t/g' > {output.ABUNtab}  "
+
+
+
+# Step 7 starts
+rule gene_annotation:
+    resources:
+        mem_gb=config["total_mem_gb"] # make sure not run out of memory
+    input:
+        ancient(rules.gene_prediction.output.faa),
+    threads: threads_per_job
+    params:
+        egg_db=config["eggnog_db"],
+        out_dir=ANNOTATS,
+        tmp_dir=TMP_DIR,
+        blockSize=4,
+        idxChunks=2,
+        logfile=ANNOTATS + "emapperLOG.txt",
+        emapper_hits=ANNOTATS + "annots.emapper.hits",
+        emapper_seed=ANNOTATS + "annots.emapper.seed_orthologs",
+        emapper_anno=ANNOTATS + "annots.emapper.annotations"
+    output:
+        ec=ANNOTATS + "{sample}_annots.ec.txt",
+        ko=ANNOTATS + "{sample}_annots.ko.txt",
+        gg=ANNOTATS + "{sample}_annots.KEGGmap.txt"
+    shell:"""
+        time emapper.py -i {input} -o annots --output_dir {params.out_dir} --cpu {threads} \
+            --itype proteins --block_size {params.blockSize} --index_chunks {params.idxChunks} --data_dir {params.egg_db}  \
+            --override --temp_dir {params.tmp_dir}  --scratch_dir {params.tmp_dir} --dbmem >> {params.logfile} 2>&1
+
+        ## grep needed terms
+        grep -E \"NODE_|TRINITY_\" {params.emapper_anno} | cut -f 1,11 | sed -e 's/\\t-//g' | grep -e $'\\t' | \
+                awk '{{n=split($2,s,\",\");for (i=1;i<=n;i++) {{$2=s[i];print}}}}' | sed -e 's/\\s/\\t/g' > {output.ec} || true
+
+        grep -E \"NODE_|TRINITY_\" {params.emapper_anno} | cut -f1,12 | grep \"ko:\" | sed 's/ko://g' | \
+                awk '{{n=split($2,s,\",\");for (i=1;i<=n;i++) {{$2=s[i];print}}}}' | sed -e 's/\\s/\\t/g' > {output.ko} || true
+
+        grep -E \"NODE_|TRINITY_\" {params.emapper_anno} | cut -f1,13 | grep \"ko\" | sed 's/,map.*//g' | sed 's/ko/map/g' | \
+                awk '{{n=split($2,s,\",\");for (i=1;i<=n;i++) {{$2=s[i];print}}}}' | sed -e 's/\\s/\\t/g' > {output.gg} || true
+         """
+
+
+rule gene_annot_seqExtract:
+    input: 
+        faa=rules.gene_prediction.output.faa,
+        fna=rules.gene_prediction.output.fna,
+        kos=rules.gene_annotation.output.ko,
+        ecs=rules.gene_annotation.output.ec
+    output:
+        kofaa=ANNOTATS + "{sample}_annots.ko.faa",
+        kofna=ANNOTATS + "{sample}_annots.ko.fna",
+        ecfaa=ANNOTATS + "{sample}_annots.ec.faa",
+        ecfna=ANNOTATS + "{sample}_annots.ec.fna"
+    shell:
+        """
+        seqtk subseq {input.faa} {input.kos} > {output.kofaa}
+        seqtk subseq {input.fna} {input.kos} > {output.kofna}
+        seqtk subseq {input.faa} {input.ecs} > {output.ecfaa}
+        seqtk subseq {input.fna} {input.ecs} > {output.ecfna}
+        """
+    
+
+
+rule gene_annot_iTPMs:
+    input:
+        abufile=rules.tpm_normalization.output.ABUNtab, 
+        grp_kos=rules.gene_annotation.output.ko,
+        grp_ecs=rules.gene_annotation.output.ec
+    output:
+        abukos=ANNOTATS + "ANNOTgenes_ABUNtab.ko.txt",
+        abuecs=ANNOTATS + "ANNOTgenes_ABUNtab.ec.txt"
+    shell:"""
+        awk -v OFS=\"\\t\" 'NR==FNR {{ id[$1]=$0; next }} ($1 in id){{ print $2, id[$1]}}'  {input.abufile} {input.grp_kos} | \
+            sed '1s/^/#KO\\tnodeID\\tlen\\treads\\tcov\\tiRPK\\tiTPM\\n/' > {output.abukos}
+        awk -v OFS=\"\\t\" 'NR==FNR {{ id[$1]=$0; next }} ($1 in id){{ print $2, id[$1]}}'  {input.abufile} {input.grp_ecs} | \
+            sed '1s/^/#KO\\tnodeID\\tlen\\treads\\tcov\\tiRPK\\tiTPM\\n/' > {output.abuecs}        
+        """
+
+rule gene_annot_geneTPMs:
+    input:
+        abukos=rules.gene_annot_iTPMs.output.abukos,
+        abuecs=rules.gene_annot_iTPMs.output.abuecs
+    params:
+        awk_geneTPM_script=config["awk_geneTPM_script"],
+        awk_joinTPM_script=config["awk_joinTPM_script"],
+        KO_list=config["KO_listfile"],
+        EC_list=config["EC_listfile"]
+    output:
+        tmpko=temp(ANNOTATS + "_tmp_geneTPMtab.ko.txt"),
+        TPMko=ANNOTATS + "{sample}_geneTPMtab.ko.txt",
+        tmpec=temp(ANNOTATS + "_tmp_geneTPMtab.ec.txt"),
+        TPMec=ANNOTATS + "{sample}_geneTPMtab.ec.txt"
+    shell:"""
+        cut -f1,7 {input.abukos} | sed $'s/#KO.*//g' | awk -F'\\t' -f {params.awk_geneTPM_script} > {output.tmpko}
+        awk -F'\\t' -f {params.awk_joinTPM_script} {params.KO_list} {output.tmpko} | \
+        sed '1s/^/#KO\\tgeneTPM\\tgeneNAME\\n/'> {output.TPMko}
+
+        cut -f1,7 {input.abuecs} | sed $'s/#EC.*//g' | awk -F'\\t' -f {params.awk_geneTPM_script} > {output.tmpec}
+        awk -F'\\t' -f {params.awk_joinTPM_script} {params.EC_list} {output.tmpec} | \
+        sed '1s/^/#EC\\tgeneTPM\\tgeneNAME\\n/'> {output.TPMec}
+        """
+
+rule cp_geneTPM_files:
+    input: 
+        kos=expand(rules.gene_annot_geneTPMs.output.TPMko, sample=samples),
+        ecs=expand(rules.gene_annot_geneTPMs.output.TPMec, sample=samples)
+    output:
+        expand(GENEBIN + "{sample}_geneTPMtab." + ANNO_TYPE + ".txt", sample=samples)
+    params:
+        out_dir=GENEBIN
+    run:
+        if config["annotations_type"] == "ko":
+            shell("cp {input.kos} {params.out_dir}")
+        else:
+            shell("cp {input.ecs} {params.out_dir}")
+
+
+# Step 8 starts (pwy predictions)
+rule copy_annotation_file:
+    input:
+        ko=rules.gene_annotation.output.ko,
+        ec=rules.gene_annotation.output.ec,
+        ABUNtab=rules.tpm_normalization.output.ABUNtab
+    output:
+        tmp_ann=temp(PATHWAYS + "_tmp_annots.txt"),
+        tmp_TPM=temp(PATHWAYS + "_tmp_TPM.txt")
+    run:
+        if config["annotations_type"] == "ko":
+            shell("cp {input.ko} {output.tmp_ann} && cut -f 1,5 {input.ABUNtab} > {output.tmp_TPM}")
+        else:
+            shell("cp {input.ec} {output.tmp_ann} && cut -f 1,5 {input.ABUNtab} > {output.tmp_TPM}")
+
+rule run_min_path:
+    input:
+        ancient(rules.copy_annotation_file.output.tmp_ann),
+    params:
+        minpath_script=config["minpath_script"],
+        annotations_map=config["annotations_map"],
+        minpath_log=PATHWAYS_PREFIX + ".minpath.log.txt",
+        mps_file=PATHWAYS_PREFIX + ".mps",
+        minpath_mpt=PATHWAYS_PREFIX + "_tmp_missing_pathways.txt" ## where is this outputting?
+    output:
+        tmp_report=temp(PATHWAYS + "_tmp_report.txt"),
+        details=PATHWAYS_PREFIX + ".details.txt"
+    shell:"""
+        if [ -s {input} ]; then
+            python3 {params.minpath_script} -any {input} -map {params.annotations_map} -mps {params.mps_file} \
+                -report {output.tmp_report} -details {output.details} >> {params.minpath_log} || \
+                echo "--- No pathways found based on the available annotations" | \
+                tee -a {params.minpath_log} {output.details} > /dev/null && \
+                touch {output.tmp_report} ## needs to be empty
+            # rm {params.minpath_mpt}
+        else
+            echo "--- No annotations found to infer pathways" | \
+            tee -a {output.details} {params.minpath_log} > /dev/null && \
+            touch {output.tmp_report}
+        fi
+        """
+        ## tee -a appends the 3 files
+
+
+rule create_pathways_report:
+    input:
+        rules.run_min_path.output.tmp_report
+    output:
+        PATHWAYS_PREFIX + ".report.txt"
+    shell: """
+        if [ -s {input} ]; then
+            grep 'minpath\ 1' {input} > {output}
+        else
+            touch {output} ## needs to be empty
+        fi
+        """
+
+
+
+rule run_genes2krona:
+    input:
+        tmp_annots=rules.copy_annotation_file.output.tmp_ann,
+        tmp_TPM=rules.copy_annotation_file.output.tmp_TPM,
+        report=rules.create_pathways_report.output
+    params:
+        krona_script=config["genes2krona_script"],
+        annotations_map=config["annotations_map"],
+        annotations_hrr=config["annotations_hrr"]
+    output:
+        tmp_4kr=temp(PATHWAYS + "_tmp_4kr.txt"),
+        krona_out=PATHWAYS + "{sample}_4krona.txt",
+        krona_out_clone=PWYBIN + "{sample}_4krona.txt"
+    shell:
+        """
+        if [ -s {input.tmp_annots} -a -s {input.tmp_TPM} -a -s {input.report} ]; then
+            python3 {params.krona_script} -i {input.tmp_annots}\
+            -m {params.annotations_map} -H {params.annotations_hrr} -n {wildcards.sample} -c {input.tmp_TPM}\
+            -l {input.report} -o {output.tmp_4kr} &&\
+            sed '1s/^/#/' {output.tmp_4kr} > {output.krona_out} &&\
+            cp {output.krona_out} {output.krona_out_clone}
+        else
+            echo "One of the input file is empty, so run_genes2krona will not run. All output file(s) from this step are empty."
+            touch {output.tmp_4kr} {output.krona_out} {output.krona_out_clone}
+        fi
+        """
+
+rule krona_import_text:
+    input:
+        expand(rules.run_genes2krona.output.krona_out, sample=samples)
+    output:
+        PWYPLOTS
+    shell:
+        "ktImportText {input} -o {output}"
+
+
+# Step 9 starts
+if len(samples) > 1:
+    rule TAX_collation:
+        input:
+            expand(rules.kreport2krona_per_sample.output.binfile, sample=samples)
+        params:
+            bin_dir=TED_READS_TAX + "bin/",
+            gen_dir="NA",
+            string="_wTAXid_4krona.txt",
+            tax_table_merging_script=config["tax_table_merging_script"],
+            tmp_dir=config["tmp_dir"],
+            out_dir=TAX_MERGED_TABLES
+        output:
+            scclist=temp(TED_READS_TAX + "SccList.txt"),
+            out2=TAX_MERGED_TABLES + "merged_Counts+TAX.txt",
+            out4=TAX_MERGED_TABLES + "merged_Counts+Lineage.txt",
+            logR=TAX_MERGED_TABLES + "TAX_collationR.log.txt"
+        shell:
+            "find {params.bin_dir}/*_4krona.txt -type f -empty -delete && "
+            "ls -1 {params.bin_dir} | xargs basename -a -s {params.string} > {output.scclist} && "
+            "Rscript {params.tax_table_merging_script} --binDIR {params.bin_dir} --sccList {output.scclist} --outdir {params.out_dir} \
+                    --genesDIR {params.gen_dir} >{output.logR} 2>&1 "
+
+    rule PWY_collation:
+        input:
+            pwyfiles=lambda wildcards: expand(rules.run_genes2krona.output.krona_out_clone, sample=samples), 
+            gnefiles=lambda wildcards: expand(rules.cp_geneTPM_files.output, sample=samples) 
+        params:
+            bin_dir=PWYBIN,
+            gen_dir=GENEBIN,
+            string="_4krona.txt", 
+            pwy_table_merging_script=config["pwy_table_merging_script"],
+            tmp_dir=config["tmp_dir"],
+            out_dir=PWY_MERGED_TABLES
+        output:
+            scclist=temp(PWYDIR + "SccList.txt"),
+            out2=PWY_MERGED_TABLES + "merged_Counts+PWY.txt",
+            out4=PWY_MERGED_TABLES + "merged_Counts+allTiers.txt",
+            out7=PWY_MERGED_TABLES + "merged_geneTPMtable.txt",
+            logR=PWY_MERGED_TABLES + "PWY_collationR.log.txt"
+        shell:
+            "find {params.bin_dir}/*.txt -type f -empty -delete && "
+            "find {params.gen_dir}/*.txt -type f -empty -delete && "
+            "ls -1 {params.bin_dir} | xargs basename -a -s {params.string} > {output.scclist} && head {output.scclist} &&"
+            "Rscript {params.pwy_table_merging_script} --binDIR {params.bin_dir} --sccList {output.scclist} --outdir {params.out_dir} \
+                        --genesDIR {params.gen_dir} >{output.logR} 2>&1 "
+    
+
+# step 10
+rule tax_biom_per_sample: 
+    input:
+        rules.kreport2krona_per_sample.output.binfile
+    params:
+        tabtype="OTU table"
+    output:
+        txt=temp(TAXBIOM + "{sample}_4biom.txt"),
+        biom=TAXBIOM + "{sample}_json.biom"
+    shell:
+        "sed 's/\\t/;/g' {input} | sed 's/;/\\t/1' | nl -n ln |sed '1s/^/\\t/' | sed '1s/1\\s\\+\\t#/\\t/' | sed 's/\\s\\+\\t/\\t/g' | sed '1s/LINEAGE/taxonomy/' | sed -e '1s/Level.*/taxonomy/' > {output.txt} && "
+        "biom convert -i {output.txt} -o {output.biom} --to-json --table-type='{params.tabtype}' --process-obs-metadata taxonomy"
+
+rule pwy_biom_per_sample:
+    input:
+        rules.run_genes2krona.output.krona_out_clone
+    params:
+        tabtype="Pathway table"
+    output:
+        txt=temp(PWYBIOM + "{sample}_4biom.txt"),
+        biom=PWYBIOM + "{sample}_json.biom"
+    shell:
+        """
+        if [ -s {input} ]; then
+            sed 's/\\t/;/g' {input} | sed 's/;/\\t/1' | nl -n ln |sed '1s/^/\\t/' | sed '1s/1\\s\\+\\t#/\\t/' | sed 's/\\s\\+\\t/\\t/g' | sed '1s/LINEAGE/taxonomy/' | sed -e '1s/Level.*/taxonomy/' > {output.txt}
+            biom convert -i {output.txt} -o {output.biom} --to-json --table-type='{params.tabtype}' --process-obs-metadata taxonomy || touch {output.biom}
+        else
+            echo "The input file {input} is empty, so pwy_biom_per_sample will not run. All output file(s) from this step are empty."
+            touch {output.txt} {output.biom}
+        fi
+        """
+
+if len(samples) > 1:
+    rule TAX_collation_biom:
+        input:
+            tax_collation=rules.TAX_collation.output.out4,
+            mapping_file=config["map_file"]
+        params:
+            tabtype="OTU table"
+        output:
+            biom=TAX_MERGED_TABLES + "merged_Counts+Lineage_json.biom",
+            tmp=temp(TAX_MERGED_TABLES + "_tmpbiom.txt")
+        shell:
+            "sed '1s/Lineage/taxonomy/' {input.tax_collation} > {output.tmp} && "
+            "biom convert -i {output.tmp} -m <(sed '1s/^/#/' {input.mapping_file}) -o {output.biom} --to-json "
+            " --table-type='{params.tabtype}' --process-obs-metadata taxonomy"
+    
+    rule PWY_collation_biom:
+        input:
+            pwy_collation=rules.PWY_collation.output.out4,
+            mapping_file=config["map_file"]
+        params:
+            tabtype="Pathway table"
+        output:
+            biom=PWY_MERGED_TABLES + "merged_Counts+allTiers_json.biom",
+            tmp=temp(PWY_MERGED_TABLES + "tmp_.txt")
+        shell:
+            "sed '1s/allTiers/taxonomy/' {input.pwy_collation} > {output.tmp} && "
+            "biom convert -i {output.tmp} -m <(sed '1s/^/#/' {input.mapping_file}) -o {output.biom} --to-json"
+            " --table-type='{params.tabtype}' --process-obs-metadata taxonomy"
+
+
+# Step 11 starts
+# Ignore if fail: "because those are statistics and whether they fail or not depend on the actual dataset, not on the performance of the pipeline"
+if len(samples) > 1:
+    rule TAX_diversity_plots:
+        input:
+            in1=rules.TAX_collation.output.out2,
+            mapping_file=config["map_file"]
+        params:
+            merged_tables_dir=TAX_MERGED_TABLES,
+            tax_diversity_plots_script=config["tax_diversity_plots_script"],
+            tmp_dir=TMP_DIR,
+            out_dir=TAX_DIVERSITY_PLOTS,
+            tmp_mapping_file=TAX_DIVERSITY_PLOTS + "tp_mapping_file.txt", ## if output temp() takes forever to remove
+        output:
+            logR=TAX_DIVERSITY_PLOTS + "TAX_diversity_plotsR.log.txt",
+        shell: """
+            sed '1s/^#//' {input.mapping_file} > {params.tmp_mapping_file}
+            Rscript {params.tax_diversity_plots_script} --wdir {params.tmp_dir} --indir {params.merged_tables_dir} \
+                --mfile {params.tmp_mapping_file} --outdir {params.out_dir} >{output.logR} 2>&1 || \
+             echo "Failed to generate TAX_diversity_plots" >> {output.logR} 2>&1 
+            touch {output.logR} && rm {params.tmp_mapping_file}
+            """
+  
+    rule PWY_diversity_plots:
+        input:
+            in1=rules.PWY_collation.output.out2,
+            mapping_file=config["map_file"]
+        params:
+            merged_tables_dir=PWY_MERGED_TABLES,
+            pwy_diversity_plots_script=config["pwy_diversity_plots_script"],
+            tmp_dir=TMP_DIR,
+            out_dir=PWY_DIVERSITY_PLOTS,
+            tmp_mapping_file=PWY_DIVERSITY_PLOTS + "tmp_mapping_file.txt", ## if output temp() takes forever to remove
+        output:
+            logR=PWY_DIVERSITY_PLOTS + "PWY_diversity_plotsR.log.txt"
+        shell: """
+            sed 's/^#//g' {input.mapping_file} > {params.tmp_mapping_file}
+            Rscript {params.pwy_diversity_plots_script} --wdir {params.tmp_dir} --indir {params.merged_tables_dir} \
+                    --mfile {params.tmp_mapping_file} --outdir {params.out_dir} >{output.logR}  2>&1 || \
+                    echo "Failed to generate PWY_diversity_plots" >>{output.logR}  2>&1 
+            touch {output.logR} && rm {params.tmp_mapping_file}
+            """
+
+### ----------- main done ----------------
+### ----------- elective steps -----------
 
 # Step 6A starts
 if config["tax_genes"]:
@@ -683,8 +1038,8 @@ if config["tax_scaffolds"]:
         resources:
             mem_gb=config["total_mem_gb"]
         input:
-            finfas=rules.run_bbtools_stats.output.out1,
-            require=expand(rules.scaffold_and_read_counts.output.scafCoverage, sample=samples), ##processing organization
+            finfas=rules.run_bbtools_stats.output.finfasta,
+            require=expand(rules.scaffold_and_read_counts.output.out_scfCovr, sample=samples), ##processing organization
         threads: threads_per_job
         params:
             classification_db=config["classification_db"],
@@ -700,7 +1055,7 @@ if config["tax_scaffolds"]:
     rule generate_scaftax:
         input:
             klog=rules.tax_classification_scaffolds.output.klog,
-            scov=rules.scaffold_and_read_counts.output.scafCoverage
+            scov=rules.scaffold_and_read_counts.output.out_scfCovr
         output:
             scovtax=SCAFTAX_PREFIX + "_asmbCovr_wTAX.txt",
             tmp=temp(SCAFTAX_PREFIX + "_tmp_tax.txt")
@@ -736,8 +1091,8 @@ if config["tax_scaffolds"]:
 if config["mag"]:
     rule metabat2_run:
         input:
-            fasta=rules.run_bbtools_stats.output.out1,
-            depths=rules.scaffold_and_read_counts.output.depths
+            fasta=rules.run_bbtools_stats.output.finfasta,
+            depths=rules.scaffold_and_read_counts.output.out_depths
         threads: threads_per_job
         params:
             basename=MAG + "mag"
@@ -760,11 +1115,13 @@ if config["mag"]:
             out=MAG_QA
         output:
             MAG_QA + "lineage.ms"
+        log:
+            MAG_QA + "checkmLOG.txt"
         conda:
             "checkm"
         shell:
             "checkm lineage_wf --tab_table --nt --pplacer_threads {threads} "
-            "-t {threads} -x {params.ftype} {params.basename} {params.out}"
+            "-t {threads} -x {params.ftype} {params.basename} {params.out} > {log} 2>&1"
 
     rule checkm_qa:
         input:
@@ -784,7 +1141,7 @@ if config["mag"]:
     # Too much crap logs, using 2>/dev/null
     rule checkm_coverage:
         input:
-            bam=rules.samtools_to_bam.output.final_bam,
+            bam=rules.sam_to_bam.output.final_bam,
             require=rules.metabat2_run.output, # required files
             require2=rules.checkm_lineage_wf.output # requlred file
         params:
@@ -891,7 +1248,7 @@ if config["mag"]:
 
 # Step 6D
 # if config["find_args"]:
-#     rule run_amrfinder:
+#     rule amrfinder:
 #         input:
 #             rules.gene_prediction.output.faa
 #         threads: threads_per_job
@@ -928,7 +1285,6 @@ if config["find_args"]:
             rgi_raw =RGI_DIR + "RGI_raw.txt", 
             rgi_main=RGI_DIR + "RGI_main.txt",
             rgi_faas=RGI_DIR + "RGI_seqs.faa",
-
         shell:"""
             mkdir -p {params.outDIR}
 
@@ -964,381 +1320,14 @@ if config["find_args"]:
         shell:
             "python3 {params.argMRGscript} {params.asmb_all}"
 
-
-# Step 7 starts
-rule gene_annotation:
-    resources:
-        mem_gb=config["total_mem_gb"] # make sure not run out of memory
-    input:
-        rules.gene_prediction.output.faa
-    threads: threads_per_job
-    params:
-        eggnog_db=config["eggnog_db"],
-        out_dir=ANNOTATS,
-        tmp_dir=config["tmp_dir"],
-        logfile=ANNOTATS + "emapperLOG.txt",
-        blockSize=4,
-        idxChunks=2
-    output:
-        emapper_hits=ANNOTATS + "annots.emapper.hits",
-        emapper_seed_orthologs=ANNOTATS + "annots.emapper.seed_orthologs",
-        emapper_annotations=ANNOTATS + "annots.emapper.annotations"
-    shell:
-        "time emapper.py -i {input} -o annots --output_dir {params.out_dir} --cpu {threads} "
-        "--itype proteins --block_size {params.blockSize} --index_chunks {params.idxChunks} --data_dir {params.eggnog_db} "
-        "--override --temp_dir {params.tmp_dir}  --scratch_dir {params.tmp_dir} --dbmem >> {params.logfile} 2>&1"
-
-rule gene_annotation_grep:
-    input:
-        rules.gene_annotation.output.emapper_annotations
-    output:
-        ec=ANNOTATS + "annots.ec.txt",
-        cog=ANNOTATS + "annots.COG.txt",
-        ko=ANNOTATS + "annots.ko.txt",
-        keggmap=ANNOTATS + "annots.KEGGmap.txt"
-    shell:
-        """
-        grep -E \"NODE_|TRINITY_\" {input} | cut -f 1,11 | sed -e 's/\\t-//g' | grep -e $'\\t' | awk '{{n=split($2,s,\",\");for (i=1;i<=n;i++) {{$2=s[i];print}}}}' | sed -e 's/\\s/\\t/g' > {output.ec} || true
-        grep -E \"NODE_|TRINITY_\" {input} | cut -f 1,5 > {output.cog} || true
-        grep -E \"NODE_|TRINITY_\" {input} | cut -f1,12 | grep \"ko:\" | sed 's/ko://g' | awk '{{n=split($2,s,\",\");for (i=1;i<=n;i++) {{$2=s[i];print}}}}' | sed -e 's/\\s/\\t/g' > {output.ko} || true
-        grep -E \"NODE_|TRINITY_\" {input} | cut -f1,13 | grep \"ko\" | sed 's/,map.*//g' | sed 's/ko/map/g' | awk '{{n=split($2,s,\",\");for (i=1;i<=n;i++) {{$2=s[i];print}}}}' | sed -e 's/\\s/\\t/g' > {output.keggmap} || true
-        """
+#--------------- electives done ----------
  
-rule gene_annot_seqExtract:
-    input: 
-        faa=rules.gene_prediction.output.faa,
-        fna=rules.gene_prediction.output.fna,
-        kos=rules.gene_annotation_grep.output.ko,
-        ecs=rules.gene_annotation_grep.output.ec
-    output:
-        kofaa=ANNOTATS + "annots.ko.faa",
-        kofna=ANNOTATS + "annots.ko.fna",
-        ecfaa=ANNOTATS + "annots.ec.faa",
-        ecfna=ANNOTATS + "annots.ec.fna"
-    shell:
-        """
-        seqtk subseq {input.faa} {input.kos} > {output.kofaa}
-        seqtk subseq {input.fna} {input.kos} > {output.kofna}
-        seqtk subseq {input.faa} {input.ecs} > {output.ecfaa}
-        seqtk subseq {input.fna} {input.ecs} > {output.ecfna}
-        """
-rule gene_annot_iTPMs:
-    input:
-        abufile=rules.tpm_normalization.output.ABUNtab, 
-        grp_kos=rules.gene_annotation_grep.output.ko,
-        grp_ecs=rules.gene_annotation_grep.output.ec
-    output:
-        abukos=ANNOTATS + "ANNOTgenes_ABUNtab.ko.txt",
-        abuecs=ANNOTATS + "ANNOTgenes_ABUNtab.ec.txt"
-    shell:
-        """
-        awk -v OFS=\"\\t\" 'NR==FNR {{ id[$1]=$0; next }} ($1 in id){{ print $2, id[$1]}}'  {input.abufile} {input.grp_kos} | sed '1s/^/#KO\\tnodeID\\tlen\\treads\\tcov\\tiRPK\\tiTPM\\n/' > {output.abukos}
-        awk -v OFS=\"\\t\" 'NR==FNR {{ id[$1]=$0; next }} ($1 in id){{ print $2, id[$1]}}'  {input.abufile} {input.grp_ecs} | sed '1s/^/#KO\\tnodeID\\tlen\\treads\\tcov\\tiRPK\\tiTPM\\n/' > {output.abuecs}        
-        """
-
-rule gene_annot_geneTPMs:
-    input:
-        abukos=rules.gene_annot_iTPMs.output.abukos,
-        abuecs=rules.gene_annot_iTPMs.output.abuecs
-    params:
-        awk_geneTPM_script=config["awk_geneTPM_script"],
-        awk_joinTPM_script=config["awk_joinTPM_script"],
-        KO_list=config["KO_listfile"],
-        EC_list=config["EC_listfile"]
-    output:
-        tmpko=temp(ANNOTATS + "_tmp_geneTPMtab.ko.txt"),
-        TPMko=ANNOTATS + "{sample}_geneTPMtab.ko.txt",
-        tmpec=temp(ANNOTATS + "_tmp_geneTPMtab.ec.txt"),
-        TPMec=ANNOTATS + "{sample}_geneTPMtab.ec.txt"
-    shell:
-        """
-        cut -f1,7 {input.abukos} | sed $'s/#KO.*//g' | awk -F'\\t' -f {params.awk_geneTPM_script} > {output.tmpko}
-        awk -F'\\t' -f {params.awk_joinTPM_script} {params.KO_list} {output.tmpko} | \
-        sed '1s/^/#KO\\tgeneTPM\\tgeneNAME\\n/'> {output.TPMko}
-
-        cut -f1,7 {input.abuecs} | sed $'s/#EC.*//g' | awk -F'\\t' -f {params.awk_geneTPM_script} > {output.tmpec}
-        awk -F'\\t' -f {params.awk_joinTPM_script} {params.EC_list} {output.tmpec} | \
-        sed '1s/^/#EC\\tgeneTPM\\tgeneNAME\\n/'> {output.TPMec}
-        """
-
-rule cp_geneTPM_files:
-    input: 
-        kos=expand(rules.gene_annot_geneTPMs.output.TPMko, sample=samples),
-        ecs=expand(rules.gene_annot_geneTPMs.output.TPMec, sample=samples)
-    output:
-        expand(GENEBIN + "{sample}_geneTPMtab." + ANNO_TYPE + ".txt", sample=samples)
-        # if config["annotations_type"] == "ko":
-        #     expand(GENEBIN + "{sample}_geneTPMtab.ko.txt", sample=samples)
-        # else:
-        #     expand(GENEBIN + "{sample}_geneTPMtab.ec.txt", sample=samples) 
-    params:
-        out_dir=GENEBIN
-    run:
-        if config["annotations_type"] == "ko":
-            shell("cp {input.kos} {params.out_dir}")
-        else:
-            shell("cp {input.ecs} {params.out_dir}")
-
-
-# Step 8 starts
-rule copy_annotation_file:
-    input:
-        ko=rules.gene_annotation_grep.output.ko,
-        ec=rules.gene_annotation_grep.output.ec,
-        ABUNtab=rules.tpm_normalization.output.ABUNtab
-    output:
-        tmp_annots=temp(PATHWAYS + "_tmp_annots.txt"),
-        tmp_TPM=temp(PATHWAYS + "_tmp_TPM.txt")
-    run:
-        if config["annotations_type"] == "ko":
-            shell("cp {input.ko} {output.tmp_annots} && cut -f 1,5 {input.ABUNtab} > {output.tmp_TPM}")
-        else:
-            shell("cp {input.ec} {output.tmp_annots} && cut -f 1,5 {input.ABUNtab} > {output.tmp_TPM}")
-
-rule run_min_path:
-    input:
-        rules.copy_annotation_file.output.tmp_annots
-    params:
-        minpath_script=config["minpath_script"],
-        annotations_map=config["annotations_map"],
-        minpath_log=PATHWAYS_PREFIX + ".minpath.log.txt",
-        mps_file=PATHWAYS_PREFIX + ".mps",
-        minpath_mpt=PATHWAYS_PREFIX + "missing_pathways.txt" ## where is this outputting?
-    output:
-        tmp_report=temp(PATHWAYS + "_tmp_report.txt"),
-        details=PATHWAYS_PREFIX + ".details.txt"
-    shell:
-        """
-        if [ -s {input} ]; then
-            python3 {params.minpath_script} -any {input} -map {params.annotations_map} -mps {params.mps_file} \
-                -report {output.tmp_report} -details {output.details} >> {params.minpath_log}
-            # rm {params.minpath_mpt}
-        else
-            echo "The input file {input} is empty, so run_min_path will not run. All output file(s) from this step are empty."
-            touch {output.tmp_report} {output.details} {params.minpath_log}
-        fi
-        """
-        # "python3 {params.minpath_script} -any {input} -map {params.annotations_map} "
-        # "-report {output.tmp_report} -details {output.details} >> {params.minpath_log}"
-
-rule create_pathways_report:
-    input:
-        rules.run_min_path.output.tmp_report
-    output:
-        PATHWAYS_PREFIX + ".report.txt"
-    shell:
-        """
-        if [ -s {input} ]; then
-            grep 'minpath\ 1' {input} > {output}
-        else
-            echo "The input file {input} is empty, so create_pathways_report will not run. All output file(s) from this step are empty."
-            touch {output}
-        fi
-        """
-        # "grep 'minpath\ 1' {input} > {output}"
-
-rule run_genes2krona:
-    input:
-        tmp_annots=rules.copy_annotation_file.output.tmp_annots,
-        tmp_TPM=rules.copy_annotation_file.output.tmp_TPM,
-        report=rules.create_pathways_report.output
-    params:
-        krona_script=config["genes2krona_script"],
-        annotations_map=config["annotations_map"],
-        annotations_hrr=config["annotations_hrr"]
-    output:
-        tmp_4kr=temp(PATHWAYS + "_tmp_4kr.txt"),
-        krona_out=PATHWAYS + "{sample}_4krona.txt",
-        krona_out_clone=PWYBIN + "{sample}_4krona.txt"
-    shell:
-        """
-        if [ -s {input.tmp_annots} -a -s {input.tmp_TPM} -a -s {input.report} ]; then
-            python3 {params.krona_script} -i {input.tmp_annots}\
-            -m {params.annotations_map} -H {params.annotations_hrr} -n {wildcards.sample} -c {input.tmp_TPM}\
-            -l {input.report} -o {output.tmp_4kr} &&\
-            sed '1s/^/#/' {output.tmp_4kr} > {output.krona_out} &&\
-            cp {output.krona_out} {output.krona_out_clone}
-        else
-            echo "One of the input file is empty, so run_genes2krona will not run. All output file(s) from this step are empty."
-            touch {output.tmp_4kr} {output.krona_out} {output.krona_out_clone}
-        fi
-        """
-
-rule krona_import_text:
-    input:
-        expand(rules.run_genes2krona.output.krona_out, sample=samples)
-    output:
-        PWYPLOTS
-    shell:
-        "ktImportText {input} -o {output}"
-
-
-# Step 9 starts
-if len(samples) > 1:
-    rule TAX_collation:
-        input:
-            expand(rules.kreport2krona_per_sample.output.binfile, sample=samples)
-        params:
-            bin_dir=TED_READS_TAX + "bin/",
-            gen_dir="NA",
-            string="_wTAXid_4krona.txt",
-            tax_table_merging_script=config["tax_table_merging_script"],
-            tmp_dir=config["tmp_dir"],
-            out_dir=TAX_MERGED_TABLES
-        output:
-            scclist=temp(TED_READS_TAX + "SccList.txt"),
-            ## out1=TAX_MERGED_TABLES + "merged_Counts+TAX+Lineage.txt",
-            out2=TAX_MERGED_TABLES + "merged_Counts+TAX.txt",
-            ## out3=TAX_MERGED_TABLES + "merged_Lineage.txt",
-            out4=TAX_MERGED_TABLES + "merged_Counts+Lineage.txt",
-            ## out5=TAX_MERGED_TABLES + "merged_Counts.txt",
-            ## out6=TAX_MERGED_TABLES + "merged_TAX.txt",
-            logR=TAX_MERGED_TABLES + "TAX_collationR.log.txt"
-        shell:
-            "find {params.bin_dir}/*_4krona.txt -type f -empty -delete && "
-            "ls -1 {params.bin_dir} | xargs basename -a -s {params.string} > {output.scclist} && "
-            "Rscript {params.tax_table_merging_script} --binDIR {params.bin_dir} --sccList {output.scclist} --outdir {params.out_dir} \
-                    --genesDIR {params.gen_dir} >{output.logR} 2>&1 "
-
-    rule PWY_collation:
-        input:
-            pwyfiles=lambda wildcards: expand(rules.run_genes2krona.output.krona_out_clone, sample=samples), # sample=get_passed_assembly(wildcards) ), #
-            gnefiles=lambda wildcards: expand(rules.cp_geneTPM_files.output, sample=samples) # sample=get_passed_assembly(wildcards) ),
-        params:
-            bin_dir=PWYBIN,
-            gen_dir=GENEBIN,
-            # string="_" + PWYLABEL,
-            string="_4krona.txt", 
-            pwy_table_merging_script=config["pwy_table_merging_script"],
-            tmp_dir=config["tmp_dir"],
-            out_dir=PWY_MERGED_TABLES
-        output:
-            scclist=temp(PWYDIR + "SccList.txt"),
-            ## out1=PWY_MERGED_TABLES + "merged_Counts+PWY+allTiers.txt",
-            out2=PWY_MERGED_TABLES + "merged_Counts+PWY.txt",
-            ## out3=PWY_MERGED_TABLES + "merged_allTiers.txt",
-            out4=PWY_MERGED_TABLES + "merged_Counts+allTiers.txt",
-            ## out5=PWY_MERGED_TABLES + "merged_Counts.txt",
-            ## out6=PWY_MERGED_TABLES + "merged_PWY.txt",
-            out7=PWY_MERGED_TABLES + "merged_geneTPMtable.txt",
-            logR=PWY_MERGED_TABLES + "PWY_collationR.log.txt"
-        shell:
-            "find {params.bin_dir}/*.txt -type f -empty -delete && "
-            "find {params.gen_dir}/*.txt -type f -empty -delete && "
-            "ls -1 {params.bin_dir} | xargs basename -a -s {params.string} > {output.scclist} && head {output.scclist} &&"
-            "Rscript {params.pwy_table_merging_script} --binDIR {params.bin_dir} --sccList {output.scclist} --outdir {params.out_dir} \
-                        --genesDIR {params.gen_dir} >{output.logR} 2>&1 "
-    
-
-# step 10
-rule tax_biom_per_sample: 
-    input:
-        rules.kreport2krona_per_sample.output.binfile
-    params:
-        tabtype="OTU table"
-    output:
-        txt=temp(TAXBIOM + "{sample}_4biom.txt"),
-        biom=TAXBIOM + "{sample}_json.biom"
-    shell:
-        "sed 's/\\t/;/g' {input} | sed 's/;/\\t/1' | nl -n ln |sed '1s/^/\\t/' | sed '1s/1\\s\\+\\t#/\\t/' | sed 's/\\s\\+\\t/\\t/g' | sed '1s/LINEAGE/taxonomy/' | sed -e '1s/Level.*/taxonomy/' > {output.txt} && "
-        "biom convert -i {output.txt} -o {output.biom} --to-json --table-type='{params.tabtype}' --process-obs-metadata taxonomy"
-
-rule pwy_biom_per_sample:
-    input:
-        rules.run_genes2krona.output.krona_out_clone
-    params:
-        tabtype="Pathway table"
-    output:
-        txt=temp(PWYBIOM + "{sample}_4biom.txt"),
-        biom=PWYBIOM + "{sample}_json.biom"
-    shell:
-        """
-        if [ -s {input} ]; then
-            sed 's/\\t/;/g' {input} | sed 's/;/\\t/1' | nl -n ln |sed '1s/^/\\t/' | sed '1s/1\\s\\+\\t#/\\t/' | sed 's/\\s\\+\\t/\\t/g' | sed '1s/LINEAGE/taxonomy/' | sed -e '1s/Level.*/taxonomy/' > {output.txt}
-            biom convert -i {output.txt} -o {output.biom} --to-json --table-type='{params.tabtype}' --process-obs-metadata taxonomy || touch {output.biom}
-        else
-            echo "The input file {input} is empty, so pwy_biom_per_sample will not run. All output file(s) from this step are empty."
-            touch {output.txt} {output.biom}
-        fi
-        """
-
-if len(samples) > 1:
-    rule TAX_collation_biom:
-        input:
-            tax_collation=rules.TAX_collation.output.out4,
-            mapping_file=config["map_file"]
-        params:
-            tabtype="OTU table"
-        output:
-            biom=TAX_MERGED_TABLES + "merged_Counts+Lineage_json.biom",
-            tmp=temp(TAX_MERGED_TABLES + "tmp_.txt")
-        shell:
-            "sed '1s/Lineage/taxonomy/' {input.tax_collation} > {output.tmp} && "
-            "biom convert -i {output.tmp} -m <(sed '1s/^/#/' {input.mapping_file}) -o {output.biom} --to-json --table-type='{params.tabtype}' --process-obs-metadata taxonomy"
-    
-    rule PWY_collation_biom:
-        input:
-            pwy_collation=rules.PWY_collation.output.out4,
-            mapping_file=config["map_file"]
-        params:
-            tabtype="Pathway table"
-        output:
-            biom=PWY_MERGED_TABLES + "merged_Counts+allTiers_json.biom",
-            tmp=temp(PWY_MERGED_TABLES + "tmp_.txt")
-        shell:
-            "sed '1s/allTiers/taxonomy/' {input.pwy_collation} > {output.tmp} && "
-            "biom convert -i {output.tmp} -m <(sed '1s/^/#/' {input.mapping_file}) -o {output.biom} --to-json --table-type='{params.tabtype}' --process-obs-metadata taxonomy"
-
-
-# Step 11 starts
-# Ignore if fail: "because those are statistics and whether they fail or not depend on the actual dataset, not on the performance of the pipeline"
-if len(samples) > 1:
-    rule TAX_diversity_plots:
-        input:
-            in1=rules.TAX_collation.output.out2,
-            mapping_file=config["map_file"]
-        params:
-            merged_tables_dir=TAX_MERGED_TABLES,
-            tax_diversity_plots_script=config["tax_diversity_plots_script"],
-            tmp_dir=TMP_DIR,
-            out_dir=TAX_DIVERSITY_PLOTS,
-            tmp_mapping_file=TAX_DIVERSITY_PLOTS + "tp_mapping_file.txt", ## if output temp() takes forever to remove
-        output:
-            logR=TAX_DIVERSITY_PLOTS + "TAX_diversity_plotsR.log.txt",
-        shell: """
-            sed '1s/^#//' {input.mapping_file} > {params.tmp_mapping_file}
-            Rscript {params.tax_diversity_plots_script} --wdir {params.tmp_dir} --indir {params.merged_tables_dir} \
-                --mfile {params.tmp_mapping_file} --outdir {params.out_dir} >{output.logR} 2>&1 || \
-             echo "Failed to generate TAX_diversity_plots" >> {output.logR} 2>&1 
-            touch {output.logR} && rm {params.tmp_mapping_file}
-            """
-  
-    rule PWY_diversity_plots:
-        input:
-            in1=rules.PWY_collation.output.out2,
-            mapping_file=config["map_file"]
-        params:
-            merged_tables_dir=PWY_MERGED_TABLES,
-            pwy_diversity_plots_script=config["pwy_diversity_plots_script"],
-            tmp_dir=TMP_DIR,
-            out_dir=PWY_DIVERSITY_PLOTS,
-            tmp_mapping_file=PWY_DIVERSITY_PLOTS + "tmp_mapping_file.txt", ## if output temp() takes forever to remove
-        output:
-            logR=PWY_DIVERSITY_PLOTS + "PWY_diversity_plotsR.log.txt"
-        shell: """
-            sed 's/^#//g' {input.mapping_file} > {params.tmp_mapping_file}
-            Rscript {params.pwy_diversity_plots_script} --wdir {params.tmp_dir} --indir {params.merged_tables_dir} \
-                    --mfile {params.tmp_mapping_file} --outdir {params.out_dir} >{output.logR}  2>&1 || \
-                    echo "Failed to generate PWY_diversity_plots" >>{output.logR}  2>&1 
-            touch {output.logR} && rm {params.tmp_mapping_file}
-            """
- 
-import subprocess
-onsuccess:
-    shell(clean_output() + handle_TED() + handle_cp_biom() ) 
-    subprocess.run(fwd_outputs(), shell = True ) ## for DiscoVIR and MAGs pipeline
-    #shell("cp {log_path} {outputs_dir}/.snakemake.log")
-onerror:
-    shell(clean_output() + handle_TED() + handle_cp_biom())
-    subprocess.run(fwd_outputs(), shell = True ) ## for DiscoVIR and MAGs pipeline
-    #shell("cp {log_path} {outputs_dir}/.snakemake.log")
+# import subprocess
+# onsuccess:
+#     shell(clean_output() + handle_TED() + handle_cp_biom() ) 
+#     subprocess.run(fwd_outputs(), shell = True ) ## for DiscoVIR and MAGs pipeline
+#     #shell("cp {log_path} {outputs_dir}/.snakemake.log")
+# onerror:
+#     shell(clean_output() + handle_TED() + handle_cp_biom())
+#     subprocess.run(fwd_outputs(), shell = True ) ## for DiscoVIR and MAGs pipeline
+#     #shell("cp {log_path} {outputs_dir}/.snakemake.log")
