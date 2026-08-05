@@ -218,7 +218,7 @@ rule run_kraken2_decontaminate:
         revted=TED_READS_FQS + "{sample}_R2_ted.fastq.gz"
     shell:"""
         ### touch {input.h}
-        kraken2 --use-names --gzip-compressed --threads {threads} \
+        # kraken2 --use-names --gzip-compressed --threads {threads} \
         --confidence {params.kr2confd_host} --db {params.decontaminate} \
         --paired {params.f} {params.r} --unclassified-out {params.out} \
         --output -  --report {output.report} 2>> {output.outlog}
@@ -912,7 +912,7 @@ if len(samples) > 1:
             tabtype="Pathway table"
         output:
             biom=PWY_MERGED_TABLES + "merged_Counts+allTiers_json.biom",
-            tmp=temp(PWY_MERGED_TABLES + "tmp_.txt")
+            tmp=temp(PWY_MERGED_TABLES + "_tmpbiom.txt")
         shell:
             "sed '1s/allTiers/taxonomy/' {input.pwy_collation} > {output.tmp} && "
             "biom convert -i {output.tmp} -m <(sed '1s/^/#/' {input.mapping_file}) -o {output.biom} --to-json"
