@@ -189,7 +189,7 @@ rule run_fastp:
         text=TED_READS + "{sample}_fastplog.txt",
         html=TED_READS + "{sample}_fastplog.html",
     run:
-        shell(run_fastp_cmd())
+        shell("mkdir -p {params.tmpdir} && " + run_fastp_cmd())
     # other ways:
     # shell("mkdir -p {params.tmpdir} && " + run_fastp_cmd())
     # shell:"""
@@ -218,7 +218,7 @@ rule run_kraken2_decontaminate:
         revted=TED_READS_FQS + "{sample}_R2_ted.fastq.gz"
     shell:"""
         ### touch {input.h}
-        # kraken2 --use-names --gzip-compressed --threads {threads} \
+        kraken2 --use-names --gzip-compressed --threads {threads} \
         --confidence {params.kr2confd_host} --db {params.decontaminate} \
         --paired {params.f} {params.r} --unclassified-out {params.out} \
         --output -  --report {output.report} 2>> {output.outlog}
@@ -235,12 +235,11 @@ rule remove_rRNA:
     params:
         f=rules.run_kraken2_decontaminate.params.fte,
         r=rules.run_kraken2_decontaminate.params.rte,
+        ali_log = TED_READS  + "{sample}_rna_filter_LOG.txt",
     output:
         fread_gz=TED_READS_FQS + "{sample}_R1_ted_mtx.fastq.gz",
         rread_gz=TED_READS_FQS + "{sample}_R2_ted_mtx.fastq.gz",
     threads: threads_per_job
-    params:
-        ali_log = TED_READS  + "{sample}_rna_filter_LOG.txt",
     shell:"""
         ribodetector_cpu -t {threads} -l 100 --chunk_size 3200 -e norrna \
         -i {params.f} {params.r}  --log {params.ali_log} \
@@ -389,8 +388,8 @@ rule run_trinity:
         r=lambda wildcards: (rules.norm_readDepth.output.normRread if config["read_norm"] else rules.remove_rRNA.output.rread_gz),
     threads: config["num_cpus"]  ##threads_per_job
     params:
-        tmpDir=temp(TMP_SAMPLE_DIR + "_asmb/"),
-        fasout=temp(TMP_SAMPLE_DIR + "_asmb/") + "/trinity_{sample}.Trinity.fasta",
+        tmpDir=TMP_SAMPLE_DIR + "trinity_asmb/",
+        fasout=TMP_SAMPLE_DIR + "trinity_asmb.Trinity.fasta",
         memrGb=str(config['total_mem_gb'] // 3) + "G",
         threads = lambda wildcards: int(threads_per_job - 4),
         bfly_CPU=2,
