@@ -85,7 +85,7 @@ pipeline_output = [
 ## Output for main pipeline options
 if config["denovo_mtx"]:
     pipeline_output.extend([
-        expand(TED_READS_FQS + "{sample}_R1_ted_mtx.fastq.gz", sample=samples)
+        expand(TED_READS_FQS + "{sample}_R1_tedr.fastq.gz", sample=samples)
         ])
 
 # Merging binned files from all samples into 1 collated table only run when users provide at least 2 samples
@@ -220,41 +220,15 @@ rule run_kraken2_decontaminate:
         """
 
 
-
-rule remove_rRNA:
-    input:
-        log=rules.run_kraken2_decontaminate.output.outlog,
-    params:
-        f=rules.run_kraken2_decontaminate.params.fte,
-        r=rules.run_kraken2_decontaminate.params.rte,
-        ali_log = TED_READS  + "{sample}_rna_filter_LOG.txt",
-    output:
-        fread_gz=TED_READS_FQS + "{sample}_R1_ted_mtx.fastq.gz",
-        rread_gz=TED_READS_FQS + "{sample}_R2_ted_mtx.fastq.gz",
-    threads: threads_per_job
-    shell:"""
-        ribodetector_cpu -t {threads} -l 100 --chunk_size 3200 -e norrna \
-        -i {params.f} {params.r}  --log {params.ali_log} \
-        -o {output.fread_gz} {output.rread_gz} 
-
-        sed -i 's/\\\x1b\[[0-9;]*m//g' {params.ali_log}
-
-        line_count=$(pigz -dc -p {threads} {output.fread_gz} | wc -l )
-        if [ "$line_count" -lt 400 ]; then
-            echo "ERROR: Fewer than 100 reads remain after rRNA filtering for {wildcards.sample}, and reads are unlikely to assemble. 
-            If this dataset is 16S rRNA amplicon reads, consider using our DADA2 or QIIME pipelines."
-            exit
-        fi
-        """
-
-
 # Step 3 starts
 rule run_kraken2_classification:
     resources:
         mem_gb=config["total_mem_gb"]
     input:
-        f=lambda wildcards: rules.remove_rRNA.output.fread_gz if config["denovo_mtx"] else rules.run_kraken2_decontaminate.output.fwdted,
-        r=lambda wildcards: rules.remove_rRNA.output.rread_gz if config["denovo_mtx"] else rules.run_kraken2_decontaminate.output.revted,
+        f=lambda wildcards: ancient(rules.remove_rRNA.output.fread_gz) if config["denovo_mtx"] else 
+                            ancient(rules.run_kraken2_decontaminate.output.fwdted),
+        r=lambda wildcards: ancient(rules.remove_rRNA.output.rread_gz) if config["denovo_mtx"] else 
+                            ancient(rules.run_kraken2_decontaminate.output.revted),
     threads: threads_per_job
     params:
         classification_db=config["classification_db"],
@@ -269,7 +243,7 @@ rule run_kraken2_classification:
 
 rule tax_kreport2krona_per_sample:
     input:
-        krfile=rules.run_kraken2_classification.output.report
+        krfile=ancient(rules.run_kraken2_classification.output.report)
     params:
         kreport2krona_script=config["kreport2krona_script"],
         sedRNK='s_\\tR[12]\\t(.*)(Viruses|Bacteria|Eukaryota|Archaea)_\\tD\\t\\1\\2_g',
@@ -292,13 +266,52 @@ rule tax_kreport2krona_per_sample:
 
 rule tax_ktImportText:
     input:
-        expand(rules.tax_kreport2krona_per_sample.output.binfile, sample=samples)
+        ancient(expand(rules.tax_kreport2krona_per_sample.output.binfile, sample=samples))
     output:
         TAXPLOTS
     shell:
         "ktImportText {input} -o {output}"
 
+
+
+
+
 # Step 4 starts
+rule remove_rRNA:
+    input:
+        log=rules.run_kraken2_decontaminate.output.outlog,
+        fwdgz=ancient(rules.run_kraken2_decontaminate.output.fwdted),
+        revgz=ancient(rules.run_kraken2_decontaminate.output.revted),
+    params:
+        f=ancient(rules.run_kraken2_decontaminate.params.fte),
+        r=ancient(rules.run_kraken2_decontaminate.params.rte),
+        ali_log = TED_READS  + "{sample}_rna_filter_LOG.txt",
+    output:
+        fread_gz=TED_READS_FQS + "{sample}_R1_tedr.fastq.gz",
+        rread_gz=TED_READS_FQS + "{sample}_R2_tedr.fastq.gz",
+    threads: threads_per_job
+    shell:"""
+        if [[ -s {params.f} ]]; then 
+            ribodetector_cpu -t {threads} -l 100 --chunk_size 3200 -e norrna \
+                -i {params.f} {params.r}  --log {params.ali_log} \
+                -o {output.fread_gz} {output.rread_gz} 
+        else 
+            ribodetector_cpu -t {threads} -l 100 --chunk_size 3200 -e norrna \
+                -i {input.fwdgz} {input.revgz}  --log {params.ali_log} \
+                -o {output.fread_gz} {output.rread_gz} 
+        fi
+
+
+        sed -i 's/\\\x1b\[[0-9;]*m//g' {params.ali_log}
+
+        line_count=$(pigz -dc -p {threads} {output.fread_gz} | wc -l )
+        if [ "$line_count" -lt 400 ]; then
+            echo "ERROR: Fewer than 100 reads remain after rRNA filtering for {wildcards.sample}, and reads are unlikely to assemble. 
+            If this dataset is 16S rRNA amplicon reads, consider using our DADA2 or QIIME pipelines."
+            exit
+        fi
+        """
+
 if config["read_norm"]:
     rule norm_readDepth:
         resources:
@@ -366,7 +379,8 @@ rule run_metaspades:
                     touch {params.passout} 
         else 
                     echo ">no_assembly produced" > {output.asmbout} && \
-                    touch {params.failout}          
+                    touch {params.failout}     &&\
+                    echo "---- assembly failed for {wildcards.sample}"     
             fi
         
         ## manual cleanup 
@@ -409,7 +423,8 @@ rule run_trinity:
                     touch {params.passout} ## needs to be empty
         else 
                     echo ">no_assembly produced" > {output.asmbout} && \
-                    touch {output.doneout} && touch {params.failout}
+                    touch {output.doneout} && touch {params.failout} &&
+                    echo "---- assembly failed for {wildcards.sample}" 
         fi
 
         ## manual cleanup
@@ -676,10 +691,10 @@ rule gene_annot_iTPMs:
         abukos=ANNOTATS + "ANNOTgenes_ABUNtab.ko.txt",
         abuecs=ANNOTATS + "ANNOTgenes_ABUNtab.ec.txt"
     shell:"""
-        awk -v OFS=\"\\t\" 'NR==FNR {{ id[$1]=$0; next }} ($1 in id){{ print $2, id[$1]}}'  {input.abufile} {input.grp_kos} | \
-            sed '1s/^/#KO\\tnodeID\\tlen\\treads\\tcov\\tiRPK\\tiTPM\\n/' > {output.abukos}
-        awk -v OFS=\"\\t\" 'NR==FNR {{ id[$1]=$0; next }} ($1 in id){{ print $2, id[$1]}}'  {input.abufile} {input.grp_ecs} | \
-            sed '1s/^/#KO\\tnodeID\\tlen\\treads\\tcov\\tiRPK\\tiTPM\\n/' > {output.abuecs}        
+            awk -v OFS=\"\\t\" 'NR==FNR {{ id[$1]=$0; next }} ($1 in id){{ print $2, id[$1]}}'  {input.abufile} {input.grp_kos} | \
+                sed '1s/^/#KO\\tnodeID\\tlen\\treads\\tcov\\tiRPK\\tiTPM\\n/' > {output.abukos}
+            awk -v OFS=\"\\t\" 'NR==FNR {{ id[$1]=$0; next }} ($1 in id){{ print $2, id[$1]}}'  {input.abufile} {input.grp_ecs} | \
+                sed '1s/^/#KO\\tnodeID\\tlen\\treads\\tcov\\tiRPK\\tiTPM\\n/' > {output.abuecs}        
         """
 
 rule gene_annot_geneTPMs:
@@ -692,10 +707,10 @@ rule gene_annot_geneTPMs:
         KO_list=config["KO_listfile"],
         EC_list=config["EC_listfile"]
     output:
-        tmpko=temp(ANNOTATS + "_tmp_geneTPMtab.ko.txt"),
-        TPMko=ANNOTATS + "{sample}_geneTPMtab.ko.txt",
-        tmpec=temp(ANNOTATS + "_tmp_geneTPMtab.ec.txt"),
-        TPMec=ANNOTATS + "{sample}_geneTPMtab.ec.txt"
+        tmpko=temp(ANNOTATS +     "_tmp_geneTPMtab.ko.txt"),
+        TPMko=     ANNOTATS + "{sample}_geneTPMtab.ko.txt",
+        tmpec=temp(ANNOTATS +     "_tmp_geneTPMtab.ec.txt"),
+        TPMec=     ANNOTATS + "{sample}_geneTPMtab.ec.txt"
     shell:"""
         cut -f1,7 {input.abukos} | sed $'s/#KO.*//g' | awk -F'\\t' -f {params.awk_geneTPM_script} > {output.tmpko}
         awk -F'\\t' -f {params.awk_joinTPM_script} {params.KO_list} {output.tmpko} | \
@@ -752,12 +767,12 @@ rule run_min_path:
         if [ -s {input} ]; then
             python3 {params.minpath_script} -any {input} -map {params.annotations_map} -mps {params.mps_file} \
                 -report {output.tmp_report} -details {output.details} >> {params.minpath_log} || \
-                echo "--- No pathways found based on the available annotations" | \
+                echo "--- No pathways found based on the available annotations in {wildcards.sample}" | \
                 tee -a {params.minpath_log} {output.details} > /dev/null && \
                 touch {output.tmp_report} ## needs to be empty
             # rm {params.minpath_mpt}
         else
-            echo "--- No annotations found to infer pathways" | \
+            echo "--- No annotations found to infer pathways for {wildcards.sample}"" | \
             tee -a {output.details} {params.minpath_log} > /dev/null && \
             touch {output.tmp_report}
         fi
@@ -788,21 +803,24 @@ rule run_genes2krona:
     params:
         krona_script=config["genes2krona_script"],
         annotations_map=config["annotations_map"],
-        annotations_hrr=config["annotations_hrr"]
+        annotations_hrr=config["annotations_hrr"],
+        pwybin=PWYBIN,
     output:
-        tmp_4kr=temp(PATHWAYS + "_tmp_4kr.txt"),
-        krona_out=PATHWAYS + "{sample}_4krona.txt",
-        krona_out_clone=PWYBIN + "{sample}_4krona.txt"
+        tmp_4kr=   temp(PATHWAYS + "_tmp_4kr.txt"),
+        krona_out=      PATHWAYS + "{sample}_4krona.txt",
+        krona_out_clone=PWYBIN   + "{sample}_4krona.txt"
     shell:"""
         if [ -s {input.tmp_annots} -a -s {input.tmp_TPM} -a -s {input.report} ]; then
             python3 {params.krona_script} -i {input.tmp_annots}\
-            -m {params.annotations_map} -H {params.annotations_hrr} -n {wildcards.sample} -c {input.tmp_TPM}\
-            -l {input.report} -o {output.tmp_4kr} &&\
+                -m {params.annotations_map} -H {params.annotations_hrr} \
+                -n {wildcards.sample} -c {input.tmp_TPM}\
+                -l {input.report} -o {output.tmp_4kr} &&\
             sed '1s/^/#/' {output.tmp_4kr} > {output.krona_out} &&\
             cp {output.krona_out} {output.krona_out_clone}
         else
-            echo "---- at least one of the input file is empty, so krona file could not be made"
-            touch {output.tmp_4kr} {output.krona_out} {output.krona_out_clone}
+            echo "---- at least one of the input file is empty, so krona file could not be made" &&\
+            touch {output.tmp_4kr} {output.krona_out} && mkdir -p {params.pwybin} &&\
+            touch {output.krona_out_clone}
         fi
         """
 
@@ -843,6 +861,7 @@ if len(samples) > 1:
         input:
             pwyfiles=expand( rules.run_genes2krona.output.krona_out_clone, sample=samples ) , 
             gnefiles=expand(rules.cp_geneTPM_files.output, sample=samples ),
+            htmldone=rules.gene_ktImportText.output,
         params:
             bin_dir=PWYBIN,
             gen_dir=GENEBIN,
