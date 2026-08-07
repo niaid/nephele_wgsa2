@@ -772,7 +772,7 @@ rule run_min_path:
                 touch {output.tmp_report} ## needs to be empty
             # rm {params.minpath_mpt}
         else
-            echo "--- No annotations found to infer pathways for {wildcards.sample}"" | \
+            echo "--- No annotations found to infer pathways for {wildcards.sample}" | \
             tee -a {output.details} {params.minpath_log} > /dev/null && \
             touch {output.tmp_report}
         fi
