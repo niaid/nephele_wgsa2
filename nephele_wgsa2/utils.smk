@@ -118,7 +118,6 @@ def make_biom_file(profiles, taxfiles, samples, map_file, biom_file_name, tax_co
 
 
 def clean_output():
-    # asm_bai=" ".join(expand(ASM + "*.bai", sample=samples)) ## do not remove
     asm_bt2 =" ".join(expand(TMP_SAMPLE_DIR + "*.bt2" , sample=samples))
     asm_done=" ".join(expand(ASMB_OUT_SAMPLE_DIR + "*.done", sample=samples))
     qc_plots_done=" ".join(expand(QC_PLOTS + "*.done", sample=samples))
