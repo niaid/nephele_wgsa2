@@ -203,20 +203,28 @@ rule run_kraken2_decontaminate:
         out=TMP_DIR + "{sample}_R#_ted.fastq",
         fte=TMP_DIR + "{sample}_R_1_ted.fastq",
         rte=TMP_DIR + "{sample}_R_2_ted.fastq",
+        tedtar=config["output_dir"] + "/TEDfastq.tar",
+        outdir=config["output_dir"],
+        fqsdir=TED_READS_FQS_NAME
     output:
         report=TED_READS     + "{sample}_kr2_contamREPORT.txt",
         outlog=TED_READS     + "{sample}_kr2_contamLOG.txt",
         fwdted=TED_READS_FQS + "{sample}_R1_ted.fastq.gz",
-        revted=TED_READS_FQS + "{sample}_R2_ted.fastq.gz"
+        revted=TED_READS_FQS + "{sample}_R2_ted.fastq.gz",
     shell:"""
         ### touch {input.h}
-        kraken2 --use-names --gzip-compressed --threads {threads} \
-        --confidence {params.kr2confd_host} --db {params.decontaminate} \
-        --paired {params.f} {params.r} --unclassified-out {params.out} \
-        --output -  --report {output.report} 2>> {output.outlog}
-        
-        pigz -c {params.fte} -p {threads} > {output.fwdted} && \
-        pigz -c {params.rte} -p {threads} > {output.revted} 
+
+        if [[ ! -s {output.revted} ]] && [[ -s {params.tedtar} ]] ; then 
+            tar -xvf {params.tedtar} -C {params.outdir}/  
+        else 
+            kraken2 --use-names --gzip-compressed --threads {threads} \
+            --confidence {params.kr2confd_host} --db {params.decontaminate} \
+            --paired {params.f} {params.r} --unclassified-out {params.out} \
+            --output -  --report {output.report} 2>> {output.outlog}
+            
+            pigz -c {params.fte} -p {threads} > {output.fwdted} && \
+            pigz -c {params.rte} -p {threads} > {output.revted} 
+        fi
         """
 
 
@@ -876,9 +884,10 @@ if len(samples) > 1:
             out7=PWY_MERGED_TABLES + "merged_geneTPMtable.txt",
             logR=PWY_MERGED_TABLES + "PWY_collationR.log.txt"
         shell:
-            "find {params.bin_dir}/*.txt -type f -empty -delete && "
-            "find {params.gen_dir}/*.txt -type f -empty -delete && "
-            "ls -1 {params.bin_dir} | xargs basename -a -s {params.string} > {output.scclist} && "
+            # "find {params.bin_dir}/*.txt -type f -empty -delete && "
+            # "find {params.gen_dir}/*.txt -type f -empty -delete && "
+            # "ls -1 {params.bin_dir} | xargs basename -a -s {params.string} > {output.scclist} && "
+            "find {params.gen_dir}/*.txt -type f ! -empty -print0 | xargs -0 -n1 basename -a -s {params.string} > {output.scclist} && "
             "Rscript {params.pwy_table_merging_script} --binDIR {params.bin_dir} --sccList {output.scclist} --outdir {params.out_dir} \
                         --genesDIR {params.gen_dir} >{output.logR} 2>&1 "
     

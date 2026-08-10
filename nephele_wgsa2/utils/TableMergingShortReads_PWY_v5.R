@@ -87,21 +87,23 @@ noHier <- setdiff(names(merged), c("allTiers"))
 write.table(merged[,noHier], file.path(output$dir, "merged_Counts+PWY.txt"),
             sep="\t", col.names=NA, quote = F, na="")
 
-Lin <- select(merged, "allTiers")
-write.table(Lin, file.path(output$dir, ".merged_allTiers.txt"), ## invisible file
-            sep="\t", col.names=NA, quote = F, na="")
-
 noTAX <- setdiff(names(merged), tiers)
 noTAX <- merged[, noTAX] %>% relocate(allTiers, .after=last_col() )
 write.table(noTAX, file.path(output$dir, "merged_Counts+allTiers.txt"),
             sep="\t", col.names=TRUE, row.names = F, quote = F, na="")
 
+try({
 write.table(merged[,names(data)], file.path(output$dir, ".merged_Counts.txt"), ## invisible file
             sep="\t", col.names=NA, quote = F, na="")
 
 noCounts<-setdiff(names(merged), c(names(data), "allTiers") )
 write.table(merged[,noCounts], file.path(output$dir, ".merged_PWY.txt"), ## invisible file
             sep="\t", col.names=NA, quote = F, na="") 
+
+Lin <- select(merged, "allTiers")
+write.table(Lin, file.path(output$dir, ".merged_allTiers.txt"), ## invisible file
+            sep="\t", col.names=NA, quote = F, na="")
+})
 
 # bim <-biomformat::make_biom(merged[,names(data)], observation_metadata = merged[,noCounts])
 # biomformat::write_biom(bim, biom_file = paste0(output$dir, "merged_Counts+PWY_json.biom") )
