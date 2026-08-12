@@ -543,26 +543,26 @@ rule scaffold_and_read_counts:
     input:
         final_bam=rules.sam_to_bam.output.final_bam
     params:
-        mem_gb = "-Xmx" + str(int(config['total_mem_gb'] // 4)) + "g"
-    output:
+        mem_gb = "-Xmx" + str(int(config['total_mem_gb'] // 4)) + "g",
         tmp_scafcov=TMP_SAMPLE_DIR + "_asmb/" + "_tmp_scafcov.txt",
         tmp_basecov=TMP_SAMPLE_DIR + "_asmb/" + "_tmp_basecov.txt",
         tmp_fileidx=TMP_SAMPLE_DIR + "_asmb/" + "_tmp_fileidx",
         tmp_readcnt=TMP_SAMPLE_DIR + "_asmb/" + "_tmp_readcount.txt",
         tmp_scfcov1=TMP_SAMPLE_DIR + "_asmb/" + "_tmp_scfcov1.txt",
+    output:
         out_depths =     ASMB_OUT_SAMPLE_FILE + "_asmbDepths.txt",
         out_scfCovr=     ASMB_OUT_SAMPLE_FILE + "_asmbCovr.txt",
     shell:"""
-        pileup.sh {params.mem_gb} {input.final_bam} out={output.tmp_scafcov} overwrite=true && \
-        sort -o {output.tmp_scafcov} {output.tmp_scafcov} && \
+        pileup.sh {params.mem_gb} {input.final_bam} out={params.tmp_scafcov} overwrite=true && \
+        sort -o {params.tmp_scafcov} {params.tmp_scafcov} && \
         jgi_summarize_bam_contig_depths {input.final_bam} --outputDepth {output.out_depths} && \
-        sort {output.out_depths} | sed '1 s/^/#/' | cut -f 1-3 > {output.tmp_basecov} && \
-        samtools idxstats {input.final_bam} > {output.tmp_fileidx} 
+        sort {output.out_depths} | sed '1 s/^/#/' | cut -f 1-3 > {params.tmp_basecov} && \
+        samtools idxstats {input.final_bam} > {params.tmp_fileidx} 
         
-        cut -f 1-3 {output.tmp_fileidx} | sed -e '1s/^/#contigName\\tLength\\tReadsCount\\n/' | sort | grep -v \"*\" > {output.tmp_readcnt} && \
-        paste {output.tmp_readcnt} {output.tmp_scafcov} {output.tmp_basecov} | cut -f 1,2,3,8-14,17 -d $'\\t' > {output.tmp_scfcov1} 
+        cut -f 1-3 {params.tmp_fileidx} | sed -e '1s/^/#contigName\\tLength\\tReadsCount\\n/' | sort | grep -v \"*\" > {params.tmp_readcnt} && \
+        paste {params.tmp_readcnt} {params.tmp_scafcov} {params.tmp_basecov} | cut -f 1,2,3,8-14,17 -d $'\\t' > {params.tmp_scfcov1} 
         
-        awk 'BEGIN{{FS=OFS=\"\\t\"}} NR>1 {{if ($2>0 && $3>0) $12=sprintf(\"%0.2f\", $3*1e3/$2); else $12=0; print}}'  {output.tmp_scfcov1} | \
+        awk 'BEGIN{{FS=OFS=\"\\t\"}} NR>1 {{if ($2>0 && $3>0) $12=sprintf(\"%0.2f\", $3*1e3/$2); else $12=0; print}}'  {params.tmp_scfcov1} | \
             sed -e '1s/^/#NODE\\tlen\\tReads\\t\%NodeCovered\\t\%bpCovered\\tplusReads\\tminusReads\\t\%GC\\tMedFold\\tstDev\\tAveDepth\\tRPK\\n/' > \
             {output.out_scfCovr}
         """
@@ -613,18 +613,19 @@ rule tpm_normalization:
     input:
         gtf=rules.gff_to_gtf.output,
         verse_cds=rules.run_verse.output.out2
-    output:
+    params:
         tmp_lens=temp(GENES + "_tmp_lengths.txt"),
         tmp_cnts=temp(GENES + "_tmp_counts.txt"),
         tmp_cvrg=temp(GENES + "_tmp_coverage.txt"),
         tmp_rpk =temp(GENES + "_tmp_RPK.txt"),
+    output:
         ABUNtab =PREGENES_PREFIX + "_ABUNtab.txt"
     shell:
-        "cut -f4,5,9 {input.gtf} | sed 's/gene_id //g' | gawk '{{print $3,$2-$1+1}}' | tr ' ' '\\t' | sed '1s/^/gene\\tlength\\n/' > {output.tmp_lens} && "
-        "join {output.tmp_lens} {input.verse_cds} -t $'\\t' > {output.tmp_cnts} && "
-        "grep \"_\" {output.tmp_cnts} | awk -v OFS=\"\\t\" '{{$4 = sprintf(\"%0.0f\", $3*150/$2)}}1' | sort | sed -e '1s/^/#name\\tlen\\treads\\tcov\\n/'       > {output.tmp_cvrg} && "
-        "grep \"_\" {output.tmp_cvrg} | awk -v OFS=\"\\t\" '{{$5 = sprintf(\"%0.0f\", $3*1e3/$2)}}1' | sort | sed -e '1s/^/#name\\tlen\\treads\\tcov\\tRPK\\n/' > {output.tmp_rpk}  && "
-        "awk -v OFS=\"\\t\" 'NR==FNR{{sum+= $5; next}} FNR==1{{print $0,\"iTPM\"; next}} {{printf(\"%s %0.0f\\n\", $0,$5*1e6/sum)}}'  {output.tmp_rpk} {output.tmp_rpk} |sed -e 's/\\s/\\t/g' > {output.ABUNtab}  "
+        "cut -f4,5,9 {input.gtf} | sed 's/gene_id //g' | gawk '{{print $3,$2-$1+1}}' | tr ' ' '\\t' | sed '1s/^/gene\\tlength\\n/' > {params.tmp_lens} && "
+        "join {params.tmp_lens} {input.verse_cds} -t $'\\t' > {params.tmp_cnts} && "
+        "grep \"_\" {params.tmp_cnts} | awk -v OFS=\"\\t\" '{{$4 = sprintf(\"%0.0f\", $3*150/$2)}}1' | sort | sed -e '1s/^/#name\\tlen\\treads\\tcov\\n/'       > {params.tmp_cvrg} && "
+        "grep \"_\" {params.tmp_cvrg} | awk -v OFS=\"\\t\" '{{$5 = sprintf(\"%0.0f\", $3*1e3/$2)}}1' | sort | sed -e '1s/^/#name\\tlen\\treads\\tcov\\tRPK\\n/' > {params.tmp_rpk}  && "
+        "awk -v OFS=\"\\t\" 'NR==FNR{{sum+= $5; next}} FNR==1{{print $0,\"iTPM\"; next}} {{printf(\"%s %0.0f\\n\", $0,$5*1e6/sum)}}'  {params.tmp_rpk} {params.tmp_rpk} |sed -e 's/\\s/\\t/g' > {output.ABUNtab}  "
 
 
 
