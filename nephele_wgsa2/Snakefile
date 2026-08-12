@@ -31,7 +31,7 @@ GENETAX = TAX_PROFILES + "geneTAX_" + DBNAME + "/"
 ANNOTATS = FUNC_DIR + "annotations/"
 
 SCAFTAX_DIR = TAXN_DIR + "scafTAX_" + DBNAME + "/"
-SCAFTAX_PREFIX = SCAFTAX_DIR  + "/{sample}_scaffTAX_"
+SCAFTAX_PREFIX = SCAFTAX_DIR  + "{sample}_scaffTAX"
 SCAFTAX=TAX_PROFILES + "scafTAX_" + DBNAME + "/"
 MAG = TAXN_DIR + "MAGs/"
 MAG_QA = MAG + "magsQA/"
@@ -100,7 +100,7 @@ if len(samples) > 1:
 # Output for step 6D (AMRFinder; optional)
 if config["find_args"]:
     pipeline_output.extend([
-        expand(RGI_DIR + "RGI_main.txt", sample=samples),
+        expand(RGI_DIR + "{sample}_RGI_main.txt", sample=samples),
         PWY_MERGED_TABLES + "merged_argsTPMtable.txt"
     ])
 
