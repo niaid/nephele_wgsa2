@@ -144,7 +144,7 @@ amp_htmp=amp_heatmap(amp, group_by = "SampleID", facet_by = "TreatmentGroup",
         theme(axis.text.x = element_text(angle = 45, size=10, vjust = 1),
               axis.text.y = element_text(size=8), legend.position="right")
 pdf(paste0(path$outdir, "/TAX_Heatmap.pdf"), width=14, height = 10); plot(amp_htmp); dev.off()
-png(paste0(path$outdir, "/.TAX_Heatmap.png"), width=860, height=640); plot(TAX_Heatmap); dev.off()
+png(paste0(path$outdir, "/.TAX_Heatmap.png"), width=860, height=640); plot(amp_htmp); dev.off()
 })
 
 print("-----------> making rarecurve graph")
