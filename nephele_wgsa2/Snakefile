@@ -24,14 +24,14 @@ FUNC_DIR = ASMB_OUT_SAMPLE_DIR + "functional/"
 TAXN_DIR = ASMB_OUT_SAMPLE_DIR + "taxonomic/"
 RGI_DIR = FUNC_DIR + "RGI/"
 GENES = FUNC_DIR + "genes/"
-PREGENES_PREFIX = GENES + "PREDgenes"
+PREGENES_PREFIX = GENES + "{sample}_PREDgenes"
 PREGENESTAX = TAXN_DIR + "genesTAX_" + DBNAME + "/"
-GENETAX_PREFIX = PREGENESTAX + "geneTAX"
+GENETAX_PREFIX = PREGENESTAX + "{sample}_geneTAX"
 GENETAX = TAX_PROFILES + "geneTAX_" + DBNAME + "/"
 ANNOTATS = FUNC_DIR + "annotations/"
 
 SCAFTAX_DIR = TAXN_DIR + "scafTAX_" + DBNAME + "/"
-SCAFTAX_PREFIX = SCAFTAX_DIR  + "scafTAX" + "/"
+SCAFTAX_PREFIX = SCAFTAX_DIR  + "/{sample}_scaffTAX_"
 SCAFTAX=TAX_PROFILES + "scafTAX_" + DBNAME + "/"
 MAG = TAXN_DIR + "MAGs/"
 MAG_QA = MAG + "magsQA/"
@@ -1086,7 +1086,7 @@ if config["tax_scaffolds"]:
             classification_db=config["classification_db"],
             confidence_taxon=config["kr2confidence_taxonomic"],
         output:
-            klog=temp(SCAFTAX_PREFIX + "_klog.txt"),
+            klog=temp(SCAFTAX_DIR + "_klog.txt"),
             report=SCAFTAX_PREFIX + "_taxREPORT.txt",
             outlog=SCAFTAX_PREFIX + "_classLOG.txt"
         shell:
@@ -1099,7 +1099,7 @@ if config["tax_scaffolds"]:
             scov=rules.scaffold_and_read_counts.output.out_scfCovr
         output:
             scovtax=SCAFTAX_PREFIX + "_asmbCovr_wTAX.txt",
-            tmp=temp(SCAFTAX_PREFIX + "_tmp_tax.txt")
+            tmp=temp(SCAFTAX_DIR   + "_tmp_tax.txt")
         shell:
             "cut -f2-3 {input.klog} | sed -e 's/ (taxid /\\t/g' | sed -e 's/)$//g' | sort | "
             "sed '1s/^/#contigName\\tTAXname\\tTAXid\\n/' > {output.tmp} && "
@@ -1323,9 +1323,9 @@ if config["find_args"]:
         conda: 
             "rgi"
         output: ## output vars not used in rule but produced thorugh corresponding paramsVars
-            rgi_raw =RGI_DIR + "RGI_raw.txt", 
-            rgi_main=RGI_DIR + "RGI_main.txt",
-            rgi_faas=RGI_DIR + "RGI_seqs.faa",
+            rgi_raw =RGI_DIR + "{sample}_RGI_raw.txt", 
+            rgi_main=RGI_DIR + "{sample}_RGI_main.txt",
+            rgi_faas=RGI_DIR + "{sample}_RGI_seqs.faa",
         shell:"""
             mkdir -p {params.outDIR}
 
