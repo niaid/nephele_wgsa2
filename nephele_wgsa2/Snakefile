@@ -381,18 +381,17 @@ rule run_metaspades:
                     cp {params.scafout} {params.scfout} && \
                     cp {params.scafout} {output.asmbout} && \
                     touch {params.passout}  
+                    echo "---- PASS: scaffold assembly achieved for {wildcards.sample}"
         elif [[ -s {params.contout} ]]; then
                     cp {params.contout} {params.cntout} && \
-                    cp {params.contout} {output.asmbout} &&
-                    touch {params.passout} 
+                    cp {params.contout} {output.asmbout} && \
+                    touch {params.passout} && \
+                    echo "---- PASS: contig assembly achieved for {wildcards.sample}"
         else 
                     echo ">no_assembly produced" > {output.asmbout} && \
-                    touch {params.failout}     &&\
+                    touch {params.failout}     && \
                     echo "---- FAIL: assembly failed for {wildcards.sample}"     
-            fi
-        
-        ## manual cleanup 
-        ## rm -rf {params.tmp_dir}
+        fi
         """
 
 rule run_trinity:
@@ -432,12 +431,9 @@ rule run_trinity:
                     echo "---- PASS: assembly passed for {wildcards.sample}"
         else 
                     echo ">no_assembly produced" > {output.asmbout} && \
-                    touch {output.doneout} && touch {params.failout} &&
+                    touch {output.doneout} && touch {params.failout} && \
                     echo "---- FAIL: assembly failed for {wildcards.sample}" 
         fi
-
-        ## manual cleanup
-        ##rm -rf {params.tmpDir}
         """
 
 rule run_bbtools_stats: ## this rule _needs_ a file to expand
@@ -865,11 +861,13 @@ if len(samples) > 1:
             out2=TAX_MERGED_TABLES + "merged_Counts+TAX.txt",
             out4=TAX_MERGED_TABLES + "merged_Counts+Lineage.txt",
             logR=TAX_MERGED_TABLES + "TAX_collationR.log.txt"
-        shell:
-            "find {params.bin_dir}/*_4krona.txt -type f -empty -delete && "
-            "ls -1 {params.bin_dir} | xargs basename -a -s {params.string} > {output.scclist} && "
-            "Rscript {params.tax_table_merging_script} --binDIR {params.bin_dir} --sccList {output.scclist} --outdir {params.out_dir} \
-                    --genesDIR {params.gen_dir} >{output.logR} 2>&1 "
+        shell:"""
+            ls -1 {params.bin_dir}/*{params.string} | \
+                xargs basename -a -s {params.string} > {output.scclist} && \
+            Rscript {params.tax_table_merging_script} --binDIR {params.bin_dir} \
+                --sccList {output.scclist} --outdir {params.out_dir} \
+                --genesDIR {params.gen_dir} >{output.logR} 2>&1 
+            """
 
 
     rule PWY_collation:
@@ -891,11 +889,12 @@ if len(samples) > 1:
             out7=PWY_MERGED_TABLES + "merged_geneTPMtable.txt",
             logR=PWY_MERGED_TABLES + "PWY_collationR.log.txt"
         shell:"""
-            find {params.pwy_dir}/*.txt -type f ! -empty -print0 | \
-                    xargs -0 -n1 basename -a -s {params.string} > {output.scclist} && \
+            ls -1 {params.pwy_dir}/*{params.string} | \
+                xargs basename -a -s {params.string} > {output.scclist} && \
             Rscript {params.pwyR_script} --binDIR {params.pwy_dir} --sccList {output.scclist} \
                     --outdir {params.out_dir} --genesDIR {params.gen_dir} > {output.logR} 2>&1 
             """
+
 
 # step 10
 rule tax_biom_per_sample: 
