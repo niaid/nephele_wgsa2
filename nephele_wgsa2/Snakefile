@@ -314,8 +314,8 @@ rule remove_rRNA:
 
         line_count=$(pigz -dc -p {threads} {output.fread_gz} | wc -l )
         if [ "$line_count" -lt 400 ]; then
-            echo "ERROR: Fewer than 100 reads remain after rRNA filtering for {wildcards.sample}, and reads are unlikely to assemble. 
-            If this dataset is 16S rRNA amplicon reads, consider using our DADA2 or QIIME pipelines."
+            echo "---- FAIL: Fewer than 100 reads remain after rRNA filtering for {wildcards.sample}. Reads are unlikely to assemble. 
+            If this dataset is rRNA amplicon reads, consider using our DADA2 or QIIME pipelines."
             exit
         fi
         """
@@ -388,7 +388,7 @@ rule run_metaspades:
         else 
                     echo ">no_assembly produced" > {output.asmbout} && \
                     touch {params.failout}     &&\
-                    echo "---- assembly failed for {wildcards.sample}"     
+                    echo "---- FAIL: assembly failed for {wildcards.sample}"     
             fi
         
         ## manual cleanup 
@@ -405,7 +405,7 @@ rule run_trinity:
     threads: config["num_cpus"]  ##threads_per_job
     params:
         tmpDir=TMP_SAMPLE_DIR + "_trinity_asmb/",
-        fasout=TMP_SAMPLE_DIR + "_trinity_asmb.Trinity.fasta",
+        fasout=TMP_DIR + "{sample}_trinity_asmb.Trinity.fasta",
         memrGb=str(config['total_mem_gb'] // 3) + "G",
         threads = lambda wildcards: int(threads_per_job - 4),
         bfly_CPU=2,
@@ -425,14 +425,15 @@ rule run_trinity:
             --bflyHeapSpaceMax {params.bfly_HeapSpace} --bflyCPU {params.bfly_CPU} &> \
             {params.logout} 2>&1 && touch {output.doneout}
 
-        if [[ -f {params.fasout} ]]; then 
+        if [[ -s {params.fasout} ]]; then 
                     cp {params.fasout} {params.cntout} && \
                     cp {params.fasout} {output.asmbout} && \
                     touch {params.passout} ## needs to be empty
+                    echo "---- PASS: assembly passed for {wildcards.sample}"
         else 
                     echo ">no_assembly produced" > {output.asmbout} && \
                     touch {output.doneout} && touch {params.failout} &&
-                    echo "---- assembly failed for {wildcards.sample}" 
+                    echo "---- FAIL: assembly failed for {wildcards.sample}" 
         fi
 
         ## manual cleanup
@@ -463,7 +464,7 @@ rule run_bbtools_stats: ## this rule _needs_ a file to expand
             stats.sh in={output.finfasta} out={output.finstats} && \
             printf \"\\nTEDreads mapping stats:\\n\"  >> {output.finstats}
         else
-            echo "---- no assembly produced" >> {output.finstats}
+            echo "---- FAIL: no assembly produced" >> {output.finstats}
             mv {input.asmbfas} {output.finfasta}
             mkdir -p {params.fake_dir1} && mkdir -p {params.fake_dir2}
             touch {params.fake_tpm1} {params.fake_krn2}
@@ -654,8 +655,14 @@ rule gene_annotation:
         gg=ANNOTATS + "{sample}_annots.KEGGmap.txt"
     shell:"""
         time emapper.py -i {input} -o annots --output_dir {params.out_dir} --cpu {threads} \
-            --itype proteins --block_size {params.blockSize} --index_chunks {params.idxChunks} --data_dir {params.egg_db}  \
-            --override --temp_dir {params.tmp_dir}  --scratch_dir {params.tmp_dir} --dbmem >> {params.logfile} 2>&1
+                --itype proteins --block_size {params.blockSize} --index_chunks {params.idxChunks} --data_dir {params.egg_db}  \
+                --override --temp_dir {params.tmp_dir}  --scratch_dir {params.tmp_dir} --dbmem >> {params.logfile} 2>&1 
+
+        if [[ ! -s {params.emapper_anno} ]]; then 
+            echo "---- FAIL: no gene annotations were produced for {wildcards.sample}" && exit 0
+        else 
+            echo "---- PASSED: gene annotations for {wildcards.sample} finished successfully" 
+        fi
 
         ## grep needed terms
         grep -E \"NODE_|TRINITY_\" {params.emapper_anno} | cut -f 1,11 | sed -e 's/\\t-//g' | grep -e $'\\t' | \
@@ -666,7 +673,7 @@ rule gene_annotation:
 
         grep -E \"NODE_|TRINITY_\" {params.emapper_anno} | cut -f1,13 | grep \"ko\" | sed 's/,map.*//g' | sed 's/ko/map/g' | \
                 awk '{{n=split($2,s,\",\");for (i=1;i<=n;i++) {{$2=s[i];print}}}}' | sed -e 's/\\s/\\t/g' > {output.gg} || true
-         """
+        """
 
 
 rule gene_annot_seqExtract:
@@ -775,13 +782,13 @@ rule run_min_path:
         if [ -s {input} ]; then
             python3 {params.minpath_script} -any {input} -map {params.annotations_map} -mps {params.mps_file} \
                 -report {output.tmp_report} -details {output.details} >> {params.minpath_log} || \
-                echo "--- No pathways found based on the available annotations in {wildcards.sample}" | \
+                echo "---- FAIL: No pathways found based on the available annotations in {wildcards.sample}" | \
                 tee -a {params.minpath_log} {output.details} > /dev/null && \
                 touch {output.tmp_report} ## needs to be empty
             # rm {params.minpath_mpt}
         else
-            echo "--- No annotations found to infer pathways for {wildcards.sample}" | \
-            tee -a {output.details} {params.minpath_log} > /dev/null && \
+            echo "---- FAIL: No annotations found to infer pathways for {wildcards.sample}" | \
+            tee -a {output.details} {params.minpath_log} && \
             touch {output.tmp_report}
         fi
         """
@@ -826,7 +833,7 @@ rule run_genes2krona:
             sed '1s/^/#/' {output.tmp_4kr} > {output.krona_out} &&\
             cp {output.krona_out} {output.krona_out_clone}
         else
-            echo "---- at least one of the input file is empty, so krona file could not be made" &&\
+            echo "---- FAIL: No annotations or pathways found for {wildcards.sample}, so pwybin krona file will be empty" &&\
             touch {output.tmp_4kr} {output.krona_out} && mkdir -p {params.pwybin} &&\
             touch {output.krona_out_clone}
         fi
@@ -871,10 +878,10 @@ if len(samples) > 1:
             gnefiles=expand(rules.cp_geneTPM_files.output, sample=samples ),
             htmldone=rules.gene_ktImportText.output,
         params:
-            bin_dir=PWYBIN,
+            pwy_dir=PWYBIN,
             gen_dir=GENEBIN,
             string="_4krona.txt", 
-            pwy_table_merging_script=config["pwy_table_merging_script"],
+            pwyR_script=config["pwy_table_merging_script"],
             tmp_dir=config["tmp_dir"],
             out_dir=PWY_MERGED_TABLES
         output:
@@ -883,14 +890,12 @@ if len(samples) > 1:
             out4=PWY_MERGED_TABLES + "merged_Counts+allTiers.txt",
             out7=PWY_MERGED_TABLES + "merged_geneTPMtable.txt",
             logR=PWY_MERGED_TABLES + "PWY_collationR.log.txt"
-        shell:
-            # "find {params.bin_dir}/*.txt -type f -empty -delete && "
-            # "find {params.gen_dir}/*.txt -type f -empty -delete && "
-            # "ls -1 {params.bin_dir} | xargs basename -a -s {params.string} > {output.scclist} && "
-            "find {params.gen_dir}/*.txt -type f ! -empty -print0 | xargs -0 -n1 basename -a -s {params.string} > {output.scclist} && "
-            "Rscript {params.pwy_table_merging_script} --binDIR {params.bin_dir} --sccList {output.scclist} --outdir {params.out_dir} \
-                        --genesDIR {params.gen_dir} >{output.logR} 2>&1 "
-    
+        shell:"""
+            find {params.pwy_dir}/*.txt -type f ! -empty -print0 | \
+                    xargs -0 -n1 basename -a -s {params.string} > {output.scclist} && \
+            Rscript {params.pwyR_script} --binDIR {params.pwy_dir} --sccList {output.scclist} \
+                    --outdir {params.out_dir} --genesDIR {params.gen_dir} > {output.logR} 2>&1 
+            """
 
 # step 10
 rule tax_biom_per_sample: 
@@ -1328,7 +1333,7 @@ if config["find_args"]:
             sed -E  's/\\*//g' {params.outDIR}/{params.inFAA} > {params.outDIR}/{params.inFAAm}  
 
 
-            echo "-------- Running RGI -------"
+            echo "---- Starting RGI run for {wildcards.sample} ----"
             cp -r {params.carddb} {params.outDIR}/cardDB/
             cd {params.outDIR}  && rgi load --local -i cardDB/card.json
             rgi main --input_type {params.ftype} -i {params.inFAAm} --clean --local \
@@ -1358,12 +1363,12 @@ if config["find_args"]:
 
 # #--------------- electives done ----------
  
-import subprocess
-onsuccess:
-    shell(clean_output() + handle_TED() + handle_cp_biom() ) 
-    subprocess.run(fwd_outputs(), shell = True ) ## for DiscoVIR and MAGs pipeline
-    #shell("cp {log_path} {outputs_dir}/.snakemake.log")
-onerror:
-    shell(clean_output() + handle_TED() + handle_cp_biom())
-    subprocess.run(fwd_outputs(), shell = True ) ## for DiscoVIR and MAGs pipeline
-    #shell("cp {log_path} {outputs_dir}/.snakemake.log")
+# import subprocess
+# onsuccess:
+#     shell(clean_output() + handle_TED() + handle_cp_biom() ) 
+#     subprocess.run(fwd_outputs(), shell = True ) ## for DiscoVIR and MAGs pipeline
+#     #shell("cp {log_path} {outputs_dir}/.snakemake.log")
+# onerror:
+#     shell(clean_output() + handle_TED() + handle_cp_biom())
+#     subprocess.run(fwd_outputs(), shell = True ) ## for DiscoVIR and MAGs pipeline
+#     #shell("cp {log_path} {outputs_dir}/.snakemake.log")

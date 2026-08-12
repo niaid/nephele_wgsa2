@@ -16,7 +16,7 @@ def post_clean_up(args):
     try:
         # Copy output details into main/root output folder
         shutil.copy2(pipeline_config.output_details_file_name, args.outputs_dir_path)
-        sh.rm("-rf", args.outputs_dir_path / "tmp")
+        # sh.rm("-rf", args.outputs_dir_path / "tmp")
     except Exception:
         log(f"Warning: {traceback.format_exc()}")
 
@@ -40,8 +40,8 @@ def main(args):
     log("Starting WGSA pipeline...")
     # log(args)
     base_command = [
-        "snakemake -p --cores --nocolor --use-conda --rerun-incomplete",
-        f"--resources mem_gb={mem_gb} --keep-going", ## --keep-incomplete --notemp", ##--reason --summary",
+        "snakemake -p --cores --nocolor --use-conda --rerun-incomplete --forcerun PWY_collation",
+        f"--resources mem_gb={mem_gb} --keep-going --keep-incomplete --notemp", ##--reason --summary",
         f"--directory {tmp_dir} --latency-wait 10 --rerun-triggers code input params software-env",
     ]
     snakemake_config = [

@@ -161,4 +161,4 @@ cython_debug/
 
 .DS_Store
 
-nephele_wgsa2_local_test/
+nephele_wgsa2_local_test/._*

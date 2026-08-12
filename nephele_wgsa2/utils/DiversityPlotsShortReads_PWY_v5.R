@@ -92,7 +92,8 @@ amp_htmp=amp_heatmap(amp, group_by = "SampleID", facet_by = "TreatmentGroup",
   theme(axis.text.x = element_text(angle = 45, size=10, vjust = 1),
         axis.text.y = element_text(size=8), legend.position="right")
   wratio= 8 + length(unique(amp$metadata$TreatmentGroup)) + round( (1/4)*length(amp$metadata$SampleID), 0) 
-pdf(paste0(path$outdir, "/PWY_Heatmap_top35PWYs.pdf"), width=wratio, height = 10); plot(amp_htmp); dev.off()
+pdf(paste0(path$outdir, "/PWY_Heatmap.pdf"),  width=wratio, height = 10); plot(amp_htmp); dev.off()
+png(paste0(path$outdir, "/.PWY_Heatmap.png"), width=760, height=640); plot(amp_htmp); dev.off()
 })
 
 
