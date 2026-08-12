@@ -122,7 +122,7 @@ pcoa_bray <- amp_ordinate(amp, filter_species = 0.01, type = "PCoA", sample_labe
  pcoa_bray$plot= pcoa_bray$plot + guides(color = guide_legend(ncol = 3), shape = guide_legend(ncol = 2)) +
     theme(legend.position = "right") + ggtitle(title) + scale_shape_manual(values=c(17, 15,13,18, 4,5,6,7,8) )
   pdf(paste0(path$outdir, "/TAX_BetaDiv_PCoA.pdf"), width=14, height=10); plot(pcoa_bray$plot); dev.off()
-  png(paste0(path$outdir, "/.TAX_BetaDiv_PCoA.png"), width=780, height=640); plot(pcoa_bray$plot); dev.off()
+  png(paste0(path$outdir, "/.TAX_BetaDiv_PCoA.png"), width=860, height=640); plot(pcoa_bray$plot); dev.off()
 })
 
 print("-----------> making nMDS plot")
