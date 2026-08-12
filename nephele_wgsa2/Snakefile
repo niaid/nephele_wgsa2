@@ -20,6 +20,7 @@ ASMB_MGX = config["output_dir"] + "/asmbMGX/"
 ASMB_MTX = config["output_dir"] + "/asmbMTX/"
 ASMB_OUT_SAMPLE_DIR = (ASMB_MTX if config["denovo_mtx"] else ASMB_MGX) + "{sample}_asmb/"
 ASMB_OUT_SAMPLE_FILE = ASMB_OUT_SAMPLE_DIR + "{sample}"
+ASMB_TMP_FINASM_FILE = ASMB_OUT_SAMPLE_DIR + "_tmp_finAsmb.txt" ## final tmp assembly file used across rules
 FUNC_DIR = ASMB_OUT_SAMPLE_DIR + "functional/"
 TAXN_DIR = ASMB_OUT_SAMPLE_DIR + "taxonomic/"
 RGI_DIR = FUNC_DIR + "RGI/"
@@ -358,14 +359,14 @@ rule run_metaspades:
         grafout=temp(TMP_SAMPLE_DIR + "_asmb/" + "assembly_graph_with_scaffolds.gfa"),
         mspalog=temp(TMP_SAMPLE_DIR + "_asmb/" + "spades.log"),
         ## marker files
-        passout=    ASMB_OUT_SAMPLE_DIR + "_asmb.pass",
-        failout=    ASMB_OUT_SAMPLE_DIR + "_asmb.fail",
+        passout=ASMB_OUT_SAMPLE_DIR + "_asmb.pass",
+        failout=ASMB_OUT_SAMPLE_DIR + "_asmb.fail",
         ## final files
-        grfout=      ASMB_OUT_SAMPLE_FILE + "_asmbFinal.gfa",
-        scfout=      ASMB_OUT_SAMPLE_FILE + "_scaffolds.fasta",
-        cntout=      ASMB_OUT_SAMPLE_FILE + "_contigs.fasta",
-        logout=      ASMB_OUT_SAMPLE_FILE + "_spadesLOG.txt",
-        asmbout=temp(ASMB_OUT_SAMPLE_DIR + "_tmp_finAsmb.txt"), ## needed for run_bbtools_stats proper unpackaging
+        grfout= ASMB_OUT_SAMPLE_FILE + "_asmbFinal.gfa",
+        scfout= ASMB_OUT_SAMPLE_FILE + "_scaffolds.fasta",
+        cntout= ASMB_OUT_SAMPLE_FILE + "_contigs.fasta",
+        logout= ASMB_OUT_SAMPLE_FILE + "_spadesLOG.txt",
+        asmbout=ASMB_TMP_FINASM_FILE,  ##"_tmp_finAsmb.txt" needed for run_bbtools_stats proper unpackaging
     threads: config["num_cpus"] ##threads_per_job
     output:
         doneout=     ASMB_OUT_SAMPLE_DIR + "_MGXasmb.done",
@@ -410,12 +411,12 @@ rule run_trinity:
         bfly_CPU=2,
         bfly_HeapSpace="20G",
         ## marker files
-        passout=     ASMB_OUT_SAMPLE_DIR + "_asmb.pass",
-        failout=     ASMB_OUT_SAMPLE_DIR + "_asmb.fail",
+        passout=ASMB_OUT_SAMPLE_DIR + "_asmb.pass",
+        failout=ASMB_OUT_SAMPLE_DIR + "_asmb.fail",
         ## final files
-        cntout=      ASMB_OUT_SAMPLE_FILE + "_contigs.fasta",
-        logout=      ASMB_OUT_SAMPLE_FILE + "_trinityLOG.txt",
-        asmbout=temp(ASMB_OUT_SAMPLE_DIR + "_tmp_finAsmb.txt") ## needed for run_bbtools_stats proper unpackaging
+        cntout= ASMB_OUT_SAMPLE_FILE + "_contigs.fasta",
+        logout= ASMB_OUT_SAMPLE_FILE + "_trinityLOG.txt",
+        asmbout=ASMB_TMP_FINASM_FILE,  ## "_tmp_finAsmb.txt" needed for run_bbtools_stats proper unpackaging
     output:
         doneout=     ASMB_OUT_SAMPLE_DIR + "_MTXasmb.done",
     shell:"""
@@ -440,12 +441,10 @@ rule run_bbtools_stats: ## this rule _needs_ a file to expand
     input:
         doneout=lambda wildcards: (rules.run_trinity.output.doneout    if config["denovo_mtx"] 
                            else rules.run_metaspades.output.doneout),
-        # asmbfas=lambda wildcards:    (rules.run_trinity.params.asmbout if config["denovo_mtx"] 
-        #                    else rules.run_metaspades.params.asmbout),
     params:
         asm     =ASMB_OUT_SAMPLE_DIR,
         passmark=ASMB_OUT_SAMPLE_DIR  + "_asmb.pass",
-        asmbfas1=ASMB_OUT_SAMPLE_DIR + "_tmp_finAsmb.txt",
+        asmbfas1=ASMB_TMP_FINASM_FILE,  # ASMB_OUT_SAMPLE_DIR + "_tmp_finAsmb.txt",
         ## fake files for PWY_collation rule
         fake_dir1=GENEBIN, ## touch needs the PATH pre-made
         fake_dir2=PWYBIN,  ## touch needs the PATH pre-made
@@ -873,10 +872,10 @@ if len(samples) > 1:
 
     rule PWY_collation:
         input:
-            # pwyfiles=expand( rules.run_genes2krona.output.krona_out_clone, sample=samples ) , 
-            # gnefiles=expand(rules.cp_geneTPM_files.output, sample=samples ),
-            pwyfiles=lambda wc: expand( rules.run_genes2krona.output.krona_out_clone, sample=asmb_pass(wc) ) , 
-            gnefiles=lambda wc: expand(rules.cp_geneTPM_files.output, sample=asmb_pass(wc) ),
+            pwyfiles=expand( rules.run_genes2krona.output.krona_out_clone, sample=samples ) , 
+            gnefiles=expand(rules.cp_geneTPM_files.output, sample=samples ),
+            # pwyfiles=lambda wc: expand( rules.run_genes2krona.output.krona_out_clone, sample=asmb_pass(wc) ) , 
+            # gnefiles=lambda wc: expand(rules.cp_geneTPM_files.output, sample=asmb_pass(wc) ),
             htmldone=rules.gene_ktImportText.output,
         params:
             pwy_dir=PWYBIN,

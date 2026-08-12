@@ -121,8 +121,8 @@ def clean_output():
     asm_bt2      =" ".join(expand(TMP_SAMPLE_DIR + "*.bt2"                 , sample=samples))
     asm_done     =" ".join(expand(ASMB_OUT_SAMPLE_DIR + "*.done"           , sample=samples))
     qc_plots_done=" ".join(expand(QC_PLOTS + "*.done"                      , sample=samples))
-    tmp_finAsmb  =" ".join(expand(ASMB_OUT_SAMPLE_DIR + "_tmp_finAsmb.txt"), sample = samples)
-    
+    tmp_finAsmb  =" ".join(expand(ASMB_OUT_SAMPLE_DIR + "_tmp_finAsmb.txt" , sample = samples)) ##ASMB_TMP_FINASM_FILE
+
 
     command = f"""
     set +o pipefail
