@@ -391,7 +391,9 @@ rule run_metaspades:
         else 
                     echo ">no_assembly produced" > {params.asmbout} && \
                     touch {params.failout}     && \
-                    echo "---- FAIL: assembly failed for {wildcards.sample}"   
+                    echo "---- ERROR in rule run_metaspades::" && \
+                    echo "---- FAIL: assembly failed for {wildcards.sample}" && \
+                    echo "---- processing will continue for other samples as much as possible"   
         fi
         """
 
@@ -433,7 +435,9 @@ rule run_trinity:
         else 
                     echo ">no_assembly produced" > {params.asmbout} && \
                     touch {output.doneout} && touch {params.failout} && \
-                    echo "---- FAIL: assembly failed for {wildcards.sample}" 
+                    echo "---- ERROR in rule run_trinity::" && \
+                    echo "---- FAIL: assembly failed for {wildcards.sample}" && \
+                    echo "---- processing will continue for other samples as much as possible" 
         fi
         """
 
@@ -613,10 +617,10 @@ rule tpm_normalization:
         gtf=rules.gff_to_gtf.output,
         verse_cds=rules.run_verse.output.out2
     params:
-        tmp_lens=temp(GENES + "_tmp_lengths.txt"),
-        tmp_cnts=temp(GENES + "_tmp_counts.txt"),
-        tmp_cvrg=temp(GENES + "_tmp_coverage.txt"),
-        tmp_rpk =temp(GENES + "_tmp_RPK.txt"),
+        tmp_lens=TMP_SAMPLE_DIR + "asmb/_tmp_gene_lengths.txt",
+        tmp_cnts=TMP_SAMPLE_DIR + "asmb/_tmp_gene_counts.txt",
+        tmp_cvrg=TMP_SAMPLE_DIR + "asmb/_tmp_gene_coverage.txt",
+        tmp_rpk =TMP_SAMPLE_DIR + "asmb/_tmp_gene_RPK.txt",
     output:
         ABUNtab =PREGENES_PREFIX + "_ABUNtab.txt"
     shell:
