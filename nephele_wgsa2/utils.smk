@@ -118,15 +118,16 @@ def make_biom_file(profiles, taxfiles, samples, map_file, biom_file_name, tax_co
 
 
 def clean_output():
-    asm_bt2 =" ".join(expand(TMP_SAMPLE_DIR + "*.bt2" , sample=samples))
-    asm_done=" ".join(expand(ASMB_OUT_SAMPLE_DIR + "*.done", sample=samples))
-    qc_plots_done=" ".join(expand(QC_PLOTS + "*.done", sample=samples))
+    asm_bt2      =" ".join(expand(TMP_SAMPLE_DIR + "*.bt2"                 , sample=samples))
+    asm_done     =" ".join(expand(ASMB_OUT_SAMPLE_DIR + "*.done"           , sample=samples))
+    qc_plots_done=" ".join(expand(QC_PLOTS + "*.done"                      , sample=samples))
+    tmp_finAsmb  =" ".join(expand(ASMB_OUT_SAMPLE_DIR + "_tmp_finAsmb.txt"), sample = samples)
     
 
     command = f"""
     set +o pipefail
     echo "Cleaning output..."
-    rm -rf {asm_bt2} {asm_done} {qc_plots_done}
+    rm -rf {asm_bt2} {asm_done} {qc_plots_done} {tmp_finAsmb}
     """ 
     return command
 

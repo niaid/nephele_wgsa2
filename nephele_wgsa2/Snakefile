@@ -365,10 +365,10 @@ rule run_metaspades:
         scfout=      ASMB_OUT_SAMPLE_FILE + "_scaffolds.fasta",
         cntout=      ASMB_OUT_SAMPLE_FILE + "_contigs.fasta",
         logout=      ASMB_OUT_SAMPLE_FILE + "_spadesLOG.txt",
+        asmbout=temp(ASMB_OUT_SAMPLE_DIR + "_tmp_finAsmb.txt"), ## needed for run_bbtools_stats proper unpackaging
     threads: config["num_cpus"] ##threads_per_job
     output:
         doneout=     ASMB_OUT_SAMPLE_DIR + "_MGXasmb.done",
-        asmbout=temp(ASMB_OUT_SAMPLE_DIR + "_tmp_finAsmb.txt"), ## needed for run_bbtools_stats proper unpackaging
     shell:"""
         time metaspades.py -1 {input.in1} -2 {input.in2}  --memory {params.mem_gb} \
             --tmp-dir {params.tmp_dir} -o {params.tmp_dir} -t {threads} \
@@ -379,18 +379,18 @@ rule run_metaspades:
                     cp {params.grafout} {params.grfout} && \
                     cp {params.contout} {params.cntout} && \
                     cp {params.scafout} {params.scfout} && \
-                    cp {params.scafout} {output.asmbout} && \
+                    cp {params.scafout} {params.asmbout} && \
                     touch {params.passout}  
                     echo "---- PASS: scaffold assembly achieved for {wildcards.sample}"
         elif [[ -s {params.contout} ]]; then
                     cp {params.contout} {params.cntout} && \
-                    cp {params.contout} {output.asmbout} && \
+                    cp {params.contout} {params.asmbout} && \
                     touch {params.passout} && \
                     echo "---- PASS: contig assembly achieved for {wildcards.sample}"
         else 
-                    echo ">no_assembly produced" > {output.asmbout} && \
+                    echo ">no_assembly produced" > {params.asmbout} && \
                     touch {params.failout}     && \
-                    echo "---- FAIL: assembly failed for {wildcards.sample}"     
+                    echo "---- FAIL: assembly failed for {wildcards.sample}"   
         fi
         """
 
@@ -415,9 +415,9 @@ rule run_trinity:
         ## final files
         cntout=      ASMB_OUT_SAMPLE_FILE + "_contigs.fasta",
         logout=      ASMB_OUT_SAMPLE_FILE + "_trinityLOG.txt",
+        asmbout=temp(ASMB_OUT_SAMPLE_DIR + "_tmp_finAsmb.txt") ## needed for run_bbtools_stats proper unpackaging
     output:
         doneout=     ASMB_OUT_SAMPLE_DIR + "_MTXasmb.done",
-        asmbout=temp(ASMB_OUT_SAMPLE_FILE + "_finAsmb.tmp.txt") ## needed for run_bbtools_stats proper unpackaging
     shell:"""
         time Trinity --seqType fq --left {input.f} --right {input.r} --CPU {params.threads} \
             --output {params.tmpDir} --full_cleanup --max_memory {params.memrGb} \
@@ -426,11 +426,11 @@ rule run_trinity:
 
         if [[ -s {params.fasout} ]]; then 
                     cp {params.fasout} {params.cntout} && \
-                    cp {params.fasout} {output.asmbout} && \
+                    cp {params.fasout} {params.asmbout} && \
                     touch {params.passout} ## needs to be empty
                     echo "---- PASS: assembly passed for {wildcards.sample}"
         else 
-                    echo ">no_assembly produced" > {output.asmbout} && \
+                    echo ">no_assembly produced" > {params.asmbout} && \
                     touch {output.doneout} && touch {params.failout} && \
                     echo "---- FAIL: assembly failed for {wildcards.sample}" 
         fi
@@ -440,12 +440,12 @@ rule run_bbtools_stats: ## this rule _needs_ a file to expand
     input:
         doneout=lambda wildcards: (rules.run_trinity.output.doneout    if config["denovo_mtx"] 
                            else rules.run_metaspades.output.doneout),
-        asmbfas=lambda wildcards:    (rules.run_trinity.output.asmbout if config["denovo_mtx"] 
-                           else rules.run_metaspades.output.asmbout),
+        # asmbfas=lambda wildcards:    (rules.run_trinity.params.asmbout if config["denovo_mtx"] 
+        #                    else rules.run_metaspades.params.asmbout),
     params:
         asm     =ASMB_OUT_SAMPLE_DIR,
         passmark=ASMB_OUT_SAMPLE_DIR  + "_asmb.pass",
-        asmbfas1=ASMB_OUT_SAMPLE_FILE + "_finAsmb.tmp.txt",
+        asmbfas1=ASMB_OUT_SAMPLE_DIR + "_tmp_finAsmb.txt",
         ## fake files for PWY_collation rule
         fake_dir1=GENEBIN, ## touch needs the PATH pre-made
         fake_dir2=PWYBIN,  ## touch needs the PATH pre-made
@@ -456,12 +456,12 @@ rule run_bbtools_stats: ## this rule _needs_ a file to expand
         finstats=ASMB_OUT_SAMPLE_FILE + "_asmbStats.txt",
     shell:"""
         if [[ -e {params.passmark} ]]; then  ## exists
-            sed $'s/_cov_/ cov_/g' {input.asmbfas} > {output.finfasta} && \
+            sed $'s/_cov_/ cov_/g' {params.asmbfas1} > {output.finfasta} && \
             stats.sh in={output.finfasta} out={output.finstats} && \
             printf \"\\nTEDreads mapping stats:\\n\"  >> {output.finstats}
         else
             echo "---- FAIL: no assembly produced" >> {output.finstats}
-            mv {input.asmbfas} {output.finfasta}
+            mv {params.asmbfas1} {output.finfasta}
             mkdir -p {params.fake_dir1} && mkdir -p {params.fake_dir2}
             touch {params.fake_tpm1} {params.fake_krn2}
         fi
@@ -873,8 +873,10 @@ if len(samples) > 1:
 
     rule PWY_collation:
         input:
-            pwyfiles=expand( rules.run_genes2krona.output.krona_out_clone, sample=samples ) , 
-            gnefiles=expand(rules.cp_geneTPM_files.output, sample=samples ),
+            # pwyfiles=expand( rules.run_genes2krona.output.krona_out_clone, sample=samples ) , 
+            # gnefiles=expand(rules.cp_geneTPM_files.output, sample=samples ),
+            pwyfiles=lambda wc: expand( rules.run_genes2krona.output.krona_out_clone, sample=asmb_pass(wc) ) , 
+            gnefiles=lambda wc: expand(rules.cp_geneTPM_files.output, sample=asmb_pass(wc) ),
             htmldone=rules.gene_ktImportText.output,
         params:
             pwy_dir=PWYBIN,
@@ -1318,12 +1320,12 @@ if config["find_args"]:
             colsAA  ="1,9,11,15,16,17,28",
             sedhdr  ='s/ # .*;gc_cont=0....//g',
             rgi_raw ="RGI_raw.txt", ## used in rule
-            rgi_main="RGI_main.txt",## used in rule
-            rgi_faas="RGI_seqs.faa",## used in rule
+            rgi_main="{sample}_RGI_main.txt",## used in rule
+            rgi_faas="{sample}_RGI_seqs.faa",## used in rule
         conda: 
             "rgi"
         output: ## output vars not used in rule but produced thorugh corresponding paramsVars
-            rgi_raw =RGI_DIR + "{sample}_RGI_raw.txt", 
+            rgi_raw =RGI_DIR + "RGI_raw.txt", 
             rgi_main=RGI_DIR + "{sample}_RGI_main.txt",
             rgi_faas=RGI_DIR + "{sample}_RGI_seqs.faa",
         shell:"""

@@ -41,7 +41,7 @@ def main(args):
     # log(args)
     base_command = [
         "snakemake -p --cores --nocolor --use-conda --rerun-incomplete --forcerun PWY_collation",
-        f"--resources mem_gb={mem_gb} --keep-going --keep-incomplete", ## --notemp", ##--reason --summary",
+        f"--resources mem_gb={mem_gb} --keep-going", # --keep-incomplete", ## --notemp", ##--reason --summary",
         f"--directory {tmp_dir} --latency-wait 10 --rerun-triggers code params",
     ]
     snakemake_config = [
