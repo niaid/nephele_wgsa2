@@ -117,12 +117,11 @@ print("-----------> making PCOA plot")
 try({
   title=paste("PCoA ordination plot of TAX content, using Bray-Curtis distances")
 pcoa_bray <- amp_ordinate(amp, filter_species = 0.01, type = "PCoA", sample_label_by = "SampleID", sample_label_size = 3,
-                          distmeasure = "bray", sample_color_by = "SampleID", sample_point_size = 4, opacity=1.5,
+                          distmeasure = "bray", sample_color_by = "SampleID", sample_point_size = 4, opacity=1,
                           detailed_output = TRUE, transform = "none", sample_shape_by = "TreatmentGroup")
- pcoa_bray$plot= pcoa_bray$plot + guides(color = guide_legend(ncol = 3), shape = guide_legend(ncol = 2)) +
-    theme(legend.position = "right") + ggtitle(title) + scale_shape_manual(values=c(17, 15,13,18, 4,5,6,7,8) )
-  pdf(paste0(path$outdir, "/TAX_BetaDiv_PCoA.pdf"), width=14, height=10); plot(pcoa_bray$plot); dev.off()
-  png(paste0(path$outdir, "/.TAX_BetaDiv_PCoA.png"), width=860, height=640); plot(pcoa_bray$plot); dev.off()
+pcoa_bray$plot  <- pcoa_bray$plot + coord_cartesian()
+pdf(paste0(path$outdir,  "/TAX_BetaDiv_PCoA.pdf"),  width=10, height=8);                        plot(pcoa_bray$plot); dev.off()
+png(paste0(path$outdir, "/.TAX_BetaDiv_PCoA.png"),  width=10, height=8, units = "in", res=300); plot(pcoa_bray$plot); dev.off()
 })
 
 print("-----------> making nMDS plot")
@@ -133,7 +132,7 @@ nmds_bray <- amp_ordinate(amp, filter_species = 0.01, type = "NMDS",  sample_lab
                           detailed_output = TRUE, transform = "none", sample_shape_by = "TreatmentGroup")
 nmds_bray$plot=nmds_bray$plot + guides(color = guide_legend(ncol = 3), shape = guide_legend(ncol = 2)) +
     theme(legend.position = "right") + ggtitle(title) + scale_shape_manual(values=c(17, 15,13,18, 4,5,6,7,8) )
-pdf(paste0(path$outdir, "/TAX_BetaDiv_nMDS.pdf"), width=14, height=10); plot(nmds_bray$plot); dev.off()
+pdf(paste0(path$outdir, "/TAX_BetaDiv_nMDS.pdf"), width=10, height=7); plot(nmds_bray$plot); dev.off()
 })
 
 print("-----------> making heatmap profile graph")
@@ -143,8 +142,10 @@ amp_htmp=amp_heatmap(amp, group_by = "SampleID", facet_by = "TreatmentGroup",
               plot_values_size = 3, showRemainingTaxa = T, tax_add = "Class") +
         theme(axis.text.x = element_text(angle = 45, size=10, vjust = 1),
               axis.text.y = element_text(size=8), legend.position="right")
-pdf(paste0(path$outdir, "/TAX_Heatmap.pdf"), width=14, height = 10); plot(amp_htmp); dev.off()
-png(paste0(path$outdir, "/.TAX_Heatmap.png"), width=860, height=640); plot(amp_htmp); dev.off()
+  wratio= 8 + length(unique(amp$metadata$TreatmentGroup)) + round( (1/4)*length(amp$metadata$SampleID), 0) 
+pdf(paste0(path$outdir, "/TAX_Heatmap.pdf"), width=wratio, height=7); plot(amp_htmp); dev.off()
+png(paste0(path$outdir, "/.TAX_Heatmap.png"), width=wratio, height=7, units = "in", res=300); plot(amp_htmp); dev.off()
+
 })
 
 print("-----------> making rarecurve graph")

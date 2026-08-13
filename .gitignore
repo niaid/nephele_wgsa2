@@ -6,3 +6,4 @@ nephele_wgsa2/utils/._DiversityPlotsShortReads_PWY_v5.R
 nephele_wgsa2/._outputs_template.json
 nephele_wgsa2/._utils.smk
 nephele_wgsa2/__pycache__/
+nephele_wgsa2/utils/._RGI_merger_N3.py
