@@ -376,8 +376,6 @@ rule run_metaspades:
             --only-assembler  > {params.logout} 2>&1 && \
         touch {output.doneout} 
         
-
-        tail -n 30 {params.logout}
         if [[ -s {params.scafout} ]]; then  
                     cp {params.grafout} {params.grfout} && \
                     cp {params.contout} {params.cntout} && \
@@ -397,6 +395,8 @@ rule run_metaspades:
                     echo "---- FAIL: assembly failed for {wildcards.sample}" && \
                     echo "---- processing will continue for other samples as much as possible"   
         fi
+        
+        tail -n 30 {params.logout}
         """
 
 rule run_trinity:
@@ -429,7 +429,6 @@ rule run_trinity:
             --bflyHeapSpaceMax {params.bfly_HeapSpace} --bflyCPU {params.bfly_CPU} &> \
             {params.logout} 2>&1 && touch {output.doneout}
 
-        tail -n 30 {params.logout}
         if [[ -s {params.fasout} ]]; then 
                     cp {params.fasout} {params.cntout} && \
                     cp {params.fasout} {params.asmbout} && \
@@ -442,6 +441,7 @@ rule run_trinity:
                     echo "---- FAIL: assembly failed for {wildcards.sample}" && \
                     echo "---- processing will continue for other samples as much as possible" 
         fi
+        tail -n 30 {params.logout}
         """
 
 rule run_bbtools_stats: ## this rule _needs_ a file to expand
