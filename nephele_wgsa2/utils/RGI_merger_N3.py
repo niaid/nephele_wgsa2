@@ -26,7 +26,7 @@ final_data = []
 
 for sample in os.listdir(directory):
 
-    sampName=sample.removesuffix('_asmb')
+    sampName = sample.removesuffix('_asmb')
 
     genes = f"functional/genes/{sampName}_PREDgenes_ABUNtab.txt"
 
