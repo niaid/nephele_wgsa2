@@ -5,7 +5,7 @@ from functools import reduce
 import biom
 from biom.cli.util import write_biom_table
 import os
-
+from snakemake.io import glob_wildcards
 
 # def read_mapping_file():
 #     samples = {}
@@ -29,24 +29,37 @@ def get_num_threads_per_job(num_samples):
     default_threads_per_job = 16
     return min(max((num_cpus / num_samples), default_threads_per_job), num_cpus)
 
-def run_fastp_cmd():
-    # cmd = "fastp -i {input.f} -I {input.r} -o {output.f} -O {output.r} -h {output.s_l_html} -j {output.s_l_json} \
-    ## --trim_poly_x --average_qual 10 --length_required 60 --cut_window_size 4 --thread {threads} \
-    ## --low_complexity_filter --correction --cut_front --cut_front_mean_quality 20 --cut_tail  \
-    ## --cut_tail_mean_quality 15"
-    # return cmd
 
+def run_fastp_cmd():
     average_qual, length_required, cut_front_mean_quality, cut_tail_mean_quality = 10, 60, 20, 15
-    base_cmd = "fastp -i {input.f} -I {input.r} -o {output.f} -O {output.r} -h {output.s_l_html} -j {output.s_l_json} \
-                --trim_poly_x --cut_window_size 4 --thread {threads} --low_complexity_filter --correction"
+
+    base_cmd = (
+        "fastp -i {input.f} -I {input.r} "
+        "-o {params.f} -O {params.r} "
+        "-h {output.html} -j {params.json} "
+        "--trim_poly_x --cut_window_size 4 --thread {threads} "
+        "--low_complexity_filter --correction"
+    )
+
     if config["trim_filter"]:
         average_qual = config["average_read_quality"]
         length_required = config["min_read_length"]
         cut_front_mean_quality = config["trim_of_5"]
         cut_tail_mean_quality = config["trim_of_3"]
-    trim_filter = f"--average_qual {average_qual} --length_required {length_required} --cut_front \
-                    --cut_front_mean_quality {cut_front_mean_quality} --cut_tail  --cut_tail_mean_quality {cut_tail_mean_quality}"
-    return base_cmd + " " + trim_filter + " 2>> {params.s_l_text}"        ### moved to params for log-capture <--##
+
+    trim_filter = (
+        f"--average_qual {average_qual} "
+        f"--length_required {length_required} "
+        f"--cut_front --cut_front_mean_quality {cut_front_mean_quality} "
+        f"--cut_tail --cut_tail_mean_quality {cut_tail_mean_quality}"
+    )
+
+    return base_cmd + " " + trim_filter + " 2>> {output.text}"
+
+
+
+def asmb_pass(wc):
+    return glob_wildcards(ASMB_OUT_SAMPLE_DIR + "_asmb.pass").sample
 
 
 def make_biom_file(profiles, taxfiles, samples, map_file, biom_file_name, tax_col, prof_col):
@@ -105,16 +118,16 @@ def make_biom_file(profiles, taxfiles, samples, map_file, biom_file_name, tax_co
 
 
 def clean_output():
-    # asm_bai=" ".join(expand(ASM + "*.bai", sample=samples)) ## do not remove
-    asm_bt2=" ".join(expand((ASMB_MTX_SAMPLE if config["denovo_mtx"] else ASMB_MGX_SAMPLE) + "*.bt2", sample=samples))
-    asm_done=" ".join(expand((ASMB_MTX_SAMPLE if config["denovo_mtx"] else ASMB_MGX_SAMPLE) + "*.done", sample=samples))
-    qc_plots_done=" ".join(expand(QC_PLOTS + "*.done", sample=samples))
-    kraken2_clf_klogs=TED_READS_TAX_KLOGS
+    asm_bt2      =" ".join(expand(TMP_SAMPLE_DIR + "*.bt2"                 , sample=samples))
+    asm_done     =" ".join(expand(ASMB_OUT_SAMPLE_DIR + "*.done"           , sample=samples))
+    qc_plots_done=" ".join(expand(QC_PLOTS + "*.done"                      , sample=samples))
+    tmp_finAsmb  =" ".join(expand(ASMB_OUT_SAMPLE_DIR + "_tmp_finAsmb.txt" , sample = samples)) ##ASMB_TMP_FINASM_FILE
+
 
     command = f"""
     set +o pipefail
     echo "Cleaning output..."
-    rm -rf {asm_bt2} {asm_done} {qc_plots_done} {kraken2_clf_klogs} 
+    rm -rf {asm_bt2} {asm_done} {qc_plots_done} {tmp_finAsmb}
     """ 
     return command
 
@@ -155,10 +168,10 @@ def handle_cp_biom():
 
 
 def fwd_outputs():
-    asm_bam=" ".join(expand(OUT_FILE + "_asmbFinal.bam"    , sample=samples))
-    asm_bai=" ".join(expand(OUT_FILE + "_asmbFinal.bam.bai", sample=samples))
-    asm_fas=" ".join(expand(OUT_FILE + "_asmbFinal.fasta"  , sample=samples))
-    asm_dep=" ".join(expand(OUT_FILE + "_asmbDepths.txt"   , sample=samples))
+    asm_bam=" ".join(expand(ASMB_OUT_SAMPLE_FILE + "_asmbFinal.bam"    , sample=samples))
+    asm_bai=" ".join(expand(ASMB_OUT_SAMPLE_FILE + "_asmbFinal.bam.bai", sample=samples))
+    asm_fas=" ".join(expand(ASMB_OUT_SAMPLE_FILE + "_asmbFinal.fasta"  , sample=samples))
+    asm_dep=" ".join(expand(ASMB_OUT_SAMPLE_FILE + "_asmbDepths.txt"   , sample=samples))
     asmbDIR = config["output_dir"] + ("/asmbMTX/" if config["denovo_mtx"] else "/asmbMGX/")
     FWD_DIR = config["output_dir"] + "/asmb_files/"
 
@@ -174,26 +187,10 @@ def fwd_outputs():
 
     for i in ${{list}}; do
     echo "---> links to create ${{i}}"
-        ln -rs {FWD_DIR}/${{i}}_asmbFinal.bam      {asmbDIR}/${{i}}_asmb/${{i}}_asmbFinal.bam
-        ln -rs {FWD_DIR}/${{i}}_asmbFinal.bam.bai  {asmbDIR}/${{i}}_asmb/${{i}}_asmbFinal.bam.bai
+        ln -rs {FWD_DIR}/${{i}}_asmbFinal.bam        {asmbDIR}/${{i}}_asmb/${{i}}_asmbFinal.bam
+        ln -rs {FWD_DIR}/${{i}}_asmbFinal.bam.bai    {asmbDIR}/${{i}}_asmb/${{i}}_asmbFinal.bam.bai
         # ln -rs {FWD_DIR}/${{i}}_asmbFinal.fasta    {asmbDIR}/${{i}}_asmb/${{i}}_asmbFinal.fasta
         # ln -rs {FWD_DIR}/${{i}}_asmbDepths.txt     {asmbDIR}/${{i}}_asmb/${{i}}_asmbDepths.txt
     done
     """
     return command
-
-# def handle_fwdDIR():
-#     if config["tar_asmb_files"]:
-#         FWD_DIR= "asmb_files/"
-#         ASMB_FILE_NAME=config["output_dir"] + "/" + "asmb_files"
-#         TAR_NAME="WGSA2plus_asmbFiles.tar"
-# 
-#         command = f"""
-#         tar -cf {TAR_NAME} -C {FWD_DIR} {ASMB_FILE_NAME}
-#         """
-#     else:
-#         command = f"""
-#         ### rm -rf {ASMB_FILE_NAME}
-#         echo "asmb_files are included in output"
-#         """
-#     return command

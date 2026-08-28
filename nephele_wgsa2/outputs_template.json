@@ -13,6 +13,13 @@
         "is_regex_path": true
     },
     {
+        "type": "IMAGE",
+        "path": "TAXprofiles/readsTAX_*/DivPlots/.TAX_Heatmap.png",
+        "title": " TAX community profile plot",
+        "description": "A heatmap plot representation of the taxonomic community profiles.",
+        "is_regex_path": true
+    },
+    {
         "type": "HTML",
         "path": "TAXprofiles/readsTAX_*/TAXplots_readsTAX_*.html",
         "title": "TAX-profiles (TED-based; interactive)",
@@ -44,6 +51,13 @@
         "path": "PWYprofiles/*PWYs.MP/DivPlots/.PWY_BetaDiv_PCoA.png",
         "title": "PWY PCoA plot",
         "description": "A PCoA plot representation of the metabolic Beta Diversity between samples of the dataset.",
+        "is_regex_path": true
+    },
+    {
+        "type": "IMAGE",
+        "path": "PWYprofiles/*PWYs.MP/DivPlots/.PWY_Heatmap.png",
+        "title": "PWY profiles plot",
+        "description": "A heatmap plot representation of the metabolic profiles of the dataset.",
         "is_regex_path": true
     },
     {

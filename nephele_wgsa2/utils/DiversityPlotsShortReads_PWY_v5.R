@@ -68,11 +68,11 @@ amp=ampvis2::amp_load(tables$amp, tables$meta)
 print("-----------> making PCOA plot")
 try({
 pcoa_bray <- amp_ordinate(amp, filter_species = 0.01, type = "PCOA", sample_label_by = "SampleID", sample_label_size = 3,
-                          distmeasure = "bray", sample_color_by = "SampleID", sample_point_size = 4, opacity=1.5,
+                          distmeasure = "bray", sample_color_by = "SampleID", sample_point_size = 4, opacity=1,
                           detailed_output = TRUE, transform = "none", sample_shape_by = "TreatmentGroup")
-#pcoa_bray$plot= pcoa_bray$plot + scale_shape_manual(values=c(17, 15,13,18, 4,5,6,7,8) )
-pdf(paste0(path$outdir, "/PWY_BetaDiv_PCoA.pdf"), width=12, height=10); plot(pcoa_bray$plot); dev.off()
-png(paste0(path$outdir, "/.PWY_BetaDiv_PCoA.png"), width=760, height=640); plot(pcoa_bray$plot); dev.off()
+pcoa_bray$plot  <- pcoa_bray$plot + coord_cartesian()
+pdf(paste0(path$outdir, "/PWY_BetaDiv_PCoA.pdf"),  width=10, height=8); plot(pcoa_bray$plot); dev.off()
+png(paste0(path$outdir, "/.PWY_BetaDiv_PCoA.png"),  width=10, height=8, units = "in", res=300); plot(pcoa_bray$plot); dev.off()
 })
 
 print("-----------> making nMDS plot")
@@ -80,7 +80,6 @@ try({
 nmds_bray <- amp_ordinate(amp, filter_species = 0.01, type = "NMDS", sample_label_by = "SampleID", sample_label_size = 3,
                           distmeasure = "bray", sample_color_by = "SampleID", sample_point_size = 4, opacity = 1.5,
                           detailed_output = TRUE, transform = "none", sample_shape_by = "TreatmentGroup")
-#nmds_bray$plot=nmds_bray$plot + scale_shape_manual(values=c(17, 15,13,18, 4,5,6,7,8))
 pdf(paste0(path$outdir, "/PWY_BetaDiv_nMDS.pdf"), width=12, height=10); plot(nmds_bray$plot); dev.off()
 })
 
@@ -92,7 +91,8 @@ amp_htmp=amp_heatmap(amp, group_by = "SampleID", facet_by = "TreatmentGroup",
   theme(axis.text.x = element_text(angle = 45, size=10, vjust = 1),
         axis.text.y = element_text(size=8), legend.position="right")
   wratio= 8 + length(unique(amp$metadata$TreatmentGroup)) + round( (1/4)*length(amp$metadata$SampleID), 0) 
-pdf(paste0(path$outdir, "/PWY_Heatmap_top35PWYs.pdf"), width=wratio, height = 10); plot(amp_htmp); dev.off()
+pdf(paste0(path$outdir, "/PWY_Heatmap.pdf" ), width=wratio, height = 10); plot(amp_htmp); dev.off()
+png(paste0(path$outdir, "/.PWY_Heatmap.png"), width=wratio, height=7, units = "in", res=300); plot(amp_htmp); dev.off()
 })
 
 

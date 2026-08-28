@@ -20,15 +20,17 @@ merged_data = []
 
 directory = args.directory
 
-genes = "functional/genes/PREDgenes_ABUNtab.txt"
-
-rgi_main = "functional/RGI/RGI_main.txt"
-
 all_data = []
 
 final_data = []
 
 for sample in os.listdir(directory):
+
+    sampName = sample.removesuffix("_asmb")
+
+    genes = f"functional/genes/{sampName}_PREDgenes_ABUNtab.txt"
+
+    rgi_main = f"functional/RGI/{sampName}_RGI_main.txt"
 
     ## import gene_TPM
     gene_TPM = pd.read_csv(os.path.join(directory, sample, genes), sep="\t")
