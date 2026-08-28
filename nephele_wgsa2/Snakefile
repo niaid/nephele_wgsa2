@@ -406,12 +406,12 @@ rule run_trinity:
         f=lambda wildcards: (rules.norm_readDepth.output.normFread if config["read_norm"] else rules.remove_rRNA.output.fread_gz),
         r=lambda wildcards: (rules.norm_readDepth.output.normRread if config["read_norm"] else rules.remove_rRNA.output.rread_gz),
         q=lambda wildcards: (rules.TAX_diversity_plots.output.logR if len(samples) >1     else []),         
-    threads: config["num_cpus"]  ##threads_per_job
+    threads: config["num_cpus"]
     params:
         tmpDir=TMP_SAMPLE_DIR + "_trinity_asmb/",
         fasout=TMP_DIR + "{sample}_trinity_asmb.Trinity.fasta",
         memrGb=str(config['total_mem_gb'] // 3) + "G",
-        threads = lambda wildcards: int(threads_per_job - 4),
+        threads = lambda wildcards: int(config["num_cpus"] - 8),
         bfly_CPU=2,
         bfly_HeapSpace="20G",
         ## marker files
@@ -426,7 +426,7 @@ rule run_trinity:
     shell:"""
         time Trinity --seqType fq --left {input.f} --right {input.r} --CPU {params.threads} \
             --output {params.tmpDir} --full_cleanup --max_memory {params.memrGb} \
-            --bflyHeapSpaceMax {params.bfly_HeapSpace} --bflyCPU {params.bfly_CPU} &> \
+            --bflyHeapSpaceMax {params.bfly_HeapSpace} --bflyCPU {params.bfly_CPU} > \
             {params.logout} 2>&1 && touch {output.doneout}
 
         if [[ -s {params.fasout} ]]; then 
