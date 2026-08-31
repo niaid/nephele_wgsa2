@@ -39,7 +39,7 @@ input$scclist <- read.table(args$sccList, header = F, sep="\t") %>%
             rename_with(~ str_remove(.,".txt"), contains(".txt")) %>% 
             rename_with(~ str_remove(.,"_4krona"), contains("_4krona"))
 names(input$files) <- input$scclist$SampNames;
-print("------> naming input files:")
+print("------> checking names of pwy input files:")
 input$files
 
 #load data from files
@@ -122,6 +122,8 @@ if(args$genesDIR == "NA" ){ print("---> no geneTABLES to merge. Disabled.")}else
           ingenes$files=list.files(args$genesDIR, full.names = T, pattern = "TPM") 
           ingenes$names=read.table(args$sccList, header = F) %>% setNames("SampNames") %>% arrange(SampNames)
           names(ingenes$files) <- ingenes$names$SampNames ;
+          print("----- checking names of gene input files:")
+          ingenes$files
 
 
           #load data from files
