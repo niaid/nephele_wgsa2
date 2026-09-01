@@ -10,32 +10,31 @@ library(docopt)
 doc <- "Usage: my_program.R [options]
 --help           show this screen
 --binDIR PATH    hard path to bin dir [default: 'getwd()/TEDreadsTAX/bin']
---sccList NAME   hard path and name of file listing successful sample names [default: 'SccList.txt']
---outdir NAME    path to & name of output directory to create [default: 'getwd()/TEDreadsTAX/merged_tables']
---genesDIR PATH  hard path to bin dir for KO/EC genes [None for TAX mode, but flag is needed]"
+--sfxRMV NAME    the suffix of the fileNames to be removed to capture only sampleNames
+--outDIR NAME    path to & name of output directory to create [default: 'getwd()/TEDreadsTAX/merged_tables']"
+##--sccList NAME   hard path and name of file listing successful sample names [default: 'SccList.txt']
 doc
 args <- docopt(doc)
 args
 # #for manual prep
 #  args <-docopt(doc, args = c(
 #   "--binDIR" , "/path/to/PWYprofiles/bin/",
-#   "--sccList"    , "/path/to/SccList.txt",
-#   "--outdir" , "/path/to/PWYprofiles/merged_tables/" )) #this is if the .sh does not provide arguments
+#   "--sfxRMV"    , "_wTAXid_4krona.txt",
+#   "--outDIR" , "/path/to/PWYprofiles/merged_tables/" )) #this is if the .sh does not provide arguments
 # args
-
 
 #load("TAX_TableMerging_v1.RData")
 # 
 # #=============== finished ==============
-input=list() #instead of input=NA
-input$path= args$binDIR #"~/Documents/DataTest/CAMI_HiSeq_data_wgs/4taxonomic_plots/"
-input$files=list.files(input$path, full.names = T) #pattern = args$infix,
-print("------> detecting input files:")
-input$files
 
-input$scclist <- read.table(args$sccList, header = F, sep="\t") %>% setNames("SampNames") %>%  arrange(SampNames)
-names(input$files) <- input$scclist$SampNames;
-print("------> naming input files:")
+cat("\n\n\n ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n")
+print("------> starting TAX COLLATION <------")
+input=list()
+input$path= args$binDIR 
+input$files=list.files(input$path, full.names = T, pattern = args$sfxRMV)
+
+names(input$files) <- basename(input$files) %>% str_remove(args$sfxRMV)
+print("------> checking names of tax input files:")
 input$files
 
 #load data from files
@@ -73,7 +72,7 @@ head(merged %>% select(-Lineage)); dim(merged);
 
 
 output=list()
-output$dir<- args$outdir
+output$dir<- args$outDIR
 dir.create(output$dir)
 print(paste("------> exporting data at:", output$dir))
 
@@ -84,21 +83,21 @@ noHier <- setdiff(names(merged), c("Lineage"))
 write.table(merged[,noHier], file.path(output$dir, "merged_Counts+TAX.txt"),
             sep="\t", col.names=NA, quote = F, na="")
 
-Lin <- select(merged, "Lineage")
-write.table(Lin, file.path(output$dir, ".merged_Lineage.txt"), ## invisible file
-            sep="\t", col.names=NA, quote = F, na="")
+# Lin <- select(merged, "Lineage")
+# write.table(Lin, file.path(output$dir, ".merged_Lineage.txt"), ## invisible file
+#             sep="\t", col.names=NA, quote = F, na="")
 
-noTAX <- setdiff(names(merged), tiers)
-noTAX <- merged[, noTAX] %>% relocate(Lineage, .after=last_col() )
-write.table(noTAX, file.path(output$dir, "merged_Counts+Lineage.txt"),
-            sep="\t", col.names=NA, quote = F, na="")
+# noTAX <- setdiff(names(merged), tiers)
+# noTAX <- merged[, noTAX] %>% relocate(Lineage, .after=last_col() )
+# write.table(noTAX, file.path(output$dir, "merged_Counts+Lineage.txt"),
+#             sep="\t", col.names=NA, quote = F, na="")
 
-write.table(merged[,names(data)], file.path(output$dir, ".merged_Counts.txt"), ## invisible file
-            sep="\t", col.names=NA, quote = F, na="")
+# write.table(merged[,names(data)], file.path(output$dir, ".merged_Counts.txt"), ## invisible file
+#             sep="\t", col.names=NA, quote = F, na="")
 
-noCounts<-setdiff(names(merged), c(names(data), "Lineage") )
-write.table(merged[,noCounts], file.path(output$dir, ".merged_TAX.txt") , ## invisible file
-            sep="\t", col.names=NA, quote = F, na="")
+# noCounts<-setdiff(names(merged), c(names(data), "Lineage") )
+# write.table(merged[,noCounts], file.path(output$dir, ".merged_TAX.txt") , ## invisible file
+#             sep="\t", col.names=NA, quote = F, na="")
 
 # bim <-biomformat::make_biom(data = merged[,names(data)], observation_metadata = merged[,noCounts], sample_metadata = names(data))
 # biomformat::write_biom(bim, biom_file = paste0(output$dir, "merged_Counts+TAX_json.biom") )

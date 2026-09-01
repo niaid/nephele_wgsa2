@@ -259,7 +259,7 @@ rule tax_kreport2krona_per_sample:
         sedSTR='s/\\tUnclassified\\t\\t\\t\\t\\t\\t\\t0/\\tUnclassified\\tUnclassified\\tUnclassified\\tUnclassified\\tUnclassified\\tUnclassified\\tUnclassified\\t0/g' # more explicit
     output:
         tmpfile=temp(TED_READS_TAX + "reports/_tmp_{sample}.txt"),
-        binfile=TED_READS_TAX + "bin/{sample}_wTAXid_4krona.txt"
+        binfile=TED_READS_TAX + "taxbin/{sample}_wTAXid_4krona.txt"
     shell:
         "sed -E '{params.sedRNK}' {input.krfile} > {output.tmpfile} &&"
         "python3 {params.kreport2krona_script} --report-file {output.tmpfile} --no-tax-prefixes -o {output.binfile} &&"
@@ -406,7 +406,7 @@ rule run_trinity:
         f=lambda wildcards: (rules.norm_readDepth.output.normFread if config["read_norm"] else rules.remove_rRNA.output.fread_gz),
         r=lambda wildcards: (rules.norm_readDepth.output.normRread if config["read_norm"] else rules.remove_rRNA.output.rread_gz),
         q=lambda wildcards: (rules.TAX_diversity_plots.output.logR if len(samples) >1     else []),         
-    threads: config["num_cpus"]  ##threads_per_job
+    threads: config["num_cpus"]
     params:
         tmpDir=TMP_SAMPLE_DIR + "_trinity_asmb/",
         fasout=TMP_DIR + "{sample}_trinity_asmb.Trinity.fasta",
@@ -860,51 +860,41 @@ if len(samples) > 1:
         input:
             expand(rules.tax_kreport2krona_per_sample.output.binfile, sample=samples)
         params:
-            bin_dir=TED_READS_TAX + "bin/",
+            bin_dir=TED_READS_TAX + "taxbin/",
             gen_dir="NA",
-            string="_wTAXid_4krona.txt",
-            tax_table_merging_script=config["tax_table_merging_script"],
+            sfx4rmv="_wTAXid_4krona.txt",
+            taxRscr=config["tax_table_merging_script"],
             tmp_dir=config["tmp_dir"],
-            out_dir=TAX_MERGED_TABLES
+            out_dir=TAX_MERGED_TABLES,
+            logR=TAX_MERGED_TABLES + "TAX_collationR.log.txt",
         output:
-            scclist=temp(TED_READS_TAX + "SccList.txt"),
             out2=TAX_MERGED_TABLES + "merged_Counts+TAX.txt",
             out4=TAX_MERGED_TABLES + "merged_Counts+Lineage.txt",
-            logR=TAX_MERGED_TABLES + "TAX_collationR.log.txt"
         shell:"""
-            ls -1 {params.bin_dir}/*{params.string} | \
-                xargs basename -a -s {params.string} > {output.scclist} && \
-            Rscript {params.tax_table_merging_script} --binDIR {params.bin_dir} \
-                --sccList {output.scclist} --outdir {params.out_dir} \
-                --genesDIR {params.gen_dir} >{output.logR} 2>&1 
+            Rscript {params.taxRscr} --binDIR {params.bin_dir} \
+                --sfxRMV {params.sfx4rmv} --outDIR {params.out_dir} > {params.logR} 2>&1 
             """
 
 
     rule PWY_collation:
         input:
-            pwyfiles=expand( rules.run_genes2krona.output.krona_out_clone, sample=samples ) , 
+            pwyfiles=expand(rules.run_genes2krona.output.krona_out_clone, sample=samples ) , 
             gnefiles=expand(rules.cp_geneTPM_files.output, sample=samples ),
-            # pwyfiles=lambda wc: expand( rules.run_genes2krona.output.krona_out_clone, sample=asmb_pass(wc) ) , 
-            # gnefiles=lambda wc: expand(rules.cp_geneTPM_files.output, sample=asmb_pass(wc) ),
             htmldone=rules.gene_ktImportText.output,
         params:
             pwy_dir=PWYBIN,
             gen_dir=GENEBIN,
-            string="_4krona.txt", 
+            string="_4krona.txt|_geneTPM.*.txt", 
             pwyR_script=config["pwy_table_merging_script"],
-            tmp_dir=config["tmp_dir"],
-            out_dir=PWY_MERGED_TABLES
+            out_dir=PWY_MERGED_TABLES,
+            logR=PWY_MERGED_TABLES + "PWY_collationR.log.txt",
         output:
-            scclist=temp(PWYDIR + "SccList.txt"),
             out2=PWY_MERGED_TABLES + "merged_Counts+PWY.txt",
             out4=PWY_MERGED_TABLES + "merged_Counts+allTiers.txt",
             out7=PWY_MERGED_TABLES + "merged_geneTPMtable.txt",
-            logR=PWY_MERGED_TABLES + "PWY_collationR.log.txt"
         shell:"""
-            ls -1 {params.pwy_dir}/*{params.string} | \
-                xargs basename -a -s {params.string} > {output.scclist} && \
-            Rscript {params.pwyR_script} --binDIR {params.pwy_dir} --sccList {output.scclist} \
-                    --outdir {params.out_dir} --genesDIR {params.gen_dir} > {output.logR} 2>&1 
+            Rscript {params.pwyR_script} --outDIR {params.out_dir} --sfxRMV '{params.string}' \
+                    --pwyDIR {params.pwy_dir} --genDIR {params.gen_dir} > {params.logR} 2>&1 
             """
 
 
