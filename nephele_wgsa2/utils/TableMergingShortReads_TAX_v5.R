@@ -83,13 +83,13 @@ noHier <- setdiff(names(merged), c("Lineage"))
 write.table(merged[,noHier], file.path(output$dir, "merged_Counts+TAX.txt"),
             sep="\t", col.names=NA, quote = F, na="")
 
+noTAX <- setdiff(names(merged), tiers)
+noTAX <- merged[, noTAX] %>% relocate(Lineage, .after=last_col() )
+write.table(noTAX, file.path(output$dir, "merged_Counts+Lineage.txt"),
+            sep="\t", col.names=NA, quote = F, na="")
+
 # Lin <- select(merged, "Lineage")
 # write.table(Lin, file.path(output$dir, ".merged_Lineage.txt"), ## invisible file
-#             sep="\t", col.names=NA, quote = F, na="")
-
-# noTAX <- setdiff(names(merged), tiers)
-# noTAX <- merged[, noTAX] %>% relocate(Lineage, .after=last_col() )
-# write.table(noTAX, file.path(output$dir, "merged_Counts+Lineage.txt"),
 #             sep="\t", col.names=NA, quote = F, na="")
 
 # write.table(merged[,names(data)], file.path(output$dir, ".merged_Counts.txt"), ## invisible file
