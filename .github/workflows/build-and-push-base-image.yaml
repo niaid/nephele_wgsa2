@@ -6,9 +6,8 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: "Docker image version tag"
+        description: "Docker image version tag. Provide the version in config.json. The version has to be newer than the one that is currently in production."
         required: true
-        default: "latest"
 
 jobs:
   build-and-push:
