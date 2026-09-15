@@ -1,5 +1,10 @@
 #!/usr/bin/env Rscript
 
+# Adding options(warn = 2) at the very beginning of your R script instructs R to treat all warnings as critical errors, causing the script to halt and exit with a non-zero code.
+# This is to fail the image build with github actions when a package fails to install (e.g., due to missing system dependencies or compilation errors).
+options(warn = 2) # Converts warnings to hard errors
+
+
 # install.packages(c('lattice'), repos='http://cran.us.r-project.org')
 ## Matrix >=1.7.0 (requires R >=4.4.0) is not compatible with our version of R (~=4.3.2)
 # install.packages('https://cran.r-project.org/src/contrib/Archive/Matrix/Matrix_1.6-5.tar.gz', repos=NULL, type='source')
