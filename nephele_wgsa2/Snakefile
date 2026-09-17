@@ -216,7 +216,8 @@ rule run_kraken2_decontaminate:
         ### touch {input.h}
 
         if [[ ! -s {output.revted} ]] && [[ -s {params.tedtar} ]] ; then 
-            tar -xvf {params.tedtar} -C {params.outdir}/  
+            tar -xvf {params.tedtar} -C {params.outdir}/  &&
+            touch {output.fwdted} {output.revted}
         else 
             kraken2 --use-names --gzip-compressed --threads {threads} \
             --confidence {params.kr2confd_host} --db {params.decontaminate} \
