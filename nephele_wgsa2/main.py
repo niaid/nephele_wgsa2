@@ -26,7 +26,9 @@ def main(args):
     outputs_dir_path = args.outputs_dir_path
     tmp_dir = outputs_dir_path / "tmp"
     sh.mkdir("-p", str(tmp_dir))
-    num_cpus = int(args.set_cpus / 1.04)  ### <- avoids heap memory issue (bbmap esp) 
+    num_cpus = int(args.set_cpus)  
+    if num_cpus > 48:
+        num_cpus = int(num_cpus / 1.04) ### <- avoids heap memory issue for high-cpu jobs (bbmap esp) 
     mem = virtual_memory()
     mem_gb = int(mem.total / 1024 / 1024 / 1024)
 
