@@ -177,4 +177,10 @@ def parse_args():
         default=Path("/outputs"),
         help="Path to outputs directory",
     )
+    parser.add_argument(
+        "--set_cpus",
+        type=field(int, ge=16, le=96),
+        default=0,
+        help="custom cpu setting. If not set, uses all available",
+    )
     return parser.parse_args()

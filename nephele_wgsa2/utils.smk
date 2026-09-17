@@ -194,3 +194,26 @@ def fwd_outputs():
     done
     """
     return command
+
+def main_outputs():
+    tax_tab=TAX_MERGED_TABLES + "merged_Counts+TAX.txt"
+    pwy_tab=PWY_MERGED_TABLES + "merged_Counts+PWY.txt"
+    gen_tab=PWY_MERGED_TABLES + "merged_geneTPMtable.txt"
+    pwyplot=PWYPLOTS
+    taxplot=TAXPLOTS
+    taxdivp=TAX_DIVERSITY_PLOTS
+    pwydivp=PWY_DIVERSITY_PLOTS
+    OUT_DIR =config["output_dir"] + "/main_results/"
+
+    command = f"""
+    echo "---> linking main result files into {OUT_DIR} "
+    mkdir -p {OUT_DIR}
+        ln -rs {tax_tab} {OUT_DIR}
+        ln -rs {pwy_tab} {OUT_DIR}
+        ln -rs {gen_tab} {OUT_DIR}
+        ln -rs {taxplot} {OUT_DIR}
+        ln -rs {pwyplot} {OUT_DIR}
+        ln -rs {taxdivp} {OUT_DIR}/TAX_DivPlots
+        ln -rs {pwydivp} {OUT_DIR}/PWY_DivPlots
+    """
+    return command
