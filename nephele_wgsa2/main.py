@@ -26,10 +26,11 @@ def main(args):
     outputs_dir_path = args.outputs_dir_path
     tmp_dir = outputs_dir_path / "tmp"
     sh.mkdir("-p", str(tmp_dir))
-    num_cpus = os.cpu_count()
+    num_cpus = int(args.set_cpus)
     if num_cpus > 48:
-        num_cpus = int(num_cpus / 1.25)
-    # # for bbmap (avoid heap memory issue)
+        num_cpus = int(
+            num_cpus / 1.04
+        )  ### <- avoids heap memory issue for high-cpu jobs (bbmap esp)
     mem = virtual_memory()
     mem_gb = int(mem.total / 1024 / 1024 / 1024)
 
@@ -44,7 +45,7 @@ def main(args):
         f"--resources mem_gb={mem_gb} --keep-going",  ##--keep-incomplete", ## --notemp", ##--reason --summary",
         f"--directory {tmp_dir} --latency-wait 10 --rerun-triggers code params",
     ]
-    snakemake_config = [
+    snakemake_config = [  ## needs to start with --config
         f"--config num_cpus={num_cpus} map_file={args.mapping_file_path}",
         f"output_dir={outputs_dir_path} total_mem_gb={mem_gb} tmp_dir={tmp_dir}",
         f"trim_filter={args.trim_filter} include_ted_files={args.include_ted_files}",

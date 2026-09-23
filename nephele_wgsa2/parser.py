@@ -1,5 +1,5 @@
 from pathlib import Path
-
+import os
 from nephele_pipeline_utils.enums import DataType
 from nephele_pipeline_utils.parser import NepheleArgumentParser
 from nephele_pipeline_utils.types import boolean, path, directory, field, mapping_file
@@ -176,5 +176,13 @@ def parse_args():
         type=directory,
         default=Path("/outputs"),
         help="Path to outputs directory",
+    )
+    parser.add_argument(
+        "--set_cpus",
+        type=field(int, ge=16, le=96),
+        default=min(
+            len(os.sched_getaffinity(0)), 96
+        ),  ##os.cpu_count() <-may grab unallocated notes
+        help="custom cpu setting. If not set, uses all available",
     )
     return parser.parse_args()

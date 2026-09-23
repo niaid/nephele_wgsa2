@@ -116,13 +116,6 @@
         "is_regex_path": true
     },
     {
-        "type": "MISCELLANEOUS",
-        "path": "asmb_files/{sample_id}_asmbDepths.txt",
-        "title": "Assembly depths info file for {sample_id}",
-        "description": "Assembly depths info file for a sample to be used by MAGs pipeline",
-        "is_regex_path": true
-    },
-    {
         "type": "MERGER",
         "path": "TAXprofiles/readsTAX_*/merged_tables/merged_Counts+Lineage.txt",
         "title": "Merged taxonomic abundance table",
