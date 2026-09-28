@@ -23,9 +23,10 @@ on:
 
 jobs:
   set-image-pointer:
-    uses: niaid/nephele_gh_actions/.github/workflows/set-image-pointer.yaml@main
+    uses: niaid/nephele_gh_actions/.github/workflows/set-image-pointer_cb.yaml@main
     with:
       pipeline: nephele_wgsa2
       region: us-east-1
       env: ${{ inputs.env }}
       sha: ${{ inputs.sha }}
+      codebuild-fleet-name: codebuild-mcb-46c5e3-nephele_wgsa2-nephele_runner
