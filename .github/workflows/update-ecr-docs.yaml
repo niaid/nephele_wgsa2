@@ -5,8 +5,9 @@ on:
 
 jobs:
   update-ecr-metadata:
-    uses: niaid/nephele_gh_actions/.github/workflows/update-ecr-metadata.yaml@main
+    uses: niaid/nephele_gh_actions/.github/workflows/update-ecr-metadata_cb.yaml@main
     with:
       pipeline: nephele_wgsa2
       description: "WGSA2+ pipeline for Nephele - metagenomics analysis platform for processing whole genome shotgun amplicon sequencing data"
       region: us-east-1
+      codebuild-fleet-name: codebuild-mcb-46c5e3-nephele_wgsa2-nephele_runner

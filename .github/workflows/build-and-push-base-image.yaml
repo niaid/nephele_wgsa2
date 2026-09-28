@@ -11,8 +11,9 @@ on:
 
 jobs:
   build-and-push:
-    uses: niaid/nephele_gh_actions/.github/workflows/build-and-push-base-image.yaml@main
+    uses: niaid/nephele_gh_actions/.github/workflows/build-and-push-base-image_cb.yaml@main
     with:
       pipeline: nephele_wgsa2
       tag: ${{ inputs.tag }}
       region: us-east-1
+      codebuild-fleet-name: codebuild-mcb-46c5e3-nephele_wgsa2-nephele_runner
