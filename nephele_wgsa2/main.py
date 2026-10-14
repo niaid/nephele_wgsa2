@@ -41,7 +41,7 @@ def main(args):
     log("Starting WGSA pipeline...")
     # log(args)
     base_command = [
-        "snakemake -p --cores all --nocolor --use-conda --use-conda --conda-prefix /opt/conda/envs --rerun-incomplete",  ## --forcerun PWY_diversity_plots TAX_diversity_plots",
+        "snakemake -p --cores all --nocolor --use-conda --conda-prefix /opt/conda/envs --rerun-incomplete",  ## --forcerun PWY_diversity_plots TAX_diversity_plots",
         f"--resources mem_gb={mem_gb} --keep-going",  ##--keep-incomplete", ## --notemp", ##--reason --summary",
         f"--directory {tmp_dir} --latency-wait 10 --rerun-triggers code params",
     ]
