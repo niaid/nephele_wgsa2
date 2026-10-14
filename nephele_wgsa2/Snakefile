@@ -302,6 +302,8 @@ rule remove_rRNA:
         fread_gz=TED_READS_FQS + "{sample}_R1_tedr.fastq.gz",
         rread_gz=TED_READS_FQS + "{sample}_R2_tedr.fastq.gz",
     threads: threads_per_job
+    conda:
+        "ribodetector"
     shell:"""
         if [[ -s {params.f} ]]; then 
             ribodetector_cpu -t {threads} -l 100 --chunk_size 3200 -e norrna \
