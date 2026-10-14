@@ -181,6 +181,8 @@ rule run_fastp:
     output:
         text=TED_READS + "{sample}_fastplog.txt",
         html=TED_READS + "{sample}_fastplog.html",
+    conda:
+        "fastp"
     run:
         shell("mkdir -p {params.tmpdir} && " + run_fastp_cmd())
     # other ways:
