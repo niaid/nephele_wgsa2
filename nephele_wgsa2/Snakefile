@@ -5,7 +5,7 @@
 configfile: "/pipeline/config.yaml"
 include: "/pipeline/utils.smk"
 
-log_path = snakemake.logger.logfile
+# log_path = snakemake.logger.logfile
 outputs_dir = Path(config["output_dir"])
 
 TMP_DIR=config["tmp_dir"] + "/"
@@ -1376,8 +1376,8 @@ import subprocess
 onsuccess:
     shell(clean_output() + handle_TED() + handle_cp_biom() + main_outputs() ) 
     subprocess.run(fwd_outputs(), shell = True ) ## for DiscoVIR and MAGs pipeline
-    #shell("cp {log_path} {outputs_dir}/.snakemake.log")
+    #shell("cp {log} {outputs_dir}/.snakemake.log")
 onerror:
     shell(clean_output() + handle_TED() + handle_cp_biom() + main_outputs() )
     subprocess.run(fwd_outputs(), shell = True ) ## for DiscoVIR and MAGs pipeline
-    #shell("cp {log_path} {outputs_dir}/.snakemake.log")
+    #shell("cp {log} {outputs_dir}/.snakemake.log")
