@@ -159,7 +159,6 @@ onstart:
     emapper.py --version | tail -n1 | awk '{{print $1}}'
     R --version | head -n1
     conda list ribodetector -n ribodetector | tail -n1 | awk '{{print $1,$2}}'
-    ribodetector_cpu --version | awk '{{print "ribodetector version", $2}}'
     Trinity --version | head -n1
     snakemake --version | awk '{{print "Snakemake version", $1}}'
     """)
