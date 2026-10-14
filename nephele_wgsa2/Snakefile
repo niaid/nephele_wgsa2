@@ -142,7 +142,9 @@ onstart:
     """
     set +o pipefail
     echo "Dependencies:"
+    mamba activate fastp
     fastp --version
+    mamba deactivate
     metaspades.py --version
     bowtie2 --version | awk '{{print "bowtie2 version", $3}}' | head -n1
     samtools --version | head -n1
@@ -158,7 +160,9 @@ onstart:
     # rgi -h |grep "Resistance Gene Identifier - " | sed 's/ - / version /g'
     emapper.py --version | tail -n1 | awk '{{print $1}}'
     R --version | head -n1
+    mamba activate ribodetector
     ribodetector_cpu --version | awk '{{print "ribodetector version", $2}}'
+    mamba deactivate
     Trinity --version | head -n1
     snakemake --version | awk '{{print "Snakemake version", $1}}'
     """)
