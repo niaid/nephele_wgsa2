@@ -157,7 +157,6 @@ onstart:
     conda list rgi -n rgi | tail -n1 | awk '{{print $1, $2}}'
     # rgi -h |grep "Resistance Gene Identifier - " | sed 's/ - / version /g'
     conda list eggnog-mapper -n eggnog_mapper | tail -n1 | awk '{{print $1, $2}}'
-    emapper.py --version | tail -n1 | awk '{{print $1}}'
     R --version | head -n1
     conda list ribodetector -n ribodetector | tail -n1 | awk '{{print $1,$2}}'
     Trinity --version | head -n1
