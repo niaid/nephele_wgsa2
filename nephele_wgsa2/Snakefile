@@ -665,7 +665,7 @@ rule gene_annotation:
         ko=ANNOTATS + "{sample}_annots.ko.txt",
         gg=ANNOTATS + "{sample}_annots.KEGGmap.txt"
     conda:
-        "eggnog_mapper"
+        "gene_annotation"
     shell:"""
         time emapper.py -i {input} -o annots --output_dir {params.out_dir} --cpu {threads} \
                 --itype proteins --block_size {params.blockSize} --index_chunks {params.idxChunks} --data_dir {params.egg_db}  \
