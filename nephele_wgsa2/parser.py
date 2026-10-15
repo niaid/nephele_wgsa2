@@ -182,7 +182,7 @@ def parse_args():
         type=field(int, ge=16, le=96),
         default=min(
             len(os.sched_getaffinity(0)), 96
-        ),  ##os.cpu_count() <-may grab unallocated notes
+        )-1,  ##os.cpu_count() <-may grab unallocated notes
         help="custom cpu setting. If not set, uses all available",
     )
     return parser.parse_args()
