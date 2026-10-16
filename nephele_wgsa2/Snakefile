@@ -845,7 +845,7 @@ rule run_genes2krona:
         tmp_4kr=   temp(PATHWAYS + "_tmp_4kr.txt"),
         krona_out=      PATHWAYS + "{sample}_4krona.txt",
         krona_out_clone=PWYBIN   + "{sample}_4krona.txt"
-    shell:
+    run:
         try:
             shell_command = """
         if [ -s {input.tmp_annots} -a -s {input.tmp_TPM} -a -s {input.report} ]; then
