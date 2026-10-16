@@ -186,8 +186,7 @@ def parse_args():
     parser.add_argument(
         "--set_cpus",
         type=field(int, ge=16, le=96),
-        default=min(len(os.sched_getaffinity(0)), 96)
-        - 1,  ##os.cpu_count() <-may grab unallocated notes
+        default=min(len(os.sched_getaffinity(0)), 96),  ##os.cpu_count() <-may grab unallocated notes
         help="custom cpu setting. If not set, uses all available",
     )
     return parser.parse_args()
