@@ -666,7 +666,9 @@ rule gene_annotation:
         gg=ANNOTATS + "{sample}_annots.KEGGmap.txt"
     conda:
         "gene_annotation"
-    shell:"""
+    run:
+        try:
+            shell_command = """
         time emapper.py -i {input} -o annots --output_dir {params.out_dir} --cpu {threads} \
                 --itype proteins --block_size {params.blockSize} --index_chunks {params.idxChunks} --data_dir {params.egg_db}  \
                 --override --temp_dir {params.tmp_dir}  --scratch_dir {params.tmp_dir} --dbmem >> {params.logfile} 2>&1 
@@ -687,6 +689,12 @@ rule gene_annotation:
         grep -E \"NODE_|TRINITY_\" {params.emapper_anno} | cut -f1,13 | grep \"ko\" | sed 's/,map.*//g' | sed 's/ko/map/g' | \
                 awk '{{n=split($2,s,\",\");for (i=1;i<=n;i++) {{$2=s[i];print}}}}' | sed -e 's/\\s/\\t/g' > {output.gg} || true
         """
+            main_logger.info(f"Shell command for rule gene_annotation:\n{format(shell_command)}")
+            shell_command = cmd_with_error_report(shell_command)
+            shell(shell_command)
+        except Exception as e:
+            rules_error_logger.error(f"Error in rule gene_annotation: {e}\ninputs: {input}")
+            raise(e)
 
 
 rule gene_annot_seqExtract:

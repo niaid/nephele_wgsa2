@@ -1,5 +1,7 @@
 import csv
 import json
+import logging
+from pathlib import Path
 import pandas as pd
 from functools import reduce
 import biom
@@ -217,3 +219,24 @@ def main_outputs():
         ln -rs {pwydivp} {OUT_DIR}/PWY_DivPlots
     """
     return command
+
+
+## python loggers setup
+logs_dir = Path(config["logs_dir_path"])
+debug_logs_file_path = config["debug_logs_file_path"]
+
+main_logger = logging.getLogger()
+main_logger.setLevel(logging.INFO)
+rules_error_logger = logging.getLogger("rules_error_logger")
+rules_error_logger.setLevel(logging.WARNING)
+file_handler = logging.FileHandler(logs_dir / "rules_error_logs.log")
+file_handler.setLevel(logging.WARNING)
+rules_error_logger.addHandler(file_handler)
+
+
+def cmd_with_error_report(commands):
+    return f"""
+    (
+        {commands}
+    ) 2> >(tee -a {debug_logs_file_path} >&2)
+    """

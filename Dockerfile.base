@@ -1,8 +1,10 @@
 # Dockerfile to create base image
 FROM condaforge/mambaforge:23.3.1-1
 
+ENV DEBIAN_FRONTEND=noninteractive
+
 RUN apt update && apt upgrade -y
-RUN apt install -y unzip pigz
+RUN apt install -y unzip pigz graphviz
 
 # Install dependencies
 # Note: eggnog-mapper=2.1.6 Expected eggNOG DB version: 5.0.2 (http://eggnog5.embl.de/download/emapperdb-5.0.2/)
@@ -18,6 +20,9 @@ RUN mamba install -y -c conda-forge -c bioconda -c r samtools=1.21 bbmap=39.15 s
     r-easypackages==0.1.0 \
     r-tidyverse==2.0.0
     #  r-ampvis2==2.8.11 r-broom==1.0.12 r-tibble==3.3.1 r-reshape2==1.4.5 r-data.table==1.18.2.1 r-biocmanager==1.30.27 r-ggplot2==4.0.1 r-vegan==2.7.2
+
+# link cbc to pulp/solverdir to resolve scheduling problem with ILP solver
+RUN ln -s /opt/conda/bin/cbc /opt/conda/lib/python3.11/site-packages/pulp/solverdir/cbc/linux/64/cbc
 
 RUN export CONDA_PREFIX=/opt/conda && amrfinder -u
 # MinPath

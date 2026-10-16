@@ -26,6 +26,11 @@ def main(args):
     outputs_dir_path = args.outputs_dir_path
     tmp_dir = outputs_dir_path / "tmp"
     sh.mkdir("-p", str(tmp_dir))
+
+    logs_dir_path = outputs_dir_path / "logs"
+    sh.mkdir("-p", logs_dir_path)
+    debug_logs_file_path = logs_dir_path / "debug.log"
+
     num_cpus = int(args.set_cpus)
     if num_cpus > 48:
         num_cpus = int(
@@ -48,6 +53,7 @@ def main(args):
     snakemake_config = [  ## needs to start with --config
         f"--config num_cpus={num_cpus} map_file={args.mapping_file_path}",
         f"output_dir={outputs_dir_path} total_mem_gb={mem_gb} tmp_dir={tmp_dir}",
+        f"logs_dir_path={logs_dir_path} debug_logs_file_path={debug_logs_file_path}",
         f"trim_filter={args.trim_filter} include_ted_files={args.include_ted_files}",
         f"ted_file_name={pipeline_config.ted_file_name}",
         f"biom_file_name={pipeline_config.biom_file_name}",
@@ -90,6 +96,15 @@ def main(args):
         )
 
     base_command.extend(snakemake_config)
+
+    if args.output_dag:
+        dag_generate_command = base_command.copy()
+        dag_generate_command[0] = dag_generate_command[0].replace(
+            "snakemake", "snakemake --dag -f"
+        )
+        dag_generate_command.append(f"| dot -Tpdf > {logs_dir_path}/dag.pdf")
+        exec_cmnd(" ".join(dag_generate_command))
+
     main_pipeline = " ".join(base_command)
     exec_cmnd(main_pipeline)
 
