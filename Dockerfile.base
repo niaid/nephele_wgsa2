@@ -39,7 +39,8 @@ RUN mamba create -n fastp -y -c conda-forge -c bioconda fastp=1.3.7
 
 RUN mamba create -n ribodetector -y -c conda-forge -c bioconda python=3.10 ribodetector=0.3.2
 
-RUN mamba create -n gene_annotation -y -c conda-forge -c bioconda python=3.10.0 biopython=1.86 numpy=2.2.6 diamond=2.1.10 mmseqs2=16.747c6 hmmer=3.4 sqlite=3.43.0 eggnog-mapper=2.1.6
+#RUN mamba create -n gene_annotation -y -c conda-forge -c bioconda python=3.10.0 biopython=1.86 numpy=2.2.6 diamond=2.1.10 mmseqs2=16.747c6 hmmer=3.4 sqlite=3.43.0 eggnog-mapper=2.1.6
+RUN mamba create -n gene_annotation -y -c conda-forge -c bioconda python=3.10.0 eggnog-mapper=2.1.6
 
 # Install R packages
 ADD dependencies.R /tmp/dependencies.R
