@@ -18,6 +18,12 @@ def parse_args():
         help="show program's version number and exit",
     )
     parser.add_argument(
+        "--output_dag",
+        type=boolean,
+        default=True,
+        help="generate dag in pdf format",
+    )
+    parser.add_argument(
         "--decontaminate_db_path",
         type=directory,
         required=True,

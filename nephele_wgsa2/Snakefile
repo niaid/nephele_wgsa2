@@ -5,7 +5,7 @@
 configfile: "/pipeline/config.yaml"
 include: "/pipeline/utils.smk"
 
-log_path = snakemake.logger.logfile
+# log_path = snakemake.logger.logfile
 outputs_dir = Path(config["output_dir"])
 
 TMP_DIR=config["tmp_dir"] + "/"
@@ -142,7 +142,7 @@ onstart:
     """
     set +o pipefail
     echo "Dependencies:"
-    fastp --version
+    conda list fastp -n fastp | tail -n1 | awk '{{print $1,$2}}'
     metaspades.py --version
     bbmap.sh --version 2>&1 >/dev/null | grep 'BBTools version'
     bowtie2 --version | awk '{{print "bowtie2 version", $3}}' | head -n1
@@ -157,9 +157,9 @@ onstart:
     kraken2 --version | head -n1
     conda list rgi -n rgi | tail -n1 | awk '{{print $1, $2}}'
     # rgi -h |grep "Resistance Gene Identifier - " | sed 's/ - / version /g'
-    emapper.py --version | tail -n1 | awk '{{print $1}}'
+    conda list eggnog-mapper -n eggnog_mapper | tail -n1 | awk '{{print $1, $2}}'
     R --version | head -n1
-    ribodetector_cpu --version | awk '{{print "ribodetector version", $2}}'
+    conda list ribodetector -n ribodetector | tail -n1 | awk '{{print $1,$2}}'
     Trinity --version | head -n1
     snakemake --version | awk '{{print "Snakemake version", $1}}'
     """)
@@ -182,6 +182,8 @@ rule run_fastp:
     output:
         text=TED_READS + "{sample}_fastplog.txt",
         html=TED_READS + "{sample}_fastplog.html",
+    conda:
+        "fastp"
     run:
         shell("mkdir -p {params.tmpdir} && " + run_fastp_cmd())
     # other ways:
@@ -301,6 +303,8 @@ rule remove_rRNA:
         fread_gz=TED_READS_FQS + "{sample}_R1_tedr.fastq.gz",
         rread_gz=TED_READS_FQS + "{sample}_R2_tedr.fastq.gz",
     threads: threads_per_job
+    conda:
+        "ribodetector"
     shell:"""
         if [[ -s {params.f} ]]; then 
             ribodetector_cpu -t {threads} -l 100 --chunk_size 3200 -e norrna \
@@ -663,7 +667,11 @@ rule gene_annotation:
         ec=ANNOTATS + "{sample}_annots.ec.txt",
         ko=ANNOTATS + "{sample}_annots.ko.txt",
         gg=ANNOTATS + "{sample}_annots.KEGGmap.txt"
-    shell:"""
+    conda:
+        "gene_annotation"
+    run:
+        try:
+            shell_command = """
         time emapper.py -i {input} -o annots --output_dir {params.out_dir} --cpu {threads} \
                 --itype proteins --block_size {params.blockSize} --index_chunks {params.idxChunks} --data_dir {params.egg_db}  \
                 --override --temp_dir {params.tmp_dir}  --scratch_dir {params.tmp_dir} --dbmem >> {params.logfile} 2>&1 
@@ -684,6 +692,12 @@ rule gene_annotation:
         grep -E \"NODE_|TRINITY_\" {params.emapper_anno} | cut -f1,13 | grep \"ko\" | sed 's/,map.*//g' | sed 's/ko/map/g' | \
                 awk '{{n=split($2,s,\",\");for (i=1;i<=n;i++) {{$2=s[i];print}}}}' | sed -e 's/\\s/\\t/g' > {output.gg} || true
         """
+            main_logger.info(f"Shell command for rule gene_annotation:\n{format(shell_command)}")
+            shell_command = cmd_with_error_report(shell_command)
+            shell(shell_command)
+        except Exception as e:
+            rules_error_logger.error(f"Error in rule gene_annotation: {e}\ninputs: {input}")
+            raise(e)
 
 
 rule gene_annot_seqExtract:
@@ -834,7 +848,9 @@ rule run_genes2krona:
         tmp_4kr=   temp(PATHWAYS + "_tmp_4kr.txt"),
         krona_out=      PATHWAYS + "{sample}_4krona.txt",
         krona_out_clone=PWYBIN   + "{sample}_4krona.txt"
-    shell:"""
+    run:
+        try:
+            shell_command = """
         if [ -s {input.tmp_annots} -a -s {input.tmp_TPM} -a -s {input.report} ]; then
             python3 {params.krona_script} -i {input.tmp_annots}\
                 -m {params.annotations_map} -H {params.annotations_hrr} \
@@ -848,6 +864,12 @@ rule run_genes2krona:
             touch {output.krona_out_clone}
         fi
         """
+            main_logger.info(f"Shell command for rule run_genes2krona:\n{format(shell_command)}")
+            shell_command = cmd_with_error_report(shell_command)
+            shell(shell_command)
+        except Exception as e:
+            rules_error_logger.error(f"Error in rule run_genes2krona: {e}\ninputs: {input}")
+            raise(e)
 
 rule gene_ktImportText:
     input:
@@ -1377,8 +1399,8 @@ import subprocess
 onsuccess:
     shell(clean_output() + handle_TED() + handle_cp_biom() + main_outputs() ) 
     subprocess.run(fwd_outputs(), shell = True ) ## for DiscoVIR and MAGs pipeline
-    #shell("cp {log_path} {outputs_dir}/.snakemake.log")
+    #shell("cp {log} {outputs_dir}/.snakemake.log")
 onerror:
     shell(clean_output() + handle_TED() + handle_cp_biom() + main_outputs() )
     subprocess.run(fwd_outputs(), shell = True ) ## for DiscoVIR and MAGs pipeline
-    #shell("cp {log_path} {outputs_dir}/.snakemake.log")
+    #shell("cp {log} {outputs_dir}/.snakemake.log")

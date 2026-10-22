@@ -117,13 +117,13 @@ def CalcHierarchy(mapping, annotations, coverage, operation, limit, verbose):
             for gene in l:
                 try:
                     gene_cov = coverage[gene]
+                    covlist.append(gene_cov)
                 except KeyError:
-                    sys.exit(
+                    sys.stderr.write(
                         "ERROR: Could not find coverage for gene "
                         + str(gene)
                         + ". Are you sure you have coverage information?\n"
                     )
-                covlist.append(gene_cov)
             ann_c[annotation] = np.mean(covlist)
         else:
             ann_c[annotation] = len(l)
