@@ -1,6 +1,6 @@
 {
     "name": "WGSA2",
-    "version": "0.4.1",
+    "version": "0.4.2",
     "mapping_file_name": "mapping_file.txt",
     "output_details_file_name": "OutputDetails_WGSA2plus_Oct2026.pdf",
     "ted_file_name": "TEDfastq.tar",
