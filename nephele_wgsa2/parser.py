@@ -101,7 +101,7 @@ def parse_args():
     )
     parser.add_argument(
         "--readCoverage",
-        type=field(int, ge=10, le=80),
+        type=field(int, ge=10, le=200),
         default=50,
         help="Normalize reads to this coverage (Min 10, Max = 80)",
     )
@@ -156,13 +156,13 @@ def parse_args():
     parser.add_argument(
         "--trim_of_5",
         type=field(int, ge=0, le=35),
-        default=20,
+        default=10,
         help="Quality threshold for 5'-end trimming. Come into effect when trim_filter=true",
     )
     parser.add_argument(
         "--trim_of_3",
         type=field(int, ge=0, le=35),
-        default=15,
+        default=5,
         help="Quality threshold of 3'-end trimming. Come into effect when trim_filter=true",
     )
     parser.add_argument(

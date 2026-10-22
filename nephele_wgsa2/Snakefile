@@ -144,6 +144,7 @@ onstart:
     echo "Dependencies:"
     fastp --version
     metaspades.py --version
+    bbmap.sh --version 2>&1 >/dev/null | grep 'BBTools version'
     bowtie2 --version | awk '{{print "bowtie2 version", $3}}' | head -n1
     samtools --version | head -n1
     metabat2 2>&1 >/dev/null | grep version
@@ -396,8 +397,9 @@ rule run_metaspades:
                     echo "---- FAIL: assembly failed for {wildcards.sample}" && \
                     echo "---- processing will continue for other samples as much as possible"   
         fi
-        
+        echo "---- printing tail end of assembly log"
         tail -n 30 {params.logout}
+        echo "======= SPAdes pipeline finished. ---- ----- -----"
         """
 
 rule run_trinity:
@@ -547,6 +549,7 @@ rule add_derep_stats:
 rule scaffold_and_read_counts:
     resources:
         mem_gb=lambda wildcards: int(config['total_mem_gb'] // 4)
+    threads: threads_per_job
     input:
         final_bam=rules.sam_to_bam.output.final_bam
     params:
@@ -562,11 +565,11 @@ rule scaffold_and_read_counts:
         out_scfCovr=     ASMB_OUT_SAMPLE_FILE + "_asmbCovr.txt",
     shell:"""
         printf \"\\n\\nRead Coverage stats: \\n\" >> {params.finstatsADD}
-        pileup.sh {params.mem_gb} {input.final_bam} out={params.tmp_scafcov} overwrite=true 2>> {params.finstatsADD} && \
+        pileup.sh {params.mem_gb} {input.final_bam} threads={threads} out={params.tmp_scafcov} overwrite=true 2>> {params.finstatsADD} && \
         sort -o {params.tmp_scafcov} {params.tmp_scafcov} && \
         jgi_summarize_bam_contig_depths {input.final_bam} --outputDepth {output.out_depths} && \
         sort {output.out_depths} | sed '1 s/^/#/' | cut -f 1-3 > {params.tmp_basecov} && \
-        samtools idxstats {input.final_bam} > {params.tmp_fileidx} 
+        samtools idxstats -@ {threads} {input.final_bam} > {params.tmp_fileidx} 
         
         cut -f 1-3 {params.tmp_fileidx} | sed -e '1s/^/#contigName\\tLength\\tReadsCount\\n/' | sort | grep -v \"*\" > {params.tmp_readcnt} && \
         paste {params.tmp_readcnt} {params.tmp_scafcov} {params.tmp_basecov} | cut -f 1,2,3,8-14,17 -d $'\\t' > {params.tmp_scfcov1} 
