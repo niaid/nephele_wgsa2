@@ -3,7 +3,7 @@ from nephele_pipeline_utils.utils import exec_cmnd
 config = snakemake.config
 
 
-def run_fastp_cmd():
+def get_fastp_cmd():
     average_qual, length_required, cut_front_mean_quality, cut_tail_mean_quality = (
         10,
         60,
@@ -37,4 +37,4 @@ def run_fastp_cmd():
 
 if __name__ == "__main__":
     exec_cmnd(f"mkdir -p {snakemake.params.tmpdir} ")
-    exec_cmnd(run_fastp_cmd())
+    exec_cmnd(get_fastp_cmd())
