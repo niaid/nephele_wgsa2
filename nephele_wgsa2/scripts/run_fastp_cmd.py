@@ -37,4 +37,4 @@ def run_fastp_cmd():
 
 if __name__ == "__main__":
     exec_cmnd(f"mkdir -p {snakemake.params.tmpdir} ")
-    run_fastp_cmd()
+    exec_cmnd(run_fastp_cmd())
