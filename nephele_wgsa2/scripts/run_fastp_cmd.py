@@ -4,7 +4,12 @@ config = snakemake.config
 
 
 def run_fastp_cmd():
-    average_qual, length_required, cut_front_mean_quality, cut_tail_mean_quality = 10, 60, 20, 15
+    average_qual, length_required, cut_front_mean_quality, cut_tail_mean_quality = (
+        10,
+        60,
+        20,
+        15,
+    )
 
     base_cmd = (
         "fastp -i {input.f} -I {input.r} "
