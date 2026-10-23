@@ -1,6 +1,10 @@
 from nephele_pipeline_utils.utils import exec_cmnd
 
 config = snakemake.config
+snakemake_input = snakemake.input
+output = snakemake.output
+params = snakemake.params
+threads = snakemake.threads
 
 
 def get_fastp_cmd():
@@ -12,10 +16,11 @@ def get_fastp_cmd():
     )
 
     base_cmd = (
-        "fastp -i {input.f} -I {input.r} "
-        "-o {params.f} -O {params.r} "
-        "-h {output.html} -j {params.json} "
-        "--trim_poly_x --cut_window_size 4 --thread {threads} "
+        f"fastp -i {snakemake_input.f} -I {snakemake_input.r} "
+        f"fastp -i {snakemake_input.f} -I {snakemake_input.r} "
+        f"-o {params.f} -O {params.r} "
+        f"-h {output.html} -j {params.json} "
+        f"--trim_poly_x --cut_window_size 4 --thread {threads} "
         "--low_complexity_filter --correction"
     )
 
@@ -32,9 +37,9 @@ def get_fastp_cmd():
         f"--cut_tail --cut_tail_mean_quality {cut_tail_mean_quality}"
     )
 
-    return base_cmd + " " + trim_filter + " 2>> {output.text}"
+    return f"{base_cmd} {trim_filter} 2>> {output.text}"
 
 
 if __name__ == "__main__":
-    exec_cmnd(f"mkdir -p {snakemake.params.tmpdir} ")
+    exec_cmnd(f"mkdir -p {params.tmpdir} ")
     exec_cmnd(get_fastp_cmd())
