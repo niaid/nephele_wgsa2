@@ -1,4 +1,4 @@
-from nephele_pipeline_utils.utils import exec_cmnd
+from snakemake.shell import shell
 
 config = snakemake.config
 snakemake_input = snakemake.input
@@ -41,5 +41,5 @@ def get_fastp_cmd():
 
 
 if __name__ == "__main__":
-    exec_cmnd(f"mkdir -p {params.tmpdir} ")
-    exec_cmnd(get_fastp_cmd())
+    shell(f"mkdir -p {params.tmpdir} ")
+    shell(get_fastp_cmd())
