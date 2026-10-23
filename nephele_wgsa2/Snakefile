@@ -142,7 +142,7 @@ onstart:
     """
     set +o pipefail
     echo "Dependencies:"
-    fastp --version
+    conda list fastp -n fastp | tail -n1 | awk '{{print $1,$2}}'
     metaspades.py --version
     bbmap.sh --version 2>&1 >/dev/null | grep 'BBTools version'
     bowtie2 --version | awk '{{print "bowtie2 version", $3}}' | head -n1
@@ -182,8 +182,12 @@ rule run_fastp:
     output:
         text=TED_READS + "{sample}_fastplog.txt",
         html=TED_READS + "{sample}_fastplog.html",
-    run:
-        shell("mkdir -p {params.tmpdir} && " + run_fastp_cmd())
+    conda:
+        "fastp"
+    script:
+        "scripts/run_fastp_cmd.py"
+    # run:
+    #    shell("mkdir -p {params.tmpdir} && " + run_fastp_cmd())
     # other ways:
     # shell("mkdir -p {params.tmpdir} && " + run_fastp_cmd())
     # shell:"""
