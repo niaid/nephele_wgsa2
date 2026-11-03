@@ -3,11 +3,17 @@
 ## Introduction
 The WGSA2+ pipeline uses raw paired end (PE) shotgun reads to produce de novo assemblies for each sample in a metagenomic or metatranscriptomics dataset, as well as extract information about the taxonomic and functional composition of microbial communities.
 
+Detailed information about the pipeline including relevant citations can be found at [WGSA2's description page](https://nephele.niaid.nih.gov/user-guide/pipeline-descriptions/wgsa2)
+
 
 ## Pipeline's parameters
-### Commandline usage
+
+### Container download
+The docker image with usage instructions of the pipeline is available at [WGSA2's ECR gallery](https://gallery.ecr.aws/niaid_nephele/pipeline/nephele_wgsa2) 
+
+### Command line usage
 ```
-Usage: [-h] [--version] --mapping_file_path {mappingFile.txt} \
+Usage: python /pipeline/main.py [-h] [--version] --mapping_file_path {mappingFile} \
                --outputs_dir_path {outputDIR} \
                --denovo_mtx  {bool} \
                --trim_filter {bool} --average_read_quality {int} \
@@ -18,13 +24,14 @@ Usage: [-h] [--version] --mapping_file_path {mappingFile.txt} \
                --classification_db_name {classification_db_name} \
                --classification_db_path {classification_db_path} \
                    --kr2confidence_taxonomic {int} \
-               --krona_tax_db_path      {krona_tax_db_path} \
+               --krona_tax_db_path  {krona_tax_db_path} \
                --read_norm  {bool} \
                    --readCoverage {int} \
                --tax_genes  {bool} \
                --tax_scaffolds {bool} \
                --mag {bool} \
-               --find_args {bool}  --args_db_path {args_db_path} \
+               --find_args {bool}  \
+                   --args_db_path {args_db_path} \
                --annotations_type {annotations_type} \
                    --eggnog_db_path {eggnog_db_path} \
                    --annotations_map_db_path {annotations_map_db_path} \
