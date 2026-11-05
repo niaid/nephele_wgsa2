@@ -24,10 +24,10 @@ args <- docopt(doc);
 print(args)
 ## manual args set:
 # args <- docopt(doc, args = c(
-#    "--wdir"   ,  "dbLinks/merging/table_merging_test/merged_tables_v5_ec/",
-#    "--indir"  ,  "dbLinks/merging/table_merging_test/merged_tables_v5_ec/merged_tables/",
-#    "--mfile"  ,  "dbLinks/merging/table_merging_test/merged_tables_v5_ec/tmp_mapping_file.txt",
-#    "--outdir" ,  "dbLinks/merging/table_merging_test/merged_tables_v5_ec/divPlots_pwy/")) #this is if the .sh does not provide arguments
+#    "--wdir"   ,  "dbLinks/merging/table_merging_test/",
+#    "--indir"  ,  "dbLinks/merging/table_merging_test/merged_tables/",
+#    "--mfile"  ,  "dbLinks/merging/table_merging_test/tmp_mapping_file.txt",
+#    "--outdir" ,  "dbLinks/merging/table_merging_test/divPlots_pwy/")) #this is if the .sh does not provide arguments
 #  print(args)
 print("-----------> docopt settings------^^^^")
 

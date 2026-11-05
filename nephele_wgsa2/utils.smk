@@ -94,7 +94,7 @@ def make_biom_file(profiles, taxfiles, samples, map_file, biom_file_name, tax_co
         tab.rename(columns={prof_col : sample}, inplace=True)
         return(tab)
 
-    ## merge tables over all samples; format string to ensure files match ANGELINA note I added prof_col.format here 
+    ## merge tables over all samples; format string to ensure files match; added prof_col.format here 
     tablist = [merge_single_profile_tax(profiles.format(sample=s), taxfiles.format(sample=s), s, prof_col.format(sample=s)) for s in samples]
     if len(samples) > 1:
         mergedtable = reduce(lambda l,r: pd.merge(l,r, how="outer", on=tax_col), tablist)
