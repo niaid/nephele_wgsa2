@@ -1,12 +1,12 @@
 # Nephele WGSA2 pipeline
 
 ## Description
-The WGSA2+ pipeline uses raw paired end (PE) shotgun reads to produce de novo assemblies for each sample in a metagenomic or metatranscriptomics dataset, as well as extract information about the taxonomic and functional composition of microbial communities.
+The WGSA2+ pipeline uses raw paired end (PE) shotgun reads to produce de novo assemblies for each sample in a metagenomic or metatranscriptomics dataset, as well as to extract information about the taxonomic and functional composition of microbial communities.
 
 Detailed information about the pipeline including relevant citations can be found at [WGSA2's description page](https://nephele.niaid.nih.gov/user-guide/pipeline-descriptions/wgsa2)
 
 ## Demo data
-You can find a test dataset and relevant metadata for WGSA2+ in the Analyze section of [Nephele's Demo datasets page](https://nephele.niaid.nih.gov/user-guide/demo-datasets). Detailed description of the example outputs that can also be found there, can be found at [WGSA2's description page](https://nephele.niaid.nih.gov/user-guide/pipeline-descriptions/wgsa2) and within the outputs of the pipeline.
+You can find a test dataset and relevant metadata for WGSA2+ in the Analyze section of [Nephele's Demo datasets page](https://nephele.niaid.nih.gov/user-guide/demo-datasets). A detailed description of the example outputs can be found on [WGSA2's description page](https://nephele.niaid.nih.gov/user-guide/pipeline-descriptions/wgsa2) and within the outputs of the pipeline.
 
 ## Running WGSA2+
 
@@ -16,19 +16,19 @@ There are two major ways to run the pipeline. The easiest is via NIAID's free mi
 ### Via Docker image
 The second way requires access to computational resources, HPC and a containerized version of the pipeline (Docker image). The docker image specific for WGSA2+ with usage instructions of the pipeline is available at [WGSA2's ECR gallery](https://gallery.ecr.aws/niaid_nephele/pipeline/nephele_wgsa2). Since the code is containerized, it is easily adaptable to any HPC. 
 
-Once you have the docker image (e.g. `.sif`) downloaded, you will need: \
+Once you have the docker image (e.g. `.sif`) downloaded, you will need: 
 - access to an HPC with at least 32 CPUs and 128Gb of memory
 - input data: recommended to start with [Nephele's Demo datasets page](https://nephele.niaid.nih.gov/user-guide/demo-datasets)
-- a metadata file ([template here](https://nephele-workspace-prod-public-files.s3.us-east-1.amazonaws.com/demo_datasets/wgsa2/wgsa2plus_mtx_mode__example_mapping_oct_2026.xlsx))
+- metadata file ([template here](https://nephele-workspace-prod-public-files.s3.us-east-1.amazonaws.com/demo_datasets/wgsa2/wgsa2plus_mtx_mode__example_mapping_oct_2026.xlsx))
 - path to an output directory
-- a path containing downloaded versions of all necessary databases: \
-  - a kraken-formatted host decontamination database (can be found on (Nephele's Zenodo community page)[https://zenodo.org/communities/nephele/about]. Descriptions can be found at [WGSA2's description page](https://nephele.niaid.nih.gov/user-guide/pipeline-descriptions/wgsa2#:~:text=minimum%20read%20length.-,Host%20Decontamination%20DB,-(Options)))
-  - a kraken-formatted taxonomic classification database (see [WGSA2's description page](https://nephele.niaid.nih.gov/user-guide/pipeline-descriptions/wgsa2#:~:text=TAX%20Classification%20database) for choices and sources)
-  - a minPATH-formatted pathway mapper files from one of KEGG or MetaCyc databases (can be found on [Nephele's Zenodo community page](https://zenodo.org/records/18262625))
-  - a copy of the EggNOG database (access [here](https://eggnog6.embl.de/); recommended v5.0)
-  - (optional) a copy of the CARD database (access [here](https://card.mcmaster.ca/))
+- path containing downloaded versions of all necessary databases: 
+  - kraken-formatted host decontamination database. See [Nephele's Zenodo community page](https://zenodo.org/communities/nephele/about) to download. Descriptions [here](https://nephele.niaid.nih.gov/user-guide/pipeline-descriptions/wgsa2#:~:text=minimum%20read%20length.-,Host%20Decontamination%20DB,-(Options)).
+  - kraken-formatted taxonomic classification database (see [here for choices and sources](https://nephele.niaid.nih.gov/user-guide/pipeline-descriptions/wgsa2#:~:text=TAX%20Classification%20database))
+  - minPATH-formatted pathway mapper files from one of KEGG or MetaCyc databases (can be downloaded [here](https://zenodo.org/records/18262625))
+  - EggNOG database (see [here](https://eggnog6.embl.de/); recommended v5.0)
+  - (optional) CARD database (see ["Download CARD Data" here](https://card.mcmaster.ca/download#:~:text=More%20ontology%20downloads...-,Download%20CARD%20Data,-(see%20README)))
 
-Once all databases are acquired, the image can be run with any container running platforms (e.g. apptainer). The pipeline will automatically read in available resources within an interactive session of the HPC.
+Once all databases are acquired, the image can be run with any container engine (e.g. apptainer, docker). The pipeline will automatically set cpu usage based on available resources within a batch or interactive session of the HPC.  See [here under Usage](https://gallery.ecr.aws/niaid_nephele/pipeline/nephele_wgsa2).
 
 ### Command line parameters
 ```
