@@ -11,3 +11,4 @@ nephele_wgsa2/._outputs_template.json
 nephele_wgsa2/._Snakefile
 nephele_wgsa2/._utils.smk
 ._.gitignore
+._README.md
