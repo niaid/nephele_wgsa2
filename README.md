@@ -22,7 +22,7 @@ Once you have the docker image (e.g. `.sif`) downloaded, you will need: \
 - a metadata file ([template here](https://nephele-workspace-prod-public-files.s3.us-east-1.amazonaws.com/demo_datasets/wgsa2/wgsa2plus_mtx_mode__example_mapping_oct_2026.xlsx))
 - path to an output directory
 - a path containing downloaded versions of all necessary databases: \
-  - a kraken-formated host decontamination database (can be found on (Nephele's Zenodo community page)[https://zenodo.org/communities/nephele/about]. Descriptions can be found at [WGSA2's description page](https://nephele.niaid.nih.gov/user-guide/pipeline-descriptions/wgsa2#:~:text=minimum%20read%20length.-,Host%20Decontamination%20DB,-(Options)))
+  - a kraken-formatted host decontamination database (can be found on (Nephele's Zenodo community page)[https://zenodo.org/communities/nephele/about]. Descriptions can be found at [WGSA2's description page](https://nephele.niaid.nih.gov/user-guide/pipeline-descriptions/wgsa2#:~:text=minimum%20read%20length.-,Host%20Decontamination%20DB,-(Options)))
   - a kraken-formatted taxonomic classification database (see [WGSA2's description page](https://nephele.niaid.nih.gov/user-guide/pipeline-descriptions/wgsa2#:~:text=TAX%20Classification%20database) for choices and sources)
   - a minPATH-formatted pathway mapper files from one of KEGG or MetaCyc databases (can be found on [Nephele's Zenodo community page](https://zenodo.org/records/18262625))
   - a copy of the EggNOG database (access [here](https://eggnog6.embl.de/); recommended v5.0)
